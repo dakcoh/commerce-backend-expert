@@ -43,7 +43,7 @@ test("pins six platform archives and rejects unsupported CPUs", () => {
   assert.throws(() => runtimeInfo("freebsd", "x64"), /Unsupported/);
 });
 
-test("Unicode Java directories use a verified private junction on Windows", t => {
+test("Unicode Java directories use a verified private filesystem alias", t => {
   const f = fixture(t);
   const home = path.join(f.dir, "한글-🧪");
   fs.mkdirSync(path.join(home, "bin"), {recursive: true});
@@ -55,7 +55,7 @@ test("Unicode Java directories use a verified private junction on Windows", t =>
     assert.equal(fs.realpathSync(alias), fs.realpathSync(home));
     assert.equal(javaDirectory(home), alias);
     assert.equal(javaExecutable(executable), path.join(alias, "bin", "java.exe"));
-    const root = path.join(os.tmpdir(), ".commerce-context-mcp-java");
+    const root = path.join(os.tmpdir(), `.commerce-context-mcp-java${process.getuid ? `-${process.getuid()}` : ""}`);
     assert.equal(path.dirname(alias), root);
     assert.match(path.basename(alias), /^[a-f0-9]{64}$/);
     fs.rmSync(alias, {force: true});
@@ -66,6 +66,7 @@ test("Unicode Java directories use a verified private junction on Windows", t =>
     assert.equal(alias, home);
     assert.equal(javaExecutable(executable), executable);
   }
+
 });
 
 test("the private cache directory can be selected without changing system Java", () => {

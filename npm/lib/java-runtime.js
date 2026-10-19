@@ -6,11 +6,11 @@ const path = require("node:path");
 function javaDirectory(home) {
   if (process.platform !== "win32" || /^[\x20-\x7e]+$/.test(home)) return home;
   const fs = require("node:fs"), os = require("node:os"), {createHash} = require("node:crypto");
-  const root = path.join(os.tmpdir(), ".commerce-context-mcp-java");
+  const root = path.join(os.tmpdir(), `.commerce-context-mcp-java${process.getuid ? `-${process.getuid()}` : ""}`);
   if (!/^[\x20-\x7e]+$/.test(root)) {
-    throw new Error("Cannot launch managed Java from this Windows Unicode path. Set COMMERCE_CONTEXT_CACHE_DIR to a private writable ASCII-only path.");
+    throw new Error("Cannot launch managed Java from this Unicode path. Set COMMERCE_CONTEXT_CACHE_DIR to a private writable ASCII-only path.");
   }
-  fs.mkdirSync(root, {recursive: true});
+  fs.mkdirSync(root, {recursive: true, mode: 0o700});
   if (fs.lstatSync(root).isSymbolicLink()) throw new Error("Runtime alias directory must not be a link");
   const alias = path.join(root, createHash("sha256").update(home).digest("hex"));
   try { fs.symlinkSync(home, alias, "junction"); }

@@ -8,7 +8,7 @@ AI 코딩 도구에서 한국 이커머스와 Java/Spring의 설계 규칙을 �
 
 **첫 실행에서 전용 Temurin JRE 21.0.12.1+1을 자동 준비합니다.** npm 설치 스크립트에 의존하지 않으므로 `--ignore-scripts` 설치도 지원합니다. 이 기능은 **0.2.0부터 제공**합니다. 이전 버전 사용자는 패키지를 갱신하세요. 소스에서 검증할 때는 [기여 가이드의 로컬 패키지 절차](https://github.com/dakcoh/commerce-context-mcp/blob/master/CONTRIBUTING.md#로컬에서-검증하기)를 따릅니다.
 
-구현 대상은 Windows·macOS·Linux(glibc)의 x64/ARM64입니다. 각 플랫폼의 실제 실행·복구·종료는 릴리스 CI에서 검사합니다. Node 프로세스의 CPU 아키텍처에 맞춥니다. Linux musl(Alpine)과 32비트는 지원하지 않습니다. 압축 해제용 `tar`가 필요하며 Windows 10/11·macOS에서는 기본 제공됩니다. Windows에서는 유니코드 런타임과 작업 디렉터리를 개인 임시 폴더의 영문 junction으로 연결해 실행합니다. 관리자 권한·PowerShell·8.3 이름 생성은 필요하지 않습니다.
+구현 대상은 Windows·macOS·Linux(glibc)의 x64/ARM64입니다. 각 플랫폼의 실제 실행·복구·종료는 릴리스 CI에서 검사합니다. Node 프로세스의 CPU 아키텍처에 맞춥니다. Linux musl(Alpine)과 32비트는 지원하지 않습니다. 압축 해제용 `tar`가 필요하며 Windows 10/11·macOS에서는 기본 제공됩니다. Windows의 유니코드 런타임 경로는 개인 임시 폴더의 영문 junction으로 연결합니다. 한글·보충 문자가 있는 캐시의 서버 JAR는 영문 임시 작업 경로에 복사해 실행하고 종료 후 정리합니다. 관리자 권한·PowerShell·8.3 이름 생성은 필요하지 않습니다.
 
 ```bash
 node -v
@@ -66,7 +66,7 @@ claude mcp add --transport stdio commerce-context -- npx -y commerce-context-mcp
 | 증상 | 다음 행동 |
 |---|---|
 | `Managed Java ... cannot run` | 지원 OS/CPU·OS 라이브러리를 확인하고 `download` 재실행. 잠긴 파일이 있으면 기존 MCP 종료 |
-| `Cannot launch managed Java from this Windows Unicode path` | 임시 경로까지 영문 별칭을 만들 수 없는 환경입니다. 쓰기 가능한 개인용 영문 경로를 `COMMERCE_CONTEXT_CACHE_DIR`로 지정하고 재실행 |
+| `Cannot launch managed Java from this Unicode path` | 임시 경로까지 영문 별칭을 만들 수 없는 환경입니다. 쓰기 가능한 개인용 영문 경로를 `COMMERCE_CONTEXT_CACHE_DIR`로 지정하고 재실행 |
 | `Cannot extract Java runtime` | OS의 `tar` 설치·실행 가능 여부와 디스크 여유 공간 확인 |
 | `Unsupported Java runtime platform` | 지원되는 OS·CPU와 Node 아키텍처 확인 |
 | `npx`를 찾지 못함 | Node 설치와 앱의 PATH·명령 실행 방식 확인 후 재시작 |
