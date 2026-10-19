@@ -51,13 +51,13 @@ jobs:
           node scripts/release-checks.js wrapper
       - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
         with:
-          java-version: '17'
+          java-version: '21'
           distribution: corretto
           cache: gradle
           cache-dependency-path: |
             **/*.gradle.kts
             gradle/wrapper/gradle-wrapper.properties
-      - name: Java and knowledge regression, Java 17 JAR
+      - name: Java and knowledge regression, Java 21 JAR
         env:
           VERSION: ${{ steps.version.outputs.version }}
         run: |
@@ -72,7 +72,7 @@ jobs:
         run: |
           node scripts/release-checks.js stage
           java scripts/VerifyArtifact.java "build/release/context-engine-$VERSION.jar" "$VERSION" > build/release/runtime-inventory.tsv
-      - name: Actual Java 17 MCP and version contract
+      - name: Actual Java 21 MCP and version contract
         env:
           VERSION: ${{ steps.version.outputs.version }}
           MCP_EXPECTED_VERSION: ${{ steps.version.outputs.version }}
@@ -111,11 +111,23 @@ jobs:
             java: '21'
             node: '24'
           - os: windows-latest
-            java: '17'
+            java: '21'
             node: '22'
           - os: windows-latest
             java: '21'
             node: '24'
+          - os: ubuntu-24.04-arm
+            node: '24'
+            managedOnly: true
+          - os: windows-11-arm
+            node: '24'
+            managedOnly: true
+          - os: macos-15-intel
+            node: '24'
+            managedOnly: true
+          - os: macos-15
+            node: '24'
+            managedOnly: true
     runs-on: ${{ matrix.os }}
     timeout-minutes: 15
     steps:
@@ -128,6 +140,7 @@ jobs:
           node-version: ${{ matrix.node }}
           package-manager-cache: false
       - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
+        if: ${{ !matrix.managedOnly }}
         with:
           java-version: ${{ matrix.java }}
           distribution: corretto
@@ -136,19 +149,23 @@ jobs:
           artifact-ids: ${{ needs.build.outputs.artifact-id }}
           merge-multiple: true
           path: build/release
-      - name: Verify identical bundle and runtime compatibility
+      - name: Verify identical bundle
+        run: node scripts/release-checks.js verify
+      - name: Verify direct JDK runtime compatibility
+        if: ${{ !matrix.managedOnly }}
         env:
           VERSION: ${{ needs.build.outputs.version }}
           MCP_EXPECTED_VERSION: ${{ needs.build.outputs.version }}
         run: |
-          node scripts/release-checks.js verify
           java scripts/VerifyArtifact.java "build/release/context-engine-$VERSION.jar" "$VERSION" > "$RUNNER_TEMP/runtime-inventory.tsv"
           cmp build/release/runtime-inventory.tsv "$RUNNER_TEMP/runtime-inventory.tsv"
           node npm/test/mcp-smoke.js "build/release/context-engine-$VERSION.jar"
       - name: Launcher regression on runtime OS and Node
         working-directory: npm
         run: npm test
-      - name: Test packed launcher, Korean cache path and Java EOF
+      - name: Real runtime concurrency and offline corruption repair without system Java
+        run: node npm/test/runtime-smoke.js
+      - name: Test packed launcher without system Java, Korean cache path and EOF
         env:
           VERSION: ${{ needs.build.outputs.version }}
           MCP_EXPECTED_VERSION: ${{ needs.build.outputs.version }}

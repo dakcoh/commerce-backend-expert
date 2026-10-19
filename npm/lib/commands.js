@@ -1,4 +1,4 @@
-const { assertJava, javaStatus } = require("./java-runtime");
+const {ensureRuntime, runtimeInfo, runtimePaths, verifiedRuntime} = require("./managed-runtime");
 const { releaseInfo } = require("./release-client");
 const { cachePaths, ensureJar, verifyCached } = require("./jar-cache");
 const { startServer } = require("./server-process");
@@ -12,8 +12,9 @@ Usage:
   commerce-context-mcp download
   commerce-context-mcp doctor
 
-With no command, downloads and verifies the release JAR if needed, then starts
-the MCP server over stdio using Java 17 or newer.`);
+With no command, prepares a private Java 21 runtime and the release JAR, then
+starts the MCP server over stdio. No system Java or JAVA_HOME is required.
+The download command prepares both caches; doctor checks them without downloads.`);
 }
 
 async function run(args, pkg, dependencies = {}) {
@@ -33,29 +34,28 @@ async function run(args, pkg, dependencies = {}) {
     return;
   }
 
-  assertJava();
+  const javaPath = await ensureRuntime({cacheDir: paths.cacheDir});
   const jarPath = await ensureJar(info, { cacheDir: dependencies.cacheDir });
   if (command === "download" || command === "--download-only") {
     return;
   }
   console.error("Starting MCP server over stdio. This process stays running while the MCP client is connected.");
-  process.exitCode = await startServer(jarPath, paths.cacheDir, args);
+  process.exitCode = await startServer(jarPath, paths.cacheDir, args, {javaPath});
 }
 
 function doctor(pkg, info, paths) {
-  const status = javaStatus();
+  const runtime = runtimeInfo();
+  const managed = runtimePaths(paths.cacheDir, runtime);
+  const runtimeReady = verifiedRuntime(managed, runtime);
   const cached = verifyCached(paths);
   console.log(`package: ${pkg.name}@${pkg.version}`);
-  console.log(`java: ${status.ok ? "ok" : "missing or too old"}`);
-  if (status.output) {
-    console.log(status.output.split(/\r?\n/)[0]);
-  }
+  console.log(`managed java: ${runtimeReady ? "verified" : "not prepared or damaged"} (${runtime.version})`);
+  console.log(`runtime executable: ${managed.javaPath}`);
+  if (!runtimeReady) console.log("Run commerce-context-mcp download to prepare the private runtime and server.");
   console.log(`release asset: ${info.releaseUrl}`);
   console.log(`release checksum: ${info.checksumUrl}`);
   console.log(`cached jar: ${cached.ok ? `verified (${paths.jarPath})` : cached.reason}`);
-  if (!status.ok) {
-    process.exitCode = 1;
-  }
+  process.exitCode = runtimeReady && cached.ok ? 0 : 1;
 }
 
 module.exports = { run, usage, doctor };

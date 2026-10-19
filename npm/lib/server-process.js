@@ -1,10 +1,33 @@
 const { spawn } = require("child_process");
 const { constants } = require("os");
 const path = require("path");
+const fs = require("node:fs");
+const os = require("node:os");
+
+function serverWorkspace(jarPath, cacheDir) {
+  if (/^[\x20-\x7e]+$/.test(cacheDir)) return {directory: cacheDir, jar: path.relative(cacheDir, jarPath), cleanup() {}};
+  const root = path.join(os.tmpdir(), `.commerce-context-mcp-launch${process.getuid ? `-${process.getuid()}` : ""}`);
+  if (!/^[\x20-\x7e]+$/.test(root)) throw new Error("Set COMMERCE_CONTEXT_CACHE_DIR to a private writable ASCII-only path.");
+  fs.mkdirSync(root, {recursive: true, mode: 0o700});
+  const stat = fs.lstatSync(root);
+  if (stat.isSymbolicLink() || (process.getuid && (stat.uid !== process.getuid() || (stat.mode & 0o077)))) {
+    throw new Error("Java workspace root must be a private directory owned by the current user");
+  }
+  const directory = fs.mkdtempSync(path.join(root, "run-"));
+  const cleanup = () => {
+    if (path.dirname(path.resolve(directory)) !== path.resolve(root)) throw new Error("Java workspace cleanup escaped root");
+    fs.rmSync(directory, {recursive: true, force: true});
+  };
+  try { fs.copyFileSync(jarPath, path.join(directory, "server.jar"), fs.constants.COPYFILE_EXCL); }
+  catch (error) { cleanup(); throw error; }
+  return {directory, jar: "server.jar", cleanup};
+}
 
 function serverArguments(jarPath, args = []) {
   return [
     "-Dfile.encoding=UTF-8",
+    "-Xlog:disable",
+    "-Xlog:all=warning:stderr",
     "-jar",
     jarPath,
     ...args,
@@ -13,14 +36,19 @@ function serverArguments(jarPath, args = []) {
 
 function startServer(jarPath, cacheDir, args = [], dependencies = {}) {
   const input = dependencies.stdin || process.stdin;
+  const output = dependencies.stdout || process.stdout;
   const parent = dependencies.process || process;
   const spawnChild = dependencies.spawn || spawn;
   const killTimeoutMs = dependencies.killTimeoutMs ?? 2_000;
+  const workspace = serverWorkspace(jarPath, cacheDir);
   return new Promise((resolve, reject) => {
-    // Keep the Unicode cache directory in cwd; Windows Java launchers can corrupt non-ASCII arguments.
-    const child = spawnChild("java", serverArguments(path.relative(cacheDir, jarPath), args), {
-      stdio: ["pipe", "inherit", "inherit"], cwd: cacheDir, windowsHide: true,
-    });
+    // Java resolves native libraries and the JAR against these paths; both must survive Windows codepages.
+    let child;
+    try {
+      child = spawnChild(dependencies.javaPath || "java", serverArguments(workspace.jar, args), {
+        stdio: ["pipe", "pipe", "inherit"], cwd: workspace.directory, windowsHide: true,
+      });
+    } catch (error) { workspace.cleanup(); reject(error); return; }
     let timer;
     let requestedSignal;
     let inputEnded = false;
@@ -52,12 +80,16 @@ function startServer(jarPath, cacheDir, args = [], dependencies = {}) {
     const cleanup = () => {
       clearTimeout(timer);
       input.unpipe(child.stdin);
+      child.stdout.unpipe(output);
       input.pause();
       input.removeListener("end", onEnd);
       input.removeListener("close", onEnd);
       input.removeListener("error", onInputError);
+      output.removeListener("error", onInputError);
+      child.stdout.removeListener("error", onInputError);
       parent.removeListener("SIGINT", onInterrupt);
       parent.removeListener("SIGTERM", onTerminate);
+      workspace.cleanup();
     };
     child.once("error", (error) => {
       cleanup();
@@ -72,11 +104,15 @@ function startServer(jarPath, cacheDir, args = [], dependencies = {}) {
       resolve(code ?? (128 + (constants.signals[signal] || 1)));
     });
     child.stdin.on("error", onPipeError);
+    child.stdout.on("error", onInputError);
+    output.on("error", onInputError);
     input.once("end", onEnd);
     input.once("close", onEnd);
     input.once("error", onInputError);
     parent.on("SIGINT", onInterrupt);
     parent.on("SIGTERM", onTerminate);
+    // A fresh pipe keeps Java's descriptor blocking; Node handles a slow MCP reader.
+    child.stdout.pipe(output, {end: false});
     if (input.readableEnded || input.destroyed) onEnd();
     else input.pipe(child.stdin);
   });
