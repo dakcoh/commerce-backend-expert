@@ -18,7 +18,7 @@ function startServer(jarPath, cacheDir, args = [], dependencies = {}) {
   const killTimeoutMs = dependencies.killTimeoutMs ?? 2_000;
   return new Promise((resolve, reject) => {
     // Keep the Unicode cache directory in cwd; Windows Java launchers can corrupt non-ASCII arguments.
-    const child = spawnChild("java", serverArguments(path.relative(cacheDir, jarPath), args), {
+    const child = spawnChild(dependencies.javaPath || "java", serverArguments(path.relative(cacheDir, jarPath), args), {
       stdio: ["pipe", "inherit", "inherit"], cwd: cacheDir, windowsHide: true,
     });
     let timer;

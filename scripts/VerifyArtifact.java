@@ -20,7 +20,7 @@ class VerifyArtifact {
                     try (var input = new DataInputStream(jar.getInputStream(entry))) {
                         if (input.readInt() != 0xcafebabe) throw new IllegalStateException("Invalid class: " + name);
                         input.readUnsignedShort();
-                        if (input.readUnsignedShort() != 61) throw new IllegalStateException("Java 17 bytecode required: " + name);
+                        if (input.readUnsignedShort() != 65) throw new IllegalStateException("Java 21 bytecode required: " + name);
                     }
                     classes++;
                 }
@@ -50,7 +50,7 @@ class VerifyArtifact {
         }
         if (classes == 0 || inventory.isEmpty() || sourceYaml.isEmpty() || !sourceYaml.equals(packagedYaml))
             throw new IllegalStateException("Missing classes, dependencies, or knowledge files");
-        var output = new StringBuilder("# version=" + args[1] + " classes=" + classes + " major=61 yaml=" + packagedYaml.size() + "\n");
+        var output = new StringBuilder("# version=" + args[1] + " classes=" + classes + " major=65 yaml=" + packagedYaml.size() + "\n");
         output.append("library\tsha256\n");
         inventory.forEach((name, hash) -> output.append(name).append('\t').append(hash).append('\n'));
         System.out.print(output);

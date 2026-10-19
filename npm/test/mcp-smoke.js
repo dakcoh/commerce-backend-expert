@@ -16,12 +16,21 @@ if (!jarPath) {
 
 const launcherRoot = process.env.MCP_LAUNCHER_ROOT;
 let cacheDir;
+const launcherEnv = {...process.env};
 if (launcherRoot) {
   cacheDir = fs.mkdtempSync(path.join(os.tmpdir(), "commerce-한글-smoke-"));
   const pkg = require(path.join(path.resolve(launcherRoot), "package.json"));
   const cachedJar = path.join(cacheDir, `context-engine-${pkg.version}.jar`);
   fs.copyFileSync(jarPath, cachedJar);
   fs.writeFileSync(`${cachedJar}.sha256`, sha256OfFile(cachedJar));
+  // Only extraction tools are on PATH: the packed launcher cannot use system Java.
+  const tools = path.join(cacheDir, "tools");
+  fs.mkdirSync(tools);
+  if (process.platform !== "win32") {
+    for (const name of ["tar", "gzip"]) fs.symlinkSync(fs.realpathSync(`/usr/bin/${name}`), path.join(tools, name));
+  }
+  launcherEnv.PATH = tools;
+  launcherEnv.JAVA_HOME = path.join(cacheDir, "no-system-java");
 }
 const launcherCode = `const cp=require('child_process'),spawn=cp.spawn;
   cp.spawn=(...args)=>{const child=spawn(...args);console.error('SMOKE_JAVA_PID:'+child.pid);return child;};
@@ -33,6 +42,7 @@ const child = spawn(launcherRoot ? process.execPath : "java", launcherRoot
   cwd: cacheDir || path.dirname(jarPath),
   stdio: ["pipe", "pipe", "pipe"],
   windowsHide: true,
+  env: launcherEnv,
 });
 
 const pending = new Map();
@@ -98,7 +108,7 @@ child.on("exit", (code, signal) => {
   if (!settled) finish(new Error(`MCP server exited early: code=${code}, signal=${signal}\n${stderr}`));
 });
 
-const timeout = setTimeout(() => finish(new Error(`MCP smoke test timed out\n${stderr}`)), 60_000);
+const timeout = setTimeout(() => finish(new Error(`MCP smoke test timed out\n${stderr}`)), launcherRoot ? 660_000 : 60_000);
 
 function finish(error) {
   if (settled) return;
@@ -300,7 +310,12 @@ function finish(error) {
     const recovery = data(await tool("search_knowledge", { query: "결제 웹훅 서명", topK: 1 }));
     assert.strictEqual(recovery.results[0].ruleId, "webhook-handling");
 
-    console.log(`MCP JSON-RPC smoke test passed: ${nextId - 1} requests, 4 tools, 3 resource reads, 2 prompt gets, ${invalidCalls.length + 3} error cases, JSON mode, bounded review, UTF-8, 200KB input, recovery`);
+    const guide = fs.readFileSync(path.resolve(__dirname, "../../docs/USAGE_SCENARIOS.md"), "utf8");
+    const examples = [...guide.matchAll(/```json\s*\n([\s\S]*?)\n```/g)].map(match => JSON.parse(match[1]));
+    assert.ok(examples.length > 0, "The usage guide must include callable examples");
+    for (const example of examples) data(await tool(example.name, example.arguments));
+
+    console.log(`MCP JSON-RPC smoke test passed: ${nextId - 1} requests, 4 tools, 3 resource reads, 2 prompt gets, ${invalidCalls.length + 3} error cases, ${examples.length} documentation examples, JSON mode, bounded review, UTF-8, 200KB input, recovery`);
     finish();
   } catch (error) {
     finish(error);

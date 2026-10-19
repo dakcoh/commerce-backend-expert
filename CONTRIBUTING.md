@@ -2,7 +2,7 @@
 
 사용법은 [README](README.md), 설치 문제는 [설치 가이드](npm/README.md)를 먼저 확인하세요. 이 문서는 코드·지식·문서를 고치거나 배포하는 사람을 위한 안내입니다.
 
-[개발 환경](#현재-개발-환경) · [지식 수정](#지식-고치기) · [검증](#로컬에서-검증하기) · [연동 계약](#서버-구조와-연동-계약) · [AI 평가](#실제-ai-평가) · [다음 개선](#다음-개선) · [릴리스](#게시-전-확인)
+[개발 환경](#현재-개발-환경) · [지식 수정](#지식-고치기) · [검증](#로컬에서-검증하기) · [런타임 정책](#전용-java-런타임-정책) · [연동 계약](#서버-구조와-연동-계약) · [AI 평가](#실제-ai-평가) · [다음 개선](#다음-개선) · [릴리스](#게시-전-확인)
 
 ## 사용자에게 유지할 약속
 
@@ -16,12 +16,13 @@
 
 | 항목 | 현재 기준 |
 |---|---|
-| 빌드 JDK | 17 toolchain, application major61 |
-| 실행 | Java17 이상. JDK17/21 대표 런타임 검증 |
+| 빌드 JDK | 21 toolchain, application major65 |
+| npm 실행 | 전용 Temurin JRE21 자동 준비, 시스템 Java 불필요 |
+| JAR 직접 실행 | Java21 이상 |
 | Node.js | 22 이상, 22/24 대표 검증 |
 | 서버 | STDIO, JAR 내부 YAML, 외부 HTTP 서버·DB·LLM 없음 |
 
-Java21 자동 준비와 21 기준 빌드 전환은 [다음 개선](#다음-개선)의 예정 작업입니다. 문서만 바꿔 현재 요구사항을 21로 표시하지 않습니다.
+Java21 기준 빌드와 전용 런타임 자동 준비를 적용했습니다. 시스템 Java를 사용하는 직접 JAR 실행과 npm 사용자의 자동 준비를 구분합니다.
 
 의존 방향 `adapter → application → core`를 유지하고 core에 Spring/MCP/Jackson·파일 I/O 의존성을 넣지 않습니다. 기존 4개 Tool로 해결할 수 있는지 먼저 확인하며, 정적 규칙마다 도구를 만들거나 Tomcat·Spring Web·Actuator를 추가하지 않습니다.
 
@@ -79,19 +80,40 @@ evidence:
 
 ## 로컬에서 검증하기
 
-PowerShell 예시입니다. `JAVA_HOME`은 자신의 JDK17 경로로 바꿉니다.
+아래 명령은 저장소 루트에서 PowerShell로 실행합니다. `JAVA_HOME`만 자신의 JDK21 경로로 바꾸세요. 이 JDK는 소스 빌드용이며 npm 사용자의 런타임 설치와는 별개입니다.
 
 ```powershell
-$env:JAVA_HOME="C:\path\to\jdk-17"
+$env:JAVA_HOME="C:\path\to\jdk-21"
 $env:Path="$env:JAVA_HOME\bin;$env:Path"
-.\gradlew.bat validateKnowledge bootJar --no-daemon
-
-cd npm
-npm.cmd test
-node test\mcp-smoke.js ..\build\libs\context-engine-0.2.0-SNAPSHOT.jar
-$env:npm_config_cache="..\.npm-cache"
-npm.cmd pack --dry-run
+.\gradlew.bat clean validateKnowledge bootJar "-Pversion=0.2.0" --no-daemon
+npm.cmd --prefix npm test
+$env:MCP_EXPECTED_VERSION="0.2.0"
+node npm/test/mcp-smoke.js build/libs/context-engine-0.2.0.jar
 ```
+
+전용 JRE의 실제 다운로드·동시 실행·오프라인 재사용·손상 복구는 다음 명령으로 확인합니다. 이 테스트는 자체 임시 캐시를 사용하고 자식 프로세스의 PATH에서 Java를 제거합니다. 공식 JRE를 한 번 다운로드하므로 네트워크와 디스크 공간이 필요합니다.
+
+```powershell
+node npm/test/runtime-smoke.js
+```
+
+게시 전에는 **로컬 패키지**로 검증합니다. 아직 게시하지 않은 작업본을 `npx commerce-context-mcp`로 검사하면 registry의 기존 패키지를 실행하게 됩니다.
+
+```powershell
+Push-Location npm
+npm.cmd pack --ignore-scripts --json --pack-destination ../build > ../build/npm-pack.json
+Pop-Location
+New-Item -ItemType Directory -Force build/packed | Out-Null
+tar -xzf build/commerce-context-mcp-0.2.0.tgz -C build/packed
+$env:MCP_LAUNCHER_ROOT=(Resolve-Path build/packed/package).Path
+node npm/test/mcp-smoke.js build/libs/context-engine-0.2.0.jar
+Remove-Item Env:\MCP_LAUNCHER_ROOT
+Remove-Item Env:\MCP_EXPECTED_VERSION
+```
+
+패키지 smoke는 빌드한 로컬 JAR를 임시 캐시에 넣고, 시스템 Java 없이 전용 JRE 준비·MCP 호출·한글 캐시 경로·EOF 후 종료를 확인합니다. 게시된 서버 JAR의 콜드 다운로드는 릴리스 workflow의 별도 검사입니다. `--ignore-scripts` 설치는 `npm.cmd install --ignore-scripts --no-audit --no-fund --prefix build/local-install ./build/commerce-context-mcp-0.2.0.tgz`로 확인할 수 있습니다.
+
+Linux/macOS에서는 JDK21을 설정한 뒤 `./gradlew`·`npm`을 사용합니다. 실제 OS 신호 테스트는 Linux/macOS에서 실행되며 Windows에서 생략한 결과와 구분합니다.
 
 | 바꾼 부분 | 확인할 내용 |
 |---|---|
@@ -99,8 +121,8 @@ npm.cmd pack --dry-run
 | 검색 | 기존 100질의, 새 표현·무관 질의, 순위와 결과 수. 기대 ID를 조용히 변경하지 않음 |
 | 검토·체크리스트 | 기존 review20/checklist10/trust15 사례, 조건·문항·부분 결과 보존 |
 | MCP | 4개 Tool·Resource3종·Prompt2종, 입력 오류 후 복구, 실제 JSON-RPC |
-| 실행기 | Java 검사·전송·동시 캐시 복구·부분 파일·EOF·자식 종료·npm pack 내용 |
-| 문서 | 명령·JSON·규칙 ID·로컬 링크, 현재와 예정 기능 구분 |
+| 실행기 | Java 없는 PATH·두 프로세스·오프라인 손상 복구·체크섬 보조 파일 유실·doctor 종료코드·EOF·자식 종료·npm pack 내용 |
+| 문서 | JSON 예시는 MCP smoke에서 실행. 규칙 70개 ID·로컬 링크·앵커와 작업본/게시본 구분 |
 
 `validateKnowledge`는 전체 Java 테스트에 연결돼 있습니다. 실제 JAR의 MCP smoke와 npm 검증도 따로 실행합니다. 정책 테스트는 실제 PG·은행·DB 경쟁/장애 검증이 아닙니다. 모델의 도구 선택·최종 답변·토큰 비교는 [실제 AI 평가](#실제-ai-평가)로 별도 수행합니다.
 
@@ -115,15 +137,15 @@ npm.cmd pack --dry-run
 | `get_*_checklist` | `get_checklist` |
 | 응답 `confidence` | `matchConfidence`. 검색 일치도이며 사실성 점수가 아님 |
 
-현재 작업본은 Node22 이상을 요구합니다. 다음 Java21 target 전환은 별도 호환성 변경이며, 구현·검증 후 새 버전의 요구사항에 명시합니다.
+0.2.0의 npm 실행은 Node22 이상만 준비하면 전용 JRE21을 자동으로 받습니다. npm 사용자는 `download`와 `doctor`로 준비 상태를 확인하며 JAVA_HOME·PATH의 Java 설정은 필요 없습니다. 소스를 빌드하는 개발자는 JAVA_HOME과 PATH를 JDK21로 설정합니다. Java17에서는 새 JAR를 직접 실행할 수 없습니다.
 
 ## 게시 전 확인
 
-일반 `master` push/PR은 CI, GitHub Release 발행은 검증 후 게시의 조건입니다. [.github/workflows/validate.yml](.github/workflows/validate.yml)이 공통 검사이며 Ubuntu17/Node22 빌드와 Ubuntu21/Node24·Windows17/Node22·Windows21/Node24에서 같은 산출물을 확인합니다.
+일반 `master` push/PR은 CI, GitHub Release 발행은 검증 후 게시의 조건입니다. [.github/workflows/validate.yml](.github/workflows/validate.yml)이 공통 검사이며 Ubuntu21/Node22 빌드와 Ubuntu21/Node24·Windows21/Node22·Windows21/Node24에서 같은 산출물을 확인합니다. 추가로 Windows ARM64·Ubuntu ARM64·macOS Intel/ARM64에서 전용 런타임을 검사합니다. 패키지 MCP smoke는 추출 도구만 PATH에 남기고 JAVA_HOME을 없는 경로로 바꿔 시스템 Java 없이 기동·종료를 확인합니다.
 
 - Java·지식·npm 회귀와 실제 MCP가 통과했는지 확인합니다.
-- npm/tag/manifest/serverInfo 버전과 application major61을 검사합니다.
-- JAR의 YAML·금지된 웹 서버 의존성, tarball의 10개 파일·내용·integrity, bundle 해시를 확인합니다.
+- npm/tag/manifest/serverInfo 버전과 application major65을 검사합니다.
+- JAR의 YAML·금지된 웹 서버 의존성, tarball의 13개 파일·내용·integrity, bundle 해시를 확인합니다.
 - 한글 캐시 경로와 EOF 후 Java 종료, Linux 신호 검증을 지원 환경에서 확인합니다.
 - 공개 문서와 실제 코드·게시할 파일이 일치하는지 확인합니다.
 
@@ -170,12 +192,28 @@ JAR는 npm 버전과 맞춰 HTTPS로 받고 SHA-256을 검증합니다. 체크�
 | 체크섬 | 전체15초·64KiB |
 | JAR | 시도당 전체120초·최대3회 |
 | 요청 무응답 | 15초, redirect도 전체 제한 공유 |
-| 잠금 대기·재획득 | 원래405초 예산 공유, 진행 중 전송 강제 취소 시각은 아님 |
+| JAR 잠금 대기·재획득 | 원래405초 예산 공유, 진행 중 전송 강제 취소 시각은 아님 |
+| 전용 JRE 준비 | 최초600초 예산 공유, 전송 시도당120초·최대3회·해제90초 |
+| doctor | 다운로드 없음, 런타임·JAR 캐시 둘 다 정상일 때 종료코드0, 나머지1 |
 | EOF·종료 | 생성한 Java의 stdin을 닫고 최대2초 유예, 신호는 해당 자식에 전달 |
 
 - 잠금은 PID·호스트·토큰으로 확인하고 죽은 로컬 소유자만 회수합니다. 불명확·외부 호스트·활성 소유자는 자동 삭제하지 않습니다.
 - 소유권을 잃으면 게시를 중단하고 남은 예산으로 재획득하거나 검증된 승자 캐시를 사용합니다. 중복 전송은 가능하며 공유 디스크의 엄격한 상호 배제를 보장하지 않습니다.
 - 임시 파일을 정리하고 신호 종료는 130/143, 일반 종료는 자식 코드를 유지합니다. 전원 중단·실행기 강제 종료에는 정리를 보장하지 않습니다.
+
+## 전용 Java 런타임 정책
+
+런타임 준비는 npm 설치 스크립트 없이 첫 실행과 `download`에서 수행합니다. 정책은 다음과 같습니다.
+
+- 배포판: Eclipse Temurin JRE **21.0.12.1+1**, [공식 릴리스](https://github.com/adoptium/temurin21-binaries/releases/tag/jdk-21.0.12.1%2B1). `npm/lib/runtime-manifest.json`에 OS/CPU별 URL·공식 SHA-256·크기를 고정합니다. 실행 중 latest 조회나 시스템 Java 재사용은 하지 않습니다.
+- 라이선스: [OpenJDK GPLv2 + Classpath/Assembly Exception](https://adoptium.net/about/) 및 런타임의 `legal/` 고지를 보존합니다. npm에는 런타임 바이너리를 넣지 않고 공식 공급처에서 받습니다.
+- 환경: Windows·macOS·Linux(glibc), x64/ARM64. musl/32비트는 명시적으로 거부합니다. OS `tar`를 사용하며 Windows에서는 System32의 tar를 직접 실행합니다. PATH·관리자 권한·시스템 JDK 설치를 변경하지 않습니다.
+- 캐시: 사용자 홈 `.commerce-context-mcp/runtimes/` 아래 버전·플랫폼별 저장. 고정 해시 확인 후 전체 archive 경로·링크를 사전 검사하고 임시 폴더에 해제합니다. 일반 파일로 향하는 내부 symlink만 허용합니다. 파일별 해시·실행 권한을 저장하고 매번 재검증합니다. 원본 압축 파일도 보관해 오프라인 손상 복구에 사용합니다.
+- 복구: 기존 PID/호스트/토큰 잠금을 재사용합니다. 최초 대기 예산600초를 소유권 변경 시에도 유지하며 전송은 시도당120초·최대3회, 해제는90초 이내입니다. 중단된 임시 파일·추출 폴더는 소유권 확인 후 정리합니다. 로그는 stderr이며 자식 Java는 절대 경로로 실행합니다.
+- 보안 업데이트: Temurin 보안/패치 릴리스를 확인하여 고정 버전과 6개 자산 해시·크기를 함께 변경하고, 단위 테스트·각 플랫폼의 실제 패키지 smoke 후 새 npm 버전으로 배포합니다. 구버전 캐시는 자동으로 사용하지 않으며 사용 중일 수 있으므로 자동 일괄 삭제하지 않습니다.
+- 로컬 측정(2026-10-19, Windows x64): JRE 다운로드49.0 MB, 압축 포함 캐시200.6 MB, 최초 준비2.6초·재검증0.4초. JAR는 별도이며 환경별 보장값은 아닙니다. Windows·Ubuntu x64에서 실제 실행과 복구를 확인하며, macOS·ARM64 실행은 릴리스 전 CI 통과로 확인합니다.
+
+`doctor`의 성공은 캐시 무결성 검사 결과입니다. `download`는 선택한 JRE 실행까지 확인하며, 전체 MCP smoke는 서버 연결·도구 호출·종료까지 확인합니다. 압축 원본의 고정 SHA-256을 기준으로 하므로 런타임 보조 `.sha256` 파일만 유실돼도 오프라인 재설치할 수 있습니다. 서버 JAR는 릴리스의 별도 `.sha256`이 필요합니다.
 
 ## 실제 AI 평가
 
@@ -226,20 +264,16 @@ npm.cmd run test:ai-eval -- "C:\path\reviewed-transcripts.jsonl"
 
 ## 다음 개선
 
-목표는 사용자가 JDK를 직접 설치하지 않아도 쓰는 것입니다. **Java21 자동 준비·21 기준 빌드 전환·플러그인 배포는 아직 미구현**이며 현재는 Node22 이상과 Java17 이상을 직접 준비합니다.
+목표는 사용자가 JDK를 직접 설치하지 않아도 쓰는 것입니다. **Java21 기준 빌드와 전용 JRE 자동 준비를 구현했습니다.** npm 사용자는 Node22 이상을 준비하면 됩니다. 플러그인 배포와 실제 AI 비교 평가는 후속 과제입니다.
 
 | 순서 | 사용자에게 달라질 점 | 완료 기준 |
 |---|---|---|
-| 1. 전용 런타임 | 최초 실행에 Java21 다운로드·검증·캐시, 이후 재사용 | Java 없는 환경의 기동, OS·CPU별 손상·중단·동시 실행 복구, PATH·관리자 권한 변경 없음 |
-| 2. 21 기준 통일 | 빌드·실행 요구사항을21로 명확히 안내 | 버전 검사·toolchain·artifact·CI·문서와 업그레이드 안내 일치, 기존 지식·MCP 계약 유지 |
+| 1. 전용 런타임 (구현) | 최초 실행에 Java21 다운로드·검증·캐시, 이후 재사용 | Java 없는 환경의 기동, OS·CPU별 손상·중단·동시 실행 복구, PATH·관리자 권한 변경 없음 |
+| 2. 21 기준 통일 (구현) | 빌드·실행 요구사항을21로 명확히 안내 | 버전 검사·toolchain·artifact·CI·문서와 업그레이드 안내 일치, 기존 지식·MCP 계약 유지 |
 | 3. 연결·평가 | 클라이언트 연결 안내·선택적 플러그인 포장, 실제 AI 답변 비교 | 클라이언트별 설치·활성화 확인, 실제 작업 기록·별도 검증용 표현 평가 |
 
-런타임 준비는 npm 설치 스크립트에만 의존하지 않고 첫 실행에도 확인합니다. 배포판·라이선스·고정 패치 버전·공급처·시스템 Java 재사용·지원 OS/CPU와 보안 업데이트 정책을 구현 전에 확정합니다. 다운로드·체크섬·안전한 압축 해제·실패 원인 안내·캐시 재사용·자식 종료를 검사하고 로그는 stderr로 보내 STDIO를 보존합니다. 최초 시간·용량은 실측 후 안내합니다.
-
-영향은 Java 검사·명령·자식 실행·다운로드/캐시·테스트·릴리스/CI입니다. 압축 경로 밖 쓰기를 차단하고 반복 복구가 대기 예산을 초기화하지 않도록 합니다.
-
-Java21 target의 새 JAR는 Java17 직접 실행 호환성을 바꾸므로 새 버전에 명시합니다. MCP가 검토하는 사용자 프로젝트까지21로 바꿀 필요는 없습니다. 전환 자체를 성능·정확도 개선으로 발표하지 않습니다.
+MCP가 검토하는 사용자 프로젝트까지 Java21로 바꿀 필요는 없습니다. 런타임 전환 자체를 지식 정확도·성능 개선으로 발표하지 않습니다.
 
 native MCP 메타데이터는 기존 도구 중복 없이 text 응답 호환성과 실제 이득을 확인한 뒤 검토합니다. 비공개 지식은 공개 저장소·배포 파일 밖으로 분리할 때 설계합니다. 영어 지원·국가별 필터·유료화·Private 전환은 이번 범위에 추가하지 않습니다.
 
-원격 CI·Linux 실행, 실제 AI 평가와 GitHub 다운로드·npm 게시/provenance는 로컬 통과와 별도 확인 대상입니다. 커밋·push·게시·배포는 별도 요청 없이 진행하지 않습니다.
+원격 CI·macOS/ARM64 실행, 실제 AI 평가와 게시된 GitHub JAR 다운로드·npm 게시/provenance는 Windows·Ubuntu 로컬 통과와 별도 확인 대상입니다. 커밋·push·게시·배포는 별도 요청 없이 진행하지 않습니다.

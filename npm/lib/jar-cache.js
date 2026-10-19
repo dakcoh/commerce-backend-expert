@@ -19,12 +19,12 @@ function cachePaths(info, cacheDir = path.join(os.homedir(), ".commerce-context-
   };
 }
 
-function verifyCached(paths) {
-  if (!fs.existsSync(paths.jarPath) || !fs.existsSync(paths.checksumPath)) {
+function verifyCached(paths, pinnedChecksum) {
+  if (!fs.existsSync(paths.jarPath) || (!pinnedChecksum && !fs.existsSync(paths.checksumPath))) {
     return { ok: false, reason: "missing" };
   }
   try {
-    const expected = parseChecksum(fs.readFileSync(paths.checksumPath, "utf8"));
+    const expected = pinnedChecksum || parseChecksum(fs.readFileSync(paths.checksumPath, "utf8"));
     const actual = verifyFile(paths.jarPath, expected);
     return { ok: true, actual };
   } catch (error) {
@@ -35,9 +35,10 @@ function verifyCached(paths) {
 async function ensureJar(info, options = {}) {
   const paths = cachePaths(info, options.cacheDir);
   fs.mkdirSync(paths.cacheDir, { recursive: true });
-  const cached = verifyCached(paths);
+  const check = () => verifyCached(paths, options.expectedChecksum);
+  const cached = check();
   if (cached.ok) {
-    console.error(`Using verified cached JAR: ${paths.jarPath}`);
+    console.error(`Using verified cached artifact: ${paths.jarPath}`);
     return paths.jarPath;
   }
 
@@ -45,9 +46,9 @@ async function ensureJar(info, options = {}) {
   const deadline = now() + waitMs;
   for (;;) {
     const lease = await acquireLock(paths, { ...options.lockOptions, now,
-      waitMs: Math.max(0, deadline - now()) });
+      waitMs: Math.max(0, deadline - now()), isComplete: () => check().ok });
     if (!lease) {
-      const completed = verifyCached(paths);
+      const completed = check();
       if (!completed.ok) {
         throw new Error(`Concurrent download did not produce a valid cache: ${completed.reason}`);
       }
@@ -55,11 +56,23 @@ async function ensureJar(info, options = {}) {
     }
 
     try {
-      const rechecked = verifyCached(paths);
+      const rechecked = check();
       if (rechecked.ok) {
         return paths.jarPath;
       }
       lease.assertOwned();
+      // A killed owner cannot run its finally block. Reclaim only our UUID temp-file format.
+      for (const name of fs.readdirSync(paths.cacheDir)) {
+        for (const destination of [paths.jarPath, paths.checksumPath]) {
+          const prefix = `${path.basename(destination)}.`;
+          const suffix = name.slice(prefix.length);
+          if (name.startsWith(prefix) && /^[a-f0-9-]{36}\.\d+\.tmp$/.test(suffix) &&
+              lease.abandonedTokens.includes(suffix.split(".")[0])) {
+            lease.assertOwned();
+            fs.unlinkSync(path.join(paths.cacheDir, name));
+          }
+        }
+      }
       await downloadAndVerify(info, paths, options, lease);
       return paths.jarPath;
     } catch (error) {
@@ -90,7 +103,7 @@ async function downloadAndVerify(info, paths, options, lease) {
       fs.writeFileSync(checksumTempPath, `${actual}  ${info.jarName}\n`, { encoding: "utf8" });
       lease.assertOwned();
       replaceFile(checksumTempPath, paths.checksumPath);
-      console.error(`Cached verified JAR: ${paths.jarPath}`);
+      console.error(`Cached verified artifact: ${paths.jarPath}`);
       return;
     } catch (error) {
       lastError = error;
@@ -146,8 +159,10 @@ function ownerIsDead(text) {
 }
 
 async function acquireLock(paths, { waitMs = LOCK_WAIT_MS, pollMs = 250,
-  now = Date.now, sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms)) } = {}) {
+  now = Date.now, sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms)),
+  isComplete = () => verifyCached(paths).ok } = {}) {
   const started = now();
+  const abandonedTokens = [];
   while (now() - started < waitMs) {
     let descriptor;
     try {
@@ -156,7 +171,7 @@ async function acquireLock(paths, { waitMs = LOCK_WAIT_MS, pollMs = 250,
       const text = JSON.stringify({ pid: process.pid, host: os.hostname(), token });
       fs.writeFileSync(descriptor, text);
       const owned = { text, stat: fs.fstatSync(descriptor) };
-      return { token,
+      return { token, abandonedTokens,
         assertOwned() {
           if (!sameLock(owned, readLock(paths.lockPath))) {
             const error = new Error(`Cache lock ownership lost: ${paths.lockPath}`);
@@ -185,11 +200,13 @@ async function acquireLock(paths, { waitMs = LOCK_WAIT_MS, pollMs = 250,
       if (!observed) continue;
       // shortcut: path checks are not OS lock CAS; use OS-backed locking for shared caches.
       if (ownerIsDead(observed.text) && sameLock(observed, readLock(paths.lockPath))) {
+        const abandoned = JSON.parse(observed.text).token;
+        if (abandoned) abandonedTokens.push(abandoned);
         try { fs.unlinkSync(paths.lockPath); }
         catch (unlinkError) { if (unlinkError.code !== "ENOENT") throw unlinkError; }
         continue;
       }
-      if (verifyCached(paths).ok) {
+      if (isComplete()) {
         return null;
       }
       await sleep(pollMs);

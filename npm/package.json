@@ -30,7 +30,7 @@
     "commerce-context-mcp": "bin/index.js"
   },
   "scripts": {
-    "test": "node test/run-tests.js && node --test test/launcher-boundaries.test.js test/release-boundaries.test.js test/process-boundaries.test.js test/release-checks.test.js",
+    "test": "node test/run-tests.js && node --test test/launcher-boundaries.test.js test/release-boundaries.test.js test/process-boundaries.test.js test/release-checks.test.js test/runtime.test.js",
     "test:mcp": "node test/mcp-smoke.js",
     "test:ai-eval": "node test/grade-ai-transcripts.js"
   },

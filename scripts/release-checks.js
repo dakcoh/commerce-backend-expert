@@ -7,7 +7,7 @@ const {parseChecksum, verifyFile} = require("../npm/lib/checksum");
 
 const root = path.resolve(__dirname, "..");
 const packageFiles = ["LICENSE", "README.md", "bin/index.js", "lib/checksum.js", "lib/commands.js",
-  "lib/jar-cache.js", "lib/java-runtime.js", "lib/release-client.js", "lib/server-process.js", "package.json"];
+  "lib/jar-cache.js", "lib/java-runtime.js", "lib/managed-runtime.js", "lib/runtime-archive.js", "lib/runtime-manifest.json", "lib/release-client.js", "lib/server-process.js", "package.json"];
 const wrapperSha256 = "7d3a4ac4de1c32b59bc6a4eb8ecb8e612ccd0cf1ae1e99f66902da64df296172";
 const distributionSha256 = "6f74b601422d6d6fc4e1f9a1ab6522f642c2fdcbc15ae33ebd30ba3d7198e854";
 const digest = (file, algorithm = "sha256", encoding = "hex") => crypto.createHash(algorithm).update(fs.readFileSync(file)).digest(encoding);

@@ -4,17 +4,19 @@ AI 코딩 도구에서 한국 이커머스와 Java/Spring의 설계 규칙을 �
 
 ## 실행 환경
 
-현재 작업본은 **Node.js 22 이상 + Java 17 이상 + 로컬 STDIO MCP 클라이언트**가 필요합니다. Java21도 현재 JAR를 실행할 수 있습니다.
+0.2.0은 **Node.js 22 이상 + 로컬 STDIO MCP 클라이언트**가 필요합니다. 사용자가 JDK/JRE를 설치하거나 JAVA_HOME을 설정할 필요가 없습니다. 시스템 Java가 있어도 사용하지 않습니다.
 
-**Java 자동 준비는 예정 기능입니다.** 현재는 Java를 직접 준비해야 하며, 이 작업본 안내와 이미 게시된 npm 버전의 동작은 다를 수 있습니다.
+**첫 실행에서 전용 Temurin JRE 21.0.12.1+1을 자동 준비합니다.** npm 설치 스크립트에 의존하지 않으므로 `--ignore-scripts` 설치도 지원합니다. 이 기능은 **0.2.0부터 제공**합니다. 이전 버전 사용자는 패키지를 갱신하세요. 소스에서 검증할 때는 [기여 가이드의 로컬 패키지 절차](https://github.com/dakcoh/commerce-context-mcp/blob/master/CONTRIBUTING.md#로컬에서-검증하기)를 따릅니다.
+
+구현 대상은 Windows·macOS·Linux(glibc)의 x64/ARM64입니다. 각 플랫폼의 실제 실행·복구·종료는 릴리스 CI에서 검사합니다. Node 프로세스의 CPU 아키텍처에 맞춥니다. Linux musl(Alpine)과 32비트는 지원하지 않습니다. 압축 해제용 `tar`가 필요하며 Windows 10/11·macOS에서는 기본 제공됩니다.
 
 ```bash
 node -v
-java -version
+npx -y commerce-context-mcp download
 npx -y commerce-context-mcp doctor
 ```
 
-`java: ok`이면 Java를 찾았습니다. `cached jar: missing`은 첫 실행 전에는 정상입니다.
+`doctor`는 다운로드 없이 전용 런타임과 서버 JAR의 캐시를 검사합니다. **두 캐시가 모두 검증되면 종료코드 0**, 미준비·손상 상태면 1입니다. 첫 실행 전 `not prepared`·`cached jar: missing`은 준비가 필요하다는 뜻이며, `download` 실행 후 다시 확인하세요. OS 라이브러리·실제 실행 가능 여부는 `download` 또는 서버 기동에서 확인합니다.
 
 ## 연결
 
@@ -53,7 +55,7 @@ claude mcp add --transport stdio commerce-context -- npx -y commerce-context-mcp
 
 > “commerce-context를 참고해 이 결제 웹훅의 서명 검증·중복 처리·장애 복구를 검토해줘. 적용 조건과 추가 확인할 사항도 알려줘.”
 
-첫 실행은 버전에 맞는 JAR·체크섬을 받아 SHA-256을 확인하고 사용자 홈의 `.commerce-context-mcp`에 저장합니다. 이후 검증된 캐시를 재사용합니다. 현재는 JAR만 자동으로 받고 Java는 직접 준비합니다.
+첫 실행은 버전에 맞는 JAR·체크섬을 받아 SHA-256을 확인하고 사용자 홈의 `.commerce-context-mcp`에 저장합니다. 이후 검증된 캐시를 재사용합니다. 전용 JRE는 같은 캐시의 `runtimes/`에 보관하며 고정 SHA-256으로 다운로드를 확인합니다. 압축을 풀 때 경로 탈출을 차단하고, 이후에는 파일별 해시를 검사해 손상된 설치를 복구합니다. 준비 완료 후에는 런타임·JAR 다운로드 없이 재실행할 수 있습니다.
 
 서버에 별도 LLM API 키·DB는 필요하지 않습니다. AI 사용료와 데이터 전송 범위는 연결한 클라이언트의 조건·설정에 따릅니다. 검색 일치도는 사실성 점수가 아니며, 검토 후보·결과 없음으로 결함 유무를 확정하지 마세요. `partial`·`analysisTruncated`가 참이면 범위를 좁혀 추가 확인합니다.
 
@@ -63,16 +65,20 @@ claude mcp add --transport stdio commerce-context -- npx -y commerce-context-mcp
 
 | 증상 | 다음 행동 |
 |---|---|
-| `Java 17 or newer is required` | Java 설치 후 새 터미널에서 확인하고 AI 앱도 같은 Java를 찾도록 설정 |
-| `npx`·`java`를 찾지 못함 | Node·Java 설치와 앱의 PATH·명령 실행 방식 확인 후 재시작 |
+| `Managed Java ... cannot run` | 지원 OS/CPU·OS 라이브러리를 확인하고 `download` 재실행. 잠긴 파일이 있으면 기존 MCP 종료 |
+| `Cannot extract Java runtime` | OS의 `tar` 설치·실행 가능 여부와 디스크 여유 공간 확인 |
+| `Unsupported Java runtime platform` | 지원되는 OS·CPU와 Node 아키텍처 확인 |
+| `npx`를 찾지 못함 | Node 설치와 앱의 PATH·명령 실행 방식 확인 후 재시작 |
 | 실행했는데 끝나지 않음 | MCP 입력 대기 상태일 수 있음. 클라이언트의 실행 명령으로 등록 |
 | 다운로드·체크섬 오류 | GitHub Release 자산 접근 확인 후 재실행. 검증을 끄지 않음 |
 | 잠금 시간 초과 | 같은 버전의 다른 다운로드 확인. 활성 잠금을 삭제하지 않음 |
 | AI가 도구를 쓰지 않음 | 도구 허용·연결 상태 확인 후 서버를 참고하도록 명시적으로 요청 |
 
-캐시 복구는 관련 MCP 클라이언트·다운로드 프로세스를 모두 종료한 뒤 해당 버전의 JAR·`.sha256`만 제거하고 `download`를 실행합니다. 잠금 시간 초과가 계속되면 활성 다운로드가 없는 것을 확인한 후 해당 버전 `.jar.lock`만 제거하세요. 다른 폴더·버전을 일괄 삭제하지 않습니다.
+우선 `download`를 다시 실행하세요. 손상된 런타임 파일은 캐시의 고정 해시 압축에서 복구하며, 압축까지 손상되면 다시 받습니다. 정상 압축이 남아 있으면 체크섬 보조 파일이 없어도 오프라인 런타임 복구가 가능합니다. 오프라인 실행에는 서버 JAR와 그 `.sha256`도 준비되어 있어야 합니다.
 
-## 명령과 다음 개선
+자동 복구가 실패하면 관련 MCP 클라이언트·다운로드 프로세스를 모두 종료한 뒤 `doctor`가 출력한 경로만 확인하세요. `runtime executable`은 실행 파일 경로이므로 그 파일이 속한 `runtimes/temurin-<버전>-<OS>-<CPU>` 폴더가 해당 설치입니다. 해당 버전 설치 폴더 또는 JAR·`.sha256`만 제거하고 `download`를 재실행합니다. 잠금 오류가 계속되면 활성 다운로드가 없는 것을 확인한 후 해당 버전의 `.lock`만 제거하세요. 다른 폴더·버전을 일괄 삭제하지 않습니다.
+
+## 명령과 다운로드 시점
 
 ```bash
 npx -y commerce-context-mcp --help
@@ -80,6 +86,10 @@ npx -y commerce-context-mcp --version
 npx -y commerce-context-mcp download
 ```
 
-`download`는 Java를 확인하고 JAR만 준비한 뒤 종료합니다. 인자 없이 실행하면 MCP 연결을 기다립니다. 전용 Java21 런타임 자동 준비와 플러그인 설치형 배포는 아직 미구현입니다.
+npm 설치는 실행기 파일만 설치하고, `download`는 전용 Java 런타임과 JAR를 준비한 뒤 종료합니다. 인자 없이 실행해도 같은 준비 과정을 거친 후 MCP 연결을 기다립니다. 플러그인 설치형 배포는 후속 과제입니다.
+
+Windows x64 로컬 측정(2026-10-19): JRE 다운로드 49.0 MB, 압축 파일을 포함한 런타임 캐시 약 200.6 MB, 최초 준비 약 2.6초, 재검증 약 0.4초였습니다. 서버 JAR 용량·시작 시간은 별도이며 네트워크·디스크에 따라 달라집니다.
+
+런타임은 [Eclipse Temurin 공식 배포](https://github.com/adoptium/temurin21-binaries/releases/tag/jdk-21.0.12.1%2B1)에서 받습니다. 프로젝트 코드는 MIT이며 런타임에는 [OpenJDK 라이선스](https://adoptium.net/about/)와 압축에 포함된 `legal/` 고지가 별도로 적용됩니다. 런타임 보안 업데이트는 고정 버전·체크섬을 갱신한 npm 릴리스로 제공합니다.
 
 [프로젝트 소개](https://github.com/dakcoh/commerce-context-mcp) · [업그레이드·개선 계획](https://github.com/dakcoh/commerce-context-mcp/blob/master/CONTRIBUTING.md) · [MIT](LICENSE)

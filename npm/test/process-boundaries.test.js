@@ -18,9 +18,9 @@ function fixture(mode, input = new PassThrough()) {
     else if(process.argv[1]==='echo') process.stdin.pipe(process.stdout);
     else {process.stdin.resume();process.stdin.on('end',()=>{});setInterval(()=>{},1000);}`;
   const completion = startServer(path.join(process.cwd(), "server.jar"), process.cwd(), ["--fixture"], {
-    stdin: input, process: parent, killTimeoutMs: 100,
+    stdin: input, process: parent, killTimeoutMs: 100, javaPath: path.resolve("private-runtime/bin/java"),
     spawn(command, args, options) {
-      assert.equal(command, "java");
+      assert.equal(command, path.resolve("private-runtime/bin/java"));
       assert.deepEqual(args, ["-Dfile.encoding=UTF-8", "-jar", "server.jar", "--fixture"]);
       assert.equal(options.cwd, process.cwd());
       assert.equal(options.windowsHide, true);

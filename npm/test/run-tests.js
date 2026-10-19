@@ -3,7 +3,7 @@ const fs = require("fs");
 const os = require("os");
 const path = require("path");
 const { spawnSync } = require("child_process");
-const { parseJavaMajor } = require("../lib/java-runtime");
+const { parseJavaMajor, javaStatus } = require("../lib/java-runtime");
 const { parseChecksum, sha256OfFile, verifyFile } = require("../lib/checksum");
 const { releaseInfo } = require("../lib/release-client");
 const { cachePaths, verifyCached, ensureJar } = require("../lib/jar-cache");
@@ -17,6 +17,17 @@ test("parses current and legacy Java versions", () => {
   assert.strictEqual(parseJavaMajor('openjdk version "17.0.19" 2026-04-21 LTS'), 17);
   assert.strictEqual(parseJavaMajor('java version "1.8.0_401"'), 8);
   assert.strictEqual(parseJavaMajor("unknown"), null);
+});
+
+test("checks an explicit Java executable and rejects missing or incompatible runtimes", () => {
+  const java = (major, status = 0) => command => {
+    assert.strictEqual(command, "/private/runtime/java");
+    return {status, stderr: `openjdk version "${major}.0.1"`};
+  };
+  for (const major of [8, 17, 20]) assert.strictEqual(javaStatus("/private/runtime/java", java(major)).ok, false);
+  for (const major of [21, 25]) assert.strictEqual(javaStatus("/private/runtime/java", java(major)).ok, true);
+  assert.strictEqual(javaStatus("/private/runtime/java", java(21, 1)).ok, false);
+  assert.strictEqual(javaStatus("/private/runtime/java", () => ({status: null, error: new Error("ENOENT")})).ok, false);
 });
 
 test("grades observed AI transcripts without treating missing human checks or metrics as passes", () => {

@@ -1,3 +1,5 @@
+const MIN_JAVA_MAJOR = 21;
+
 const { spawnSync } = require("child_process");
 
 function parseJavaMajor(output) {
@@ -12,24 +14,15 @@ function parseJavaMajor(output) {
   return Number.isFinite(parsed) ? parsed : null;
 }
 
-function javaStatus(spawn = spawnSync) {
-  const result = spawn("java", ["-version"], { encoding: "utf8" });
+function javaStatus(executable, spawn = spawnSync) {
+  const result = spawn(executable, ["-version"], { encoding: "utf8", timeout: 15_000, windowsHide: true });
   const output = `${result.stdout || ""}${result.stderr || ""}`;
   const major = parseJavaMajor(output);
   return {
-    ok: result.status === 0 && major !== null && major >= 17,
+    ok: result.status === 0 && major !== null && major >= MIN_JAVA_MAJOR,
     major,
     output: output.trim(),
   };
 }
 
-function assertJava() {
-  const status = javaStatus();
-  if (!status.ok) {
-    const suffix = status.output ? `\n${status.output}` : "";
-    throw new Error(`Java 17 or newer is required.${suffix}`);
-  }
-  return status;
-}
-
-module.exports = { parseJavaMajor, javaStatus, assertJava };
+module.exports = { parseJavaMajor, javaStatus };
