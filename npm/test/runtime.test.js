@@ -11,6 +11,7 @@ const {run} = require("../lib/commands");
 const {cachePaths} = require("../lib/jar-cache");
 const {releaseInfo} = require("../lib/release-client");
 const manifest = require("../lib/runtime-manifest.json");
+const {javaExecutable, javaDirectory} = require("../lib/java-runtime");
 const digest = value => createHash("sha256").update(value).digest("hex");
 
 function fixture(t) {
@@ -40,6 +41,43 @@ test("pins six platform archives and rejects unsupported CPUs", () => {
   }
   assert.throws(() => runtimeInfo("linux", "ia32"), /Unsupported/);
   assert.throws(() => runtimeInfo("freebsd", "x64"), /Unsupported/);
+});
+
+test("Unicode Java directories use a verified private filesystem alias", t => {
+  const f = fixture(t);
+  const home = path.join(f.dir, "한글-🧪");
+  fs.mkdirSync(path.join(home, "bin"), {recursive: true});
+  const executable = path.join(home, "bin", "java.exe");
+  fs.writeFileSync(executable, "test executable");
+  const alias = javaDirectory(home);
+  if (process.platform === "win32") {
+    assert.match(alias, /^[\x20-\x7e]+$/);
+    assert.equal(fs.realpathSync(alias), fs.realpathSync(home));
+    assert.equal(javaDirectory(home), alias);
+    assert.equal(javaExecutable(executable), path.join(alias, "bin", "java.exe"));
+    const root = path.join(os.tmpdir(), `.commerce-context-mcp-java${process.getuid ? `-${process.getuid()}` : ""}`);
+    assert.equal(path.dirname(alias), root);
+    assert.match(path.basename(alias), /^[a-f0-9]{64}$/);
+    fs.rmSync(alias, {force: true});
+    fs.symlinkSync(f.dir, alias, "junction");
+    try { assert.throws(() => javaDirectory(home), /verified installation/); }
+    finally { fs.rmSync(alias, {force: true}); }
+  } else {
+    assert.equal(alias, home);
+    assert.equal(javaExecutable(executable), executable);
+  }
+
+});
+
+test("the private cache directory can be selected without changing system Java", () => {
+  const previous = process.env.COMMERCE_CONTEXT_CACHE_DIR;
+  try {
+    process.env.COMMERCE_CONTEXT_CACHE_DIR = path.resolve("private-runtime-cache");
+    assert.equal(cachePaths({jarName: "server.jar"}).cacheDir, path.resolve("private-runtime-cache"));
+  } finally {
+    if (previous === undefined) delete process.env.COMMERCE_CONTEXT_CACHE_DIR;
+    else process.env.COMMERCE_CONTEXT_CACHE_DIR = previous;
+  }
 });
 
 test("concurrent first use publishes one runtime; warm use is offline", async t => {

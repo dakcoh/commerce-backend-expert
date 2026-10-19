@@ -21,7 +21,7 @@ function fixture(mode, input = new PassThrough()) {
     stdin: input, process: parent, killTimeoutMs: 100, javaPath: path.resolve("private-runtime/bin/java"),
     spawn(command, args, options) {
       assert.equal(command, path.resolve("private-runtime/bin/java"));
-      assert.deepEqual(args, ["-Dfile.encoding=UTF-8", "-jar", "server.jar", "--fixture"]);
+      assert.deepEqual(args, ["-Dfile.encoding=UTF-8", "-Xlog:disable", "-Xlog:all=warning:stderr", "-jar", "server.jar", "--fixture"]);
       assert.equal(options.cwd, process.cwd());
       assert.equal(options.windowsHide, true);
       child = spawn(process.execPath, ["-e", script, mode], {...options, stdio: ["pipe", "pipe", "pipe"]});
@@ -53,20 +53,25 @@ function fixture(mode, input = new PassThrough()) {
   };
 }
 
-test("a Korean cache directory is passed as cwd and kept out of the Java JAR argument", async () => {
+test("a Unicode cache uses a temporary ASCII JAR workspace and preserves the verified cache", async () => {
   const cacheDir = fs.mkdtempSync(path.join(os.tmpdir(), "commerce-한글-path-"));
   const input = new PassThrough();
+  fs.writeFileSync(path.join(cacheDir, "server.jar"), "test JAR");
   let invocation;
   try {
     const code = await startServer(path.join(cacheDir, "server.jar"), cacheDir, ["--fixture"], {
       stdin: input, process: new EventEmitter(),
       spawn(command, args, options) {
         invocation = {command, args, cwd: options.cwd};
+        assert.equal(fs.readFileSync(path.join(options.cwd, "server.jar"), "utf8"), "test JAR");
         return spawn(process.execPath, ["-e", "process.exit(0)"], options);
       },
     });
     assert.equal(code, 0);
-    assert.deepEqual(invocation, {command: "java", args: ["-Dfile.encoding=UTF-8", "-jar", "server.jar", "--fixture"], cwd: cacheDir});
+    assert.match(invocation.cwd, /^[\x20-\x7e]+$/);
+    assert.equal(fs.existsSync(invocation.cwd), false);
+    assert.equal(fs.readFileSync(path.join(cacheDir, "server.jar"), "utf8"), "test JAR");
+    assert.deepEqual(invocation, {command: "java", args: ["-Dfile.encoding=UTF-8", "-Xlog:disable", "-Xlog:all=warning:stderr", "-jar", "server.jar", "--fixture"], cwd: invocation.cwd});
   } finally {
     input.destroy();
     assert.equal(path.dirname(path.resolve(cacheDir)), path.resolve(os.tmpdir()));

@@ -134,6 +134,8 @@ test("replaces a corrupt versioned cache with a verified download", async () => 
 test("starts Java stdio with UTF-8 before the jar argument", () => {
   assert.deepStrictEqual(serverArguments("server.jar", ["--example=true"]), [
     "-Dfile.encoding=UTF-8",
+    "-Xlog:disable",
+    "-Xlog:all=warning:stderr",
     "-jar",
     "server.jar",
     "--example=true",
