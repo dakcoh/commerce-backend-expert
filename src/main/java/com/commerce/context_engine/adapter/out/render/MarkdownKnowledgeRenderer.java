@@ -6,7 +6,6 @@ import com.commerce.context_engine.core.model.SearchResult;
 import com.commerce.context_engine.core.port.KnowledgeRenderer;
 import org.springframework.stereotype.Component;
 
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -44,12 +43,7 @@ public class MarkdownKnowledgeRenderer implements KnowledgeRenderer {
 
     @Override
     public String renderChecklist(List<KnowledgeRule> rules) {
-        LinkedHashSet<String> seen = new LinkedHashSet<>();
         return rules.stream().filter(rule -> !rule.checklist().isEmpty()).map(rule -> {
-            List<String> items = rule.checklist().stream().filter(seen::add).toList();
-            if (items.isEmpty()) {
-                return "";
-            }
             return "## " + rule.title() + "\n"
                     + "- knowledgeId: `" + rule.id() + "`\n"
                     + "- status: `" + rule.status().name().toLowerCase().replace('_', '-') + "`\n"
@@ -57,7 +51,13 @@ public class MarkdownKnowledgeRenderer implements KnowledgeRenderer {
                     + "- owner: `" + rule.governance().owner() + "`\n"
                     + "- verified-by: `" + optional(rule.governance().verifiedBy()) + "`\n"
                     + "- last-reviewed: `" + (rule.lastReviewedAt() == null ? "not-recorded" : rule.lastReviewedAt()) + "`\n"
-                    + items.stream().map(item -> "- [ ] " + item).collect(Collectors.joining("\n"));
+                    + "### 적용 조건\n" + bullets(rule.applicability().appliesWhen()) + "\n"
+                    + (rule.applicability().doesNotApplyWhen().isEmpty() ? "" :
+                        "### 적용하지 않는 조건\n" + bullets(rule.applicability().doesNotApplyWhen()) + "\n")
+                    + "### 전제와 범위\n- jurisdiction: `" + rule.applicability().jurisdiction() + "`\n"
+                    + bullets(rule.applicability().assumptions()) + "\n"
+                    + "### 검토 문항\n"
+                    + rule.checklist().stream().map(item -> "- [ ] " + item).collect(Collectors.joining("\n"));
         }).filter(value -> !value.isBlank()).collect(Collectors.joining("\n\n"));
     }
 

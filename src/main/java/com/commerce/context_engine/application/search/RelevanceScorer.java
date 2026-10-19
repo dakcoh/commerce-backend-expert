@@ -60,11 +60,13 @@ public class RelevanceScorer {
             Set<String> fields,
             Set<String> matchedTerms
     ) {
-        if (!matchTerms(value, query, matchedTerms)) {
+        Set<String> fieldTerms = new LinkedHashSet<>();
+        if (!matchTerms(value, query, fieldTerms)) {
             return 0;
         }
         fields.add(name);
-        return weight;
+        matchedTerms.addAll(fieldTerms);
+        return fieldWeight(weight, fieldTerms, query);
     }
 
     private static double scoreList(
@@ -75,9 +77,10 @@ public class RelevanceScorer {
             Set<String> fields,
             Set<String> matchedTerms
     ) {
+        Set<String> fieldTerms = new LinkedHashSet<>();
         boolean matched = false;
         for (String value : values) {
-            if (matchTerms(value, query, matchedTerms)) {
+            if (matchTerms(value, query, fieldTerms)) {
                 matched = true;
             }
         }
@@ -85,7 +88,13 @@ public class RelevanceScorer {
             return 0;
         }
         fields.add(name);
-        return weight;
+        matchedTerms.addAll(fieldTerms);
+        return fieldWeight(weight, fieldTerms, query);
+    }
+
+    private static double fieldWeight(double weight, Set<String> terms, QueryNormalizer.NormalizedQuery query) {
+        // A single broad alias must not receive the same weight as several topic terms.
+        return query.terms().isEmpty() ? weight : weight * terms.size() / query.terms().size();
     }
 
     private static boolean containsPhrase(String value, QueryNormalizer.NormalizedQuery query) {

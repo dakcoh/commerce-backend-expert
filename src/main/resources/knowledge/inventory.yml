@@ -6,75 +6,92 @@ rules:
     - id: stock-reservation
       category: lifecycle
       title: "재고 예약/확정/복구 단계 분리"
-      summary: "재고 차감은 예약→확정→복구 3단계로 처리해야 오버셀링을 막을 수 있다"
+      summary: "재고 예약→확정→복구와 DB 조건부 즉시 차감은 선택 가능한 재고 모델이며, 동시 주문과 실패 복구에서 수량을 보존해야 한다"
+      applicability:
+        applies-when:
+          - "주문·결제와 재고 확보를 연결하고 실패·취소·만료 시 수량을 조정한다."
+        assumptions:
+          - "재고 모델에 따라 수량의 의미와 확보·확정·복구 시점을 먼저 정의한다."
       guidance:
-        - "예약(Reserve): 주문 요청 시 가용 재고를 임시 잠금"
-        - "확정(Confirm): 결제 성공 시 실제 차감"
-        - "복구(Release): 결제 실패/취소 시 예약 해제"
+        - "예약형 예시 — 예약(Reserve): 주문 요청 시 가용 수량을 원자적으로 확보하고 예약 만료 시각과 상태를 기록한다"
+        - "예약형 예시 — 확정(Confirm): 선택한 확정 시점에 예약 상태와 재고를 같은 로컬 트랜잭션에서 반영한다"
+        - "예약형 예시 — 복구(Release): 결제 실패·취소·만료에 해당하는 예약만 한 번 해제한다"
+        - "즉시 차감형 대안: DB 조건부 UPDATE로 판매 가능 수량을 원자적으로 차감하고, 실패·취소 시 같은 업무에 대한 보상을 한 번만 반영한다"
+        - "예약 만료와 결제 성공이 경합하면 상태 CAS 또는 버전 검증으로 중복 확정·복구를 막고, 늦은 승인 결과는 주문·결제 상태와 대사한다"
       avoid-patterns:
-        - "예약 단계 없이 바로 stock - quantity 하면 결제 실패 시 재고 미복구 및 오버셀링 발생"
+        - "재고 모델의 수량 검증·원자적 확보·실패 보상 없이 애플리케이션 선조회 후 차감"
+        - "예약 컬럼이나 예약 단계의 유무만으로 재고 설계의 안전성을 판단"
       checklist:
-        - "재고 예약 단계 없이 바로 차감하지 않았는가?"
-        - "결제 실패 시 재고 복구 로직이 존재하는가?"
+        - "선택한 재고 모델에서 동시 주문에도 판매 가능 수량을 초과하지 않는가?"
+        - "실패·취소·만료 시 해당 업무의 수량 복구가 한 번만 반영되는가?"
+        - "예약형이라면 만료와 결제 성공의 경합을 상태 전이와 대사로 처리하는가?"
       tags: [reservation, lifecycle, overselling]
+      aliases: [예약 해제, 예약 확정, 예약 만료]
 
     - id: available-stock-query
       category: lifecycle
       title: "가용 재고 조회 패턴"
-      summary: "재고 판매 가능 여부는 total_quantity가 아닌 (total_quantity - reserved_quantity) 기준으로 확인해야 한다"
+      summary: "판매 가능 수량은 선택한 재고 모델의 수량 정의를 따르며, 예약형의 total_quantity - reserved_quantity와 DB 조건부 즉시 차감형을 구분한다"
+      applicability:
+        applies-when:
+          - "재고 모델의 수량 정의에 따라 조회와 주문 시점의 확보 조건을 설계한다."
+        assumptions:
+          - "예약형 예시의 total_quantity는 확정 차감 기준 수량이고 reserved_quantity는 미확정 예약 수량이다."
+          - "안전재고·할당·검수 대기와 실물 출고를 반영하는 시점은 모델별로 정의한다."
       guidance:
-        - "스키마: stock 테이블에 total_quantity(실물 재고)와 reserved_quantity(예약 중인 수량) 컬럼 분리"
-        - "가용 재고 조회: WHERE (total_quantity - reserved_quantity) >= :requested — 예약 중인 재고 제외"
-        - "예약 시: reserved_quantity += requested (원자적 업데이트, 동시성 제어 적용)"
-        - "결제 성공 확정 시: total_quantity -= confirmed, reserved_quantity -= confirmed"
-        - "결제 실패/취소 복구 시: reserved_quantity -= released (total_quantity 변경 없음)"
-        - "재고 조회 로직: SELECT ... WHERE id = ? AND (total_quantity - reserved_quantity) >= ? FOR UPDATE"
+        - "예약형 예시의 가용 재고: total_quantity - reserved_quantity; 안전재고 등을 별도 관리하면 제외 항목을 추가하고 중복 차감하지 않는다"
+        - "예약형은 reserved_quantity를 늘릴 때도 가용 수량 조건을 같은 원자적 갱신에 포함하거나, 같은 트랜잭션의 SELECT ... FOR UPDATE로 보호한다"
+        - "예약형에서 결제 성공을 확정 차감 시점으로 선택했다면 total_quantity와 reserved_quantity를 함께 감소시키며 같은 확정을 중복 반영하지 않는다"
+        - "위 예약형의 실패·취소 복구는 reserved_quantity만 감소시킨다. 즉시 차감형의 보상은 이미 차감한 수량을 복구한다"
+        - "DB 조건부 즉시 차감형 예시: UPDATE stock SET quantity = quantity - :requested WHERE id = :id AND :requested > 0 AND quantity >= :requested; 영향받은 행 수로 확보 성공 여부를 확인한다"
+        - "조회는 안내용 스냅샷이다. 양수 수량 검증과 주문 시점의 원자적 확보가 별도로 필요하며, 다중 SKU·창고는 업무 단위와 잠금 순서를 정의한다"
       avoid-patterns:
-        - "stock.quantity >= requestedQuantity 단순 비교 — 예약 중인 재고를 무시, 오버셀링 발생"
-        - "reserved_quantity 컬럼 없는 단일 quantity 스키마 — 예약과 확정을 구분 불가"
-        - "total_quantity를 예약 시점에 바로 차감 — 결제 실패 시 복구 누락 위험"
+        - "예약형에서 예약 중인 수량을 무시한 조회 또는 차감"
+        - "단일 quantity를 쓰는 즉시 차감형에 예약형 수량식을 다시 적용해 이중 차감"
+        - "애플리케이션의 수량 비교만 믿고 동시 주문의 원자적 갱신과 제약을 생략"
       checklist:
-        - "재고 조회 시 (total - reserved) 기준으로 확인하는가?"
-        - "결제 성공 확정 후 total_quantity와 reserved_quantity가 모두 감소하는가?"
-        - "결제 실패 복구 시 reserved_quantity만 감소하는가? (total_quantity 변경 없음)"
+        - "선택한 재고 모델에서 수량의 의미와 확보·확정·복구 시점이 일관되는가?"
+        - "예약형이라면 예약·안전재고 등 제외 항목을 반영하고 중복 차감하지 않는가?"
+        - "조회 뒤 수량이 바뀌어도 주문 시점의 원자적 확보로 초과 판매를 막는가?"
       tags: [lifecycle, available-stock, reserved-quantity, overselling]
-      aliases: [오버셀링, 판매 초과, overselling, sellable stock]
+      aliases: [오버셀링, 판매 초과, overselling, sellable stock, 음수 재고, 재고 마이너스]
 
     - id: concurrency-optimistic
       category: concurrency
       title: "낙관락 (Optimistic Lock)"
-      summary: "충돌이 드문 환경에서 DB 락 없이 재고 동시성을 제어하는 방식"
+      summary: "충돌이 드문 환경에서 버전 비교로 갱신 손실을 감지하고 제한된 재시도로 재고 동시성을 제어하는 방식"
       guidance:
         - "@Version private Long version; 으로 적용"
         - "충돌이 드문 경우(재고 여유, 동시 주문 적음)에 사용"
-        - "장점: DB 락 없음, 성능 우수"
-        - "충돌 시 재시도 로직 필요 — 재시도 횟수에 반드시 상한(예: 3회) 설정"
+        - "명시적 비관락을 먼저 잡지 않고 버전으로 충돌을 감지한다. UPDATE 과정의 DB 잠금까지 없어지는 것은 아니며 성능은 경합과 DB 동작에 따라 측정한다"
+        - "재시도 가능한 충돌은 새 트랜잭션에서 다시 조회하고 backoff와 상한(예: 3회)을 적용한다. 재고 부족 같은 확정 거부는 충돌 재시도와 구분한다"
       avoid-patterns:
         - "재시도 횟수 제한 없으면 무한 루프 위험"
         - "충돌이 잦은 환경(한정 수량, 동시 요청 폭증)에 낙관락 적용 시 재시도 폭증"
       checklist:
         - "재시도 횟수에 상한이 있는가?"
-        - "동시 요청에 대한 동시성 제어가 적용됐는가? (낙관락/비관락/분산락 중 선택)"
+        - "동시 요청에 DB 조건부 갱신·제약 또는 적절한 락 등 동시성 제어가 적용됐는가?"
       tags: [concurrency, optimistic-lock]
       aliases: [lost update, 갱신 손실, version conflict, 낙관적 락]
 
     - id: concurrency-pessimistic
       category: concurrency
       title: "비관락 (Pessimistic Lock)"
-      summary: "충돌이 잦은 환경(한정 수량)에서 충돌을 원천 차단하는 동시성 제어 방식"
+      summary: "충돌이 잦은 단일 DB 자원의 변경을 트랜잭션 잠금으로 직렬화하고 대기·교착상태·커넥션 점유를 관리하는 방식"
       guidance:
         - "@Lock(LockModeType.PESSIMISTIC_WRITE) 로 적용"
         - "충돌이 잦은 경우(인기 상품, 한정 수량)에 사용"
-        - "장점: 충돌 원천 차단"
-        - "반드시 타임아웃 설정 — 락 점유 시간 무한정 방지"
+        - "잠금으로 보호한 트랜잭션 범위의 동시 변경을 직렬화한다. 외부 작업이나 잠금 범위 밖의 경쟁까지 해결하지는 않는다"
+        - "DB별 락 대기·SQL·트랜잭션·네트워크 타임아웃을 구분하고 장기 점유를 제한한다"
+        - "일반적인 DB 행 잠금은 트랜잭션 또는 세션 종료로 해제되지만, 연결 단절 감지 지연과 미완료 트랜잭션은 장기 대기를 만들 수 있다"
         - "락 획득 순서를 일관되게 유지해 데드락 방지"
       avoid-patterns:
-        - "타임아웃 미설정 — 서버 장애 시 락 영구 점유"
+        - "락 대기와 미완료 트랜잭션을 방치해 잠금·DB 커넥션을 장시간 점유"
         - "락 순서 불일치로 데드락 발생"
         - "DB 커넥션 점유 과다로 커넥션 풀 고갈"
       checklist:
         - "비관락 사용 시 타임아웃 설정과 데드락 방어가 있는가?"
-        - "동시 요청에 대한 동시성 제어가 적용됐는가? (낙관락/비관락/분산락 중 선택)"
+        - "동시 요청에 DB 조건부 갱신·제약 또는 적절한 락 등 동시성 제어가 적용됐는가?"
       tags: [concurrency, pessimistic-lock, deadlock]
 
     - id: concurrency-distributed
@@ -102,7 +119,7 @@ rules:
         - "Redis 락 획득만으로 DB 불변식이 보장된다고 가정하고 조건부 갱신·제약 조건을 제거"
       checklist:
         - "분산락 사용 시 TTL이 설정됐는가?"
-        - "동시 요청에 대한 동시성 제어가 적용됐는가? (낙관락/비관락/분산락 중 선택)"
+        - "동시 요청에 DB 조건부 갱신·제약 또는 적절한 락 등 동시성 제어가 적용됐는가?"
       tags: [concurrency, distributed-lock, redis, msa]
       aliases: [fencing token, 락 만료, lock expiry, redis lock]
 
@@ -111,9 +128,10 @@ rules:
       title: "멱등성 설계 (중복 요청 방어)"
       summary: "네트워크 재시도로 인한 재고 이중 차감을 idempotency key로 방어한다"
       guidance:
-        - "요청마다 idempotency key 부여: \"order:{orderId}:inventory:{productId}\""
+        - "같은 논리적 재고 작업의 재전송에는 같은 idempotency key를 사용한다. 예: 주문 라인·작업 종류·시도 식별자를 구분하는 업무키"
         - "이미 처리된 키면 저장된 결과를 그대로 반환"
-        - "키는 TTL 24시간으로 저장"
+        - "보존 기간은 재시도·이벤트 재전달·운영 재처리 창에 맞춘다. 캐시 TTL 만료 뒤에도 영속 업무키와 처리 이력으로 같은 효과의 중복 반영을 막는다"
+        - "키와 요청 수량 등 payload를 연결해 같은 키의 다른 요청을 거부하고, 처리중·완료·확정 실패 상태를 구분한다"
       avoid-patterns:
         - "멱등성 없으면 네트워크 재시도 시 재고 이중 차감 발생"
       checklist:
@@ -124,17 +142,19 @@ rules:
     - id: saga-pattern
       category: consistency
       title: "Saga 패턴 (주문-결제-재고 정합성)"
-      summary: "MSA 분산 환경에서 @Transactional 대신 Saga/Outbox 패턴으로 데이터 정합성을 보장한다"
+      summary: "여러 로컬 트랜잭션에 걸친 작업은 Saga 보상과 Outbox 발행·소비자 멱등성·대사를 조합해 실패 후 정합성을 회복한다"
       guidance:
-        - "정상 흐름: 주문 생성 → 재고 예약 → 결제 요청 → 결제 성공 → 재고 확정 차감 → 주문 완료"
-        - "실패 보상(Compensation): 결제 실패 → 재고 예약 해제 → 주문 취소"
-        - "재고 예약 실패 → 주문 취소 (결제 미진행)"
-        - "Outbox 패턴으로 이벤트 유실 없이 보상 트랜잭션 보장"
+        - "단일 DB 로컬 트랜잭션으로 충분한지 먼저 확인한다. MSA라는 배포 형태만으로 Saga를 요구하지 않는다"
+        - "예약형 정상 흐름 예시: 주문 생성 → 재고 예약 → 결제 요청 → 결제 성공 → 재고 확정 차감 → 주문 완료; 즉시 차감형은 해당 재고 모델의 확보·보상으로 대체한다"
+        - "실패 보상(Compensation) 예시: 결제 실패 확정 → 해당 재고 작업의 해제 또는 복구 → 주문 취소. 결제 응답 유실은 실패로 단정하지 않고 대사한다"
+        - "Outbox는 로컬 상태와 발행할 이벤트 기록을 같은 로컬 트랜잭션에 저장하고 별도 발행자가 재시도하도록 한다. 업무 보상 완료를 자동 보증하지 않는다"
+        - "소비자는 at-least-once 전달을 전제로 멱등하게 처리하고, 보상 재시도·실패 상태·대사·운영자 개입 경로를 기록한다"
       avoid-patterns:
-        - "MSA 환경에서 @Transactional로는 분산 정합성 보장 불가"
+        - "로컬 @Transactional만으로 외부 시스템 변경까지 원자적으로 롤백된다고 가정"
         - "보상 트랜잭션 정의 누락 시 결제 실패 후 재고가 예약된 채 방치"
+        - "Outbox 발행 성공을 소비자 처리 또는 업무 보상 완료와 동일하게 취급"
       checklist:
-        - "MSA 구조라면 Saga 보상 트랜잭션이 정의됐는가?"
+        - "여러 로컬 트랜잭션에 걸친 작업이라면 멱등 보상·재시도·대사 경로가 있는가?"
         - "재고 부족 시 적절한 예외 처리와 메시지가 있는가?"
       tags: [saga, consistency, distributed-transaction, outbox]
 
@@ -143,14 +163,14 @@ rules:
       title: "재고 구현 체크리스트"
       summary: "재고 구현 완료 후 반드시 점검할 체크리스트"
       checklist:
-        - "재고 조회 시 (total - reserved) 기준으로 가용 재고를 확인하는가?"
-        - "재고 예약 단계 없이 바로 차감하지 않았는가?"
-        - "결제 실패 시 재고 복구 로직이 존재하는가?"
-        - "동시 요청에 대한 동시성 제어가 적용됐는가? (낙관락/비관락/분산락 중 선택)"
+        - "선택한 재고 모델에서 동시 주문에도 판매 가능 수량을 초과하지 않는가?"
+        - "선택한 재고 모델에서 수량의 의미와 확보·확정·복구 시점이 일관되는가?"
+        - "실패·취소·만료 시 해당 업무의 수량 복구가 한 번만 반영되는가?"
+        - "동시 요청에 DB 조건부 갱신·제약 또는 적절한 락 등 동시성 제어가 적용됐는가?"
         - "재고 차감 API에 멱등성 키가 적용됐는가?"
         - "비관락 사용 시 타임아웃 설정과 데드락 방어가 있는가?"
         - "분산락 사용 시 TTL이 설정됐는가?"
-        - "MSA 구조라면 Saga 보상 트랜잭션이 정의됐는가?"
+        - "여러 로컬 트랜잭션에 걸친 작업이라면 멱등 보상·재시도·대사 경로가 있는가?"
         - "재고 부족 시 적절한 예외 처리와 메시지가 있는가?"
       tags: [checklist, pitfalls, review]
       aliases: [재고 체크리스트, 재고 점검표, inventory checklist]

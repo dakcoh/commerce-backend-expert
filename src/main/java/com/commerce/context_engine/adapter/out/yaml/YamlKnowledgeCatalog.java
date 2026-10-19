@@ -7,6 +7,7 @@ import com.commerce.context_engine.core.model.KnowledgeGovernance;
 import com.commerce.context_engine.core.model.RuleSeverity;
 import com.commerce.context_engine.core.model.RuleStatus;
 import com.commerce.context_engine.core.port.KnowledgeCatalog;
+import com.fasterxml.jackson.core.StreamReadFeature;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.dataformat.yaml.YAMLMapper;
 import jakarta.annotation.PostConstruct;
@@ -33,6 +34,7 @@ public class YamlKnowledgeCatalog implements KnowledgeCatalog {
     private static final Pattern RULE_ID = Pattern.compile("[a-z0-9]+(?:-[a-z0-9]+)*");
     private final YAMLMapper mapper = YAMLMapper.builder()
             .findAndAddModules()
+            .enable(StreamReadFeature.STRICT_DUPLICATE_DETECTION)
             .enable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)
             .build();
     private final PathMatchingResourcePatternResolver resolver = new PathMatchingResourcePatternResolver();
@@ -44,17 +46,27 @@ public class YamlKnowledgeCatalog implements KnowledgeCatalog {
     @PostConstruct
     void load() {
         try {
-            Resource[] resources = resolver.getResources(LOCATION);
-            List<Resource> ordered = java.util.Arrays.stream(resources)
-                    .sorted(Comparator.comparing(resource -> Optional.ofNullable(resource.getFilename()).orElse("")))
-                    .toList();
-            if (ordered.isEmpty()) {
-                throw new IllegalStateException("No knowledge YAML found at " + LOCATION);
-            }
+            load(resolver.getResources(LOCATION));
+        }
+        catch (IOException exception) {
+            throw new IllegalStateException("Failed to resolve knowledge YAML at " + LOCATION, exception);
+        }
+    }
 
-            List<KnowledgeRule> loaded = new ArrayList<>();
-            Set<String> loadedDomains = new LinkedHashSet<>();
-            for (Resource resource : ordered) {
+    void load(Resource... resources) {
+        List<Resource> ordered = java.util.Arrays.stream(resources)
+                .sorted(Comparator.comparing(resource -> Optional.ofNullable(resource.getFilename()).orElse("")))
+                .toList();
+        if (ordered.isEmpty()) {
+            throw new IllegalStateException("No knowledge YAML found at " + LOCATION);
+        }
+
+        List<KnowledgeRule> loaded = new ArrayList<>();
+        Set<String> loadedDomains = new LinkedHashSet<>();
+        Map<String, String> sourceFiles = new LinkedHashMap<>();
+        for (Resource resource : ordered) {
+            String name = Optional.ofNullable(resource.getFilename()).orElse(resource.getDescription());
+            try {
                 KnowledgeYamlDocument document;
                 try (var input = resource.getInputStream()) {
                     document = mapper.readValue(input, KnowledgeYamlDocument.class);
@@ -64,18 +76,23 @@ public class YamlKnowledgeCatalog implements KnowledgeCatalog {
                     throw new IllegalStateException("Duplicate knowledge domain: " + document.domain());
                 }
                 for (KnowledgeYamlDocument.RuleDocument rule : document.rules()) {
-                    loaded.add(map(document.domain(), document.governance(), rule));
+                    KnowledgeRule mapped = map(document.domain(), document.governance(), rule);
+                    String previous = sourceFiles.putIfAbsent(mapped.id(), name);
+                    if (previous != null) {
+                        throw new IllegalStateException("Duplicate rule id: " + mapped.id() + " also in " + previous);
+                    }
+                    loaded.add(mapped);
                 }
             }
-            validateRules(loaded);
-            this.rules = List.copyOf(loaded);
-            this.byId = loaded.stream().collect(java.util.stream.Collectors.toUnmodifiableMap(
-                    KnowledgeRule::id, rule -> rule));
-            this.domains = java.util.Collections.unmodifiableSet(new LinkedHashSet<>(loadedDomains));
+            catch (IOException | RuntimeException exception) {
+                throw new IllegalStateException(name + ": " + exception.getMessage(), exception);
+            }
         }
-        catch (IOException exception) {
-            throw new IllegalStateException("Failed to load knowledge YAML", exception);
-        }
+        validateRules(loaded, sourceFiles);
+        this.rules = List.copyOf(loaded);
+        this.byId = loaded.stream().collect(java.util.stream.Collectors.toUnmodifiableMap(
+                KnowledgeRule::id, rule -> rule));
+        this.domains = java.util.Collections.unmodifiableSet(new LinkedHashSet<>(loadedDomains));
     }
 
     @Override
@@ -109,34 +126,118 @@ public class YamlKnowledgeCatalog implements KnowledgeCatalog {
             KnowledgeYamlDocument.GovernanceDocument governance,
             KnowledgeYamlDocument.RuleDocument source
     ) {
-        KnowledgeYamlDocument.ReviewDocument review = source.review();
-        LocalDate reviewedAt = review == null ? null : parseDate(review.lastReviewedAt(), null);
-        RuleStatus status = inferStatus(source);
-        Map<String, List<String>> sections = new LinkedHashMap<>();
-        add(sections, "guidance", source.guidance());
-        add(sections, "invariants", source.invariants());
-        add(sections, "workflow", source.workflow());
-        add(sections, "technical-guidance", source.technicalGuidance());
-        add(sections, "spring-guidance", source.springGuidance());
-        add(sections, "avoid-patterns", source.avoidPatterns());
-        add(sections, "failure-scenarios", source.failureScenarios());
+        try {
+            validateSource(source);
+            KnowledgeYamlDocument.ReviewDocument review = source.review();
+            LocalDate reviewedAt = review == null ? null : parseDate(review.lastReviewedAt(), null);
+            RuleStatus status = inferStatus(source);
+            Map<String, List<String>> sections = new LinkedHashMap<>();
+            add(sections, "guidance", source.guidance());
+            add(sections, "invariants", source.invariants());
+            add(sections, "workflow", source.workflow());
+            add(sections, "technical-guidance", source.technicalGuidance());
+            add(sections, "spring-guidance", source.springGuidance());
+            add(sections, "avoid-patterns", source.avoidPatterns());
+            add(sections, "failure-scenarios", source.failureScenarios());
 
-        String content = firstNonBlank(source.content(), source.businessContext());
-        String rationale = firstNonBlank(source.rationale(), source.businessContext(), source.summary());
-        Applicability applicability = mapApplicability(domain, source.category(), source.applicability());
-        List<Evidence> evidence = mapEvidence(domain, reviewedAt, source.evidence());
-        KnowledgeGovernance ruleGovernance = new KnowledgeGovernance(
-                governance.owner(),
-                review == null ? null : review.verifiedBy(),
-                review == null ? null : review.changeNote()
-        );
+            String content = firstNonBlank(source.content(), source.businessContext());
+            String rationale = firstNonBlank(source.rationale(), source.businessContext(), source.summary());
+            Applicability applicability = mapApplicability(domain, source.category(), source.applicability());
+            List<Evidence> evidence = mapEvidence(domain, reviewedAt, source.evidence());
+            KnowledgeGovernance ruleGovernance = new KnowledgeGovernance(
+                    governance.owner(),
+                    review == null ? null : review.verifiedBy(),
+                    review == null ? null : review.changeNote()
+            );
 
-        return new KnowledgeRule(
-                source.id(), domain, source.category(), source.title(), source.summary(),
-                inferSeverity(source), applicability, rationale, content, sections,
-                safe(source.checklist()), evidence, safe(source.tags()), safe(source.aliases()),
-                safe(source.relatedRuleIds()), ruleGovernance, reviewedAt, status
-        );
+            return new KnowledgeRule(
+                    source.id(), domain, source.category(), source.title(), source.summary(),
+                    inferSeverity(source), applicability, rationale, content, sections,
+                    safe(source.checklist()), evidence, safe(source.tags()), safe(source.aliases()),
+                    safe(source.relatedRuleIds()), ruleGovernance, reviewedAt, status
+            );
+        }
+        catch (RuntimeException exception) {
+            throw new IllegalStateException("Rule " + (source == null ? "<null>" : source.id())
+                    + ": " + exception.getMessage(), exception);
+        }
+    }
+
+    private static void validateSource(KnowledgeYamlDocument.RuleDocument source) {
+        if (source == null) {
+            throw new IllegalStateException("rules entry must not be null");
+        }
+        try {
+            inferSeverity(source);
+        }
+        catch (IllegalArgumentException exception) {
+            throw new IllegalStateException("Invalid severity: " + source.severity(), exception);
+        }
+        try {
+            RuleStatus.from(source.status());
+        }
+        catch (IllegalArgumentException exception) {
+            throw new IllegalStateException("Invalid status: " + source.status(), exception);
+        }
+        var review = source.review();
+        if (review != null) {
+            boolean reviewer = review.verifiedBy() != null && !review.verifiedBy().isBlank();
+            boolean date = review.lastReviewedAt() != null && !review.lastReviewedAt().isBlank();
+            if (reviewer != date) {
+                throw new IllegalStateException("review.verified-by and review.last-reviewed-at must be recorded together");
+            }
+            validateDate(review.lastReviewedAt(), "review.last-reviewed-at");
+        }
+        var evidenceSources = source.evidence() == null ? List.<KnowledgeYamlDocument.EvidenceDocument>of() : source.evidence();
+        for (int i = 0; i < evidenceSources.size(); i++) {
+            var evidence = evidenceSources.get(i);
+            String field = "evidence[" + i + "]";
+            if (evidence == null) {
+                throw new IllegalStateException(field + " must not be null");
+            }
+            requireText(evidence.title(), field + ".title");
+            String location = firstNonBlank(evidence.source(), evidence.url());
+            requireText(location, field + ".source");
+            requireText(evidence.type(), field + ".type");
+            boolean webSource = location.startsWith("https://") || location.startsWith("http://");
+            if (webSource) {
+                try {
+                    if (java.net.URI.create(location).getHost() == null) {
+                        throw new IllegalArgumentException("missing host");
+                    }
+                }
+                catch (IllegalArgumentException exception) {
+                    throw new IllegalStateException(field + ".source must be a valid HTTP(S) URL", exception);
+                }
+            }
+            if (webSource && !Set.of("project-guidance", "internal-reference")
+                    .contains(evidence.type().trim().toLowerCase(java.util.Locale.ROOT))) {
+                requireText(evidence.accessedAt(), field + ".accessed-at");
+            }
+            validateDate(evidence.publishedAt(), field + ".published-at");
+            validateDate(evidence.reviewedAt(), field + ".reviewed-at");
+            validateDate(evidence.accessedAt(), field + ".accessed-at");
+        }
+    }
+
+    private static void requireText(String value, String field) {
+        if (value == null || value.isBlank()) {
+            throw new IllegalStateException(field + " must not be blank");
+        }
+    }
+
+    private static void validateDate(String value, String field) {
+        if (value == null || value.isBlank()) {
+            return;
+        }
+        try {
+            if (LocalDate.parse(value.trim()).isAfter(LocalDate.now())) {
+                throw new IllegalStateException(field + " must not be in the future");
+            }
+        }
+        catch (java.time.format.DateTimeParseException exception) {
+            throw new IllegalStateException(field + " must be an ISO date (yyyy-MM-dd)", exception);
+        }
     }
 
     private static Applicability mapApplicability(
@@ -199,6 +300,8 @@ public class YamlKnowledgeCatalog implements KnowledgeCatalog {
         boolean highRisk = severity == RuleSeverity.CRITICAL || severity == RuleSeverity.HIGH;
         KnowledgeYamlDocument.ReviewDocument review = source.review();
         boolean traceable = source.applicability() != null
+                && source.applicability().appliesWhen() != null
+                && source.applicability().appliesWhen().stream().anyMatch(value -> value != null && !value.isBlank())
                 && review != null
                 && review.lastReviewedAt() != null && !review.lastReviewedAt().isBlank()
                 && review.verifiedBy() != null && !review.verifiedBy().isBlank()
@@ -223,43 +326,27 @@ public class YamlKnowledgeCatalog implements KnowledgeCatalog {
         }
     }
 
-    private static void validateRules(List<KnowledgeRule> loaded) {
+    private static void validateRules(List<KnowledgeRule> loaded, Map<String, String> sourceFiles) {
         Set<String> ids = new LinkedHashSet<>();
         for (KnowledgeRule rule : loaded) {
             if (!RULE_ID.matcher(rule.id()).matches()) {
-                throw new IllegalStateException("Invalid rule id: " + rule.id());
+                throw new IllegalStateException(sourceFiles.get(rule.id()) + ": Invalid rule id: " + rule.id());
             }
             if (!ids.add(rule.id())) {
                 throw new IllegalStateException("Duplicate rule id: " + rule.id());
             }
             if (rule.tags().isEmpty()) {
-                throw new IllegalStateException("Rule tags must not be empty: " + rule.id());
+                throw new IllegalStateException(sourceFiles.get(rule.id()) + ": " + rule.id() + ".tags must not be empty");
             }
             if (rule.governance().owner().isBlank()) {
-                throw new IllegalStateException("Rule owner must not be empty: " + rule.id());
+                throw new IllegalStateException(sourceFiles.get(rule.id()) + ": " + rule.id() + ".owner must not be empty");
             }
-            boolean hasReviewer = !rule.governance().verifiedBy().isBlank();
-            boolean hasReviewDate = rule.lastReviewedAt() != null;
-            if (hasReviewer != hasReviewDate) {
-                throw new IllegalStateException(
-                        "verified-by and last-reviewed-at must be recorded together: " + rule.id());
-            }
-            rule.evidence().stream()
-                    .filter(evidence -> evidence.source().startsWith("https://")
-                            || evidence.source().startsWith("http://"))
-                    .filter(evidence -> !evidence.type().equalsIgnoreCase("project-guidance")
-                            && !evidence.type().equalsIgnoreCase("internal-reference"))
-                    .filter(evidence -> evidence.accessedAt() == null)
-                    .findFirst()
-                    .ifPresent(evidence -> {
-                        throw new IllegalStateException(
-                                "External evidence must declare accessed-at: " + rule.id());
-                    });
         }
         for (KnowledgeRule rule : loaded) {
             for (String related : rule.relatedRuleIds()) {
                 if (!ids.contains(related)) {
-                    throw new IllegalStateException("Unknown related rule " + related + " in " + rule.id());
+                    throw new IllegalStateException(sourceFiles.get(rule.id()) + ": Unknown related rule "
+                            + related + " in " + rule.id() + ".related-rule-ids");
                 }
             }
         }

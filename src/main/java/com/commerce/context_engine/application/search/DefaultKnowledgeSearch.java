@@ -38,6 +38,13 @@ public class DefaultKnowledgeSearch implements KnowledgeSearch {
 
     @Override
     public List<SearchResult> search(SearchQuery query) {
+        validateDomains(query.domains());
+        Set<String> categories = catalog.findAll().stream().map(KnowledgeRule::category)
+                .collect(java.util.stream.Collectors.toSet());
+        if (!categories.containsAll(query.categories())) {
+            throw new IllegalArgumentException("Unknown category; available categories: "
+                    + categories.stream().sorted().toList());
+        }
         QueryNormalizer.NormalizedQuery normalized = normalizer.normalize(query.query());
         var candidates = catalog.findByDomains(query.domains()).stream()
                 .filter(rule -> query.categories().isEmpty() || query.categories().contains(rule.category()))
@@ -69,10 +76,19 @@ public class DefaultKnowledgeSearch implements KnowledgeSearch {
     @Override
     public List<KnowledgeRule> findByDomain(String domain) {
         if (domain == null || domain.isBlank()) {
-            return List.of();
+            throw new IllegalArgumentException("domain must not be blank");
         }
-        return catalog.findByDomains(java.util.Set.of(domain.trim().toLowerCase(Locale.ROOT))).stream()
+        Set<String> domains = Set.of(domain.trim().toLowerCase(Locale.ROOT));
+        validateDomains(domains);
+        return catalog.findByDomains(domains).stream()
                 .sorted(ruleOrder()).toList();
+    }
+
+    private void validateDomains(Set<String> domains) {
+        if (!catalog.domains().containsAll(domains)) {
+            throw new IllegalArgumentException("Unknown domain; available domains: "
+                    + catalog.domains().stream().sorted().toList());
+        }
     }
 
     @Override
@@ -92,6 +108,9 @@ public class DefaultKnowledgeSearch implements KnowledgeSearch {
     }
 
     private static boolean isRelevant(SearchResult result) {
+        if (result.matchedTerms().equals(List.of("예약")) && result.queryCoverage() < 1) {
+            return false; // Reservation alone does not establish commerce intent.
+        }
         boolean highSignalMatch = result.matchedFields().stream()
                 .anyMatch(field -> Set.of("id", "title", "aliases", "tags").contains(field));
         return result.queryCoverage() >= MIN_QUERY_COVERAGE

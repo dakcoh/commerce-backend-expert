@@ -2,11 +2,13 @@ const assert = require("assert");
 const fs = require("fs");
 const os = require("os");
 const path = require("path");
+const { spawnSync } = require("child_process");
 const { parseJavaMajor } = require("../lib/java-runtime");
 const { parseChecksum, sha256OfFile, verifyFile } = require("../lib/checksum");
 const { releaseInfo } = require("../lib/release-client");
 const { cachePaths, verifyCached, ensureJar } = require("../lib/jar-cache");
 const { serverArguments } = require("../lib/server-process");
+const { grade } = require("./grade-ai-transcripts");
 
 const tests = [];
 function test(name, fn) { tests.push({ name, fn }); }
@@ -15,6 +17,42 @@ test("parses current and legacy Java versions", () => {
   assert.strictEqual(parseJavaMajor('openjdk version "17.0.19" 2026-04-21 LTS'), 17);
   assert.strictEqual(parseJavaMajor('java version "1.8.0_401"'), 8);
   assert.strictEqual(parseJavaMajor("unknown"), null);
+});
+
+test("grades observed AI transcripts without treating missing human checks or metrics as passes", () => {
+  const row = {taskId: "AI-01", model: "test-fixture", client: "unit-test", run: 1,
+    finalAnswer: "테스트용 답변", toolCalls: [{result: {results: [{ruleId: "webhook-handling"}]}}]};
+  assert.strictEqual(grade(row).status, "pending");
+  assert.strictEqual(grade(row).inputTokens, null);
+  const checked = {...row, reviewedBy: "unit-test-fixture", reviewedAt: "2026-10-19",
+    humanChecks: {grounded: true, conditionsChecked: true, noFalseDefect: true}};
+  assert.strictEqual(grade(checked).status, "passed");
+  assert.strictEqual(grade({...checked, toolCalls: []}).status, "failed");
+  assert.strictEqual(grade({...checked, humanChecks: {...checked.humanChecks, noFalseDefect: false}}).status, "failed");
+  assert.throws(() => grade({...row, taskId: "unknown"}), /Unknown taskId/);
+});
+
+test("AI transcript CLI reports incomplete coverage and failures separately", () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "commerce-ai-eval-cli-"));
+  const input = path.join(dir, "synthetic-grader-test.jsonl");
+  try {
+    const row = {taskId: "AI-01", model: "test-fixture", client: "unit-test", run: 1,
+      finalAnswer: "테스트용 답변", toolCalls: [{result: {rule: {id: "webhook-handling"}}}],
+      reviewedBy: "unit-test-fixture", reviewedAt: "2026-10-19",
+      humanChecks: {grounded: true, conditionsChecked: true, noFalseDefect: true}};
+    fs.writeFileSync(input, "\uFEFF" + JSON.stringify(row) + "\n");
+    const run = () => spawnSync(process.execPath, [path.join(__dirname, "grade-ai-transcripts.js"), input], {encoding: "utf8"});
+    const incomplete = run();
+    assert.strictEqual(incomplete.status, 2);
+    assert.strictEqual(JSON.parse(incomplete.stdout).missingTasks.length, 11);
+    fs.writeFileSync(input, JSON.stringify({...row, toolCalls: []}) + "\n");
+    assert.strictEqual(run().status, 1);
+    fs.writeFileSync(input, JSON.stringify(row) + "\n" + JSON.stringify(row) + "\n");
+    assert.match(run().stderr, /Duplicate/);
+  } finally {
+    fs.unlinkSync(input);
+    fs.rmdirSync(dir);
+  }
 });
 
 test("builds versioned release URLs", () => {

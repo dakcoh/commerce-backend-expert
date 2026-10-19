@@ -46,7 +46,7 @@ rules:
         - "실패와 타임아웃 상태를 DB에 남기는가?"
         - "self-invocation으로 트랜잭션 프록시를 우회하지 않는가?"
       tags: [spring, transaction, transactional, outbox, timeout, self-invocation]
-      aliases: [트랜잭션 경계, 짧은 트랜잭션, transaction boundary]
+      aliases: [트랜잭션 경계, 짧은 트랜잭션, transaction boundary, "@Transactional", 외부 호출 트랜잭션]
 
     - id: spring-commerce-jpa-consistency
       category: persistence
@@ -80,7 +80,7 @@ rules:
       spring-guidance:
         - "충돌이 드문 엔티티는 @Version 낙관락과 제한된 재시도를 사용한다."
         - "충돌이 잦은 단일 DB 자원은 PESSIMISTIC_WRITE와 락 타임아웃을 검토한다."
-        - "선착순 접수는 Redis Lua Script를 사용하되 DB UNIQUE 제약을 최종 안전망으로 둔다."
+        - "선착순 발급은 DB 조건부 수량 차감과 발급 범위별 UNIQUE 제약을 같은 트랜잭션에서 처리할 수 있다. Redis Lua Script를 선택하면 DB 발급 원장과 영속 시도 기록, 실패 보상과 대사를 함께 설계한다."
         - "멱등성 키와 처리 결과를 저장하고 같은 키 요청에는 기존 결과를 반환한다."
       avoid-patterns:
         - "SELECT 후 애플리케이션 if 검사만으로 중복 처리를 막지 않는다."
@@ -167,10 +167,11 @@ rules:
         이커머스 운영에는 재고 예약 만료, 망취소 대사, 정산 같은 주기 작업이 필요하다.
         서버가 여러 대면 같은 스케줄러가 동시에 실행될 수 있다.
       spring-guidance:
-        - "배치 실행 ID와 처리 대상 키에 UNIQUE 제약을 둔다."
+        - "실행 ID는 추적용이며 재실행에도 유지되는 처리 대상 업무키를 UNIQUE·조건부 갱신으로 원자적 확정한다. 실행 조정 락은 업무 효과의 중복 방어를 대신하지 않는다."
         - "다중 인스턴스에서는 DB 락 또는 ShedLock 같은 실행 조정 수단을 검토한다."
         - "대량 처리는 cursor 기반 페이징과 chunk 단위 커밋을 사용한다."
         - "실패 시 마지막 처리 지점과 실패 원인을 기록한다."
+        - "대상 스냅샷·cutoff와 안정적인 cursor를 정의한다. chunk 결과와 체크포인트를 함께 커밋하거나 업무키 기반 재처리로 커밋 경계 차이를 견딘다."
       avoid-patterns:
         - "@Scheduled가 한 번만 실행된다고 가정하지 않는다."
         - "전체 테이블을 한 번에 메모리에 올리지 않는다."
@@ -189,19 +190,20 @@ rules:
         이커머스 장애는 정상 흐름보다 재시도와 경계값에서 발생한다.
         운영 중에는 특정 주문이 왜 멈췄는지 correlation ID로 추적할 수 있어야 한다.
       spring-guidance:
-        - "Testcontainers로 PostgreSQL과 Redis를 포함한 통합 테스트를 구성한다."
+        - "실제 운영 DB의 종류·버전·격리 수준에 맞는 통합 테스트를 구성한다. Testcontainers 등 재현 가능한 환경을 활용하고 Redis는 사용하는 경우 해당 기능과 장애 경계를 검증한다."
         - "동시 요청 테스트로 오버셀링, 중복 쿠폰, 중복 결제를 검증한다."
         - "Micrometer 지표에 주문 실패율, 결제 UNCERTAIN 수, 예약 만료 수, 정산 누락 수를 노출한다."
         - "구조화 로그에 orderId, paymentId, correlationId를 남긴다."
       avoid-patterns:
-        - "H2 테스트만 통과하면 PostgreSQL에서도 안전하다고 가정하지 않는다."
+        - "H2 등 대체 저장소 테스트만 통과하면 실제 운영 DB의 잠금·SQL·격리 동작도 안전하다고 가정하지 않는다."
         - "정상 흐름 테스트만 작성하지 않는다."
         - "주문 ID 없이 자유 형식 로그만 남기지 않는다."
       checklist:
-        - "PostgreSQL과 Redis 통합 테스트가 있는가?"
+        - "실제 운영 저장소와 격리 수준을 검증하고 Redis는 사용하는 경우 통합 테스트하는가?"
         - "동시성과 재시도 테스트가 있는가?"
         - "핵심 운영 지표와 correlationId 로그가 있는가?"
       tags: [spring, testcontainers, postgres, redis, micrometer, observability, concurrency-test]
+      related-rule-ids: [spring-database-index-isolation, concurrency-optimistic, settlement-integrity]
 
     - id: java-domain-modeling
       category: java-core
@@ -290,7 +292,7 @@ rules:
         - "판매자/운영자 기능의 권한 경계가 분리되어 있는가?"
         - "민감 조작에 감사 로그와 사유가 남는가?"
       tags: [spring, security, authentication, authorization, ownership, audit, jwt]
-      aliases: [소유권 검증, object ownership, ownership check, 다른 사용자 데이터 접근]
+      aliases: [소유권 검증, object ownership, ownership check, 다른 사용자 데이터 접근, 다른 회원, 다른 고객, 타인 주문, 주문번호 변조, IDOR]
 
     - id: spring-configuration-secrets
       category: configuration
@@ -348,6 +350,7 @@ rules:
         - "정렬 기준은 안정적인 unique tie-breaker를 포함한다."
         - "주문 생성, 결제 요청, 쿠폰 사용 같은 POST에는 idempotency key를 받는다."
         - "같은 idempotency key 요청에는 최초 처리 결과 또는 동일한 오류 계약을 반환한다."
+        - "키의 범위를 호출자·업무 종류·논리적 시도로 정의하고 요청 지문을 저장한다. 같은 키의 다른 payload는 거부하고 처리 중·미확정·완료·확정 실패의 응답과 재처리 계약을 구분한다."
       avoid-patterns:
         - "page=99999 같은 offset 페이지로 대형 테이블을 깊게 스캔하지 않는다."
         - "createdAt 단독 정렬처럼 중복 값에서 순서가 흔들리는 cursor를 사용하지 않는다."
@@ -358,6 +361,7 @@ rules:
         - "중복 요청의 응답 계약이 정의되어 있는가?"
       tags: [spring, rest-api, cursor, pagination, idempotency, post]
       aliases: [cursor pagination, offset pagination, 커서 페이징, 중복 페이지]
+      related-rule-ids: [idempotency, payment-idempotency]
 
     - id: spring-database-index-isolation
       category: persistence
@@ -415,12 +419,15 @@ rules:
         - "재시도 가능한 오류와 재시도하면 안 되는 오류를 코드별로 분리한다."
         - "Resilience4j 같은 circuit breaker, bulkhead, retry를 업무별로 설정한다."
         - "외부 호출 결과가 불명확하면 UNCERTAIN 상태와 대사 작업으로 넘긴다."
+        - "비멱등 POST는 통신 오류가 재시도 가능해도 자동 재실행하지 않는다. 외부 계약의 멱등성 또는 안전한 결과 조회를 확인하고 동일 시도·같은 업무키·요청 지문을 유지한다."
+        - "미확정 승인·환불·송금은 새 키로 다시 요청하지 않고 기존 결과를 조회한다. 총 재시도 시간·횟수 상한과 backoff·jitter를 정하고 SDK·HTTP client의 숨은 재시도도 포함한다."
       avoid-patterns:
         - "무제한 재시도로 PG나 채널 API 장애를 증폭시키지 않는다."
         - "timeout 없는 HTTP client를 운영에 사용하지 않는다."
         - "결제 타임아웃을 단순 실패로 확정하지 않는다."
       checklist:
         - "외부 API별 timeout과 retry 정책이 정의되어 있는가?"
+        - "부작용 요청의 멱등성·동일 시도와 미확정 결과 조회·총 재시도 한도를 검증하는가?"
         - "불명확 결과를 대사하는 상태와 배치가 있는가?"
         - "circuit breaker와 bulkhead로 장애 전파를 제한하는가?"
       tags: [spring, integration, resilience4j, timeout, retry, circuit-breaker, uncertain]

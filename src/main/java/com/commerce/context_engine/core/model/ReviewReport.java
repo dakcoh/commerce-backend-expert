@@ -7,7 +7,9 @@ public record ReviewReport(
         String artifactType,
         Set<String> detectedDomains,
         List<ReviewFinding> findings,
-        String notice
+        String notice,
+        int analyzedChunks,
+        boolean analysisTruncated
 ) {
     public ReviewReport {
         detectedDomains = detectedDomains == null

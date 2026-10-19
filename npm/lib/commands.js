@@ -39,7 +39,7 @@ async function run(args, pkg, dependencies = {}) {
     return;
   }
   console.error("Starting MCP server over stdio. This process stays running while the MCP client is connected.");
-  startServer(jarPath, paths.cacheDir, args);
+  process.exitCode = await startServer(jarPath, paths.cacheDir, args);
 }
 
 function doctor(pkg, info, paths) {

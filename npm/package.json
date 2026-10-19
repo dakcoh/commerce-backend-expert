@@ -1,6 +1,6 @@
 {
   "name": "commerce-context-mcp",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Korean domestic ecommerce Java/Spring backend knowledge MCP server for AI coding tools",
   "keywords": [
     "mcp",
@@ -30,8 +30,9 @@
     "commerce-context-mcp": "bin/index.js"
   },
   "scripts": {
-    "test": "node test/run-tests.js",
-    "test:mcp": "node test/mcp-smoke.js"
+    "test": "node test/run-tests.js && node --test test/launcher-boundaries.test.js test/release-boundaries.test.js test/process-boundaries.test.js test/release-checks.test.js",
+    "test:mcp": "node test/mcp-smoke.js",
+    "test:ai-eval": "node test/grade-ai-transcripts.js"
   },
   "files": [
     "bin/",
@@ -40,6 +41,6 @@
     "README.md"
   ],
   "engines": {
-    "node": ">=20"
+    "node": ">=22"
   }
 }

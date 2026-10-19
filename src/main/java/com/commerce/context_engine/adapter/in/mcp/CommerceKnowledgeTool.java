@@ -44,17 +44,27 @@ public class CommerceKnowledgeTool {
 
     @Tool(name = "search_knowledge",
           description = """
-                  한국 커머스와 Java/Spring 구현 규칙을 통합 검색합니다.
+                  한국 커머스와 Java/Spring 구현 규칙을 통합 검색하는 로컬 읽기 전용 도구입니다.
                   관련도, 질의 커버리지, 매칭 필드와 규칙 상태를 구조화해 반환합니다.
                   특정 규칙 ID를 모르는 일반적인 설계·구현 질문에서 우선 사용하세요.
+                  업무·실패 상황을 짧게 질의하세요. AI는 responseFormat=json으로 중복 표현을 줄일 수 있습니다.
+                  후보의 적용 조건과 예외는 get_rule로 확인한 뒤 판단하세요. 점수는 사실성 확률이 아닙니다.
                   """)
     public KnowledgeSearchResponse searchKnowledge(
             @ToolParam(description = "검색 질의", required = true) String query,
-            @ToolParam(description = "선택 domain: inventory, payment, settlement, coupon, commerce, spring-commerce", required = false) String domain,
-            @ToolParam(description = "선택 category", required = false) String category,
+            @ToolParam(description = "선택 domain: inventory, payment, settlement, coupon, commerce, spring-commerce. 여러 값은 CSV, 생략은 전체", required = false) String domain,
+            @ToolParam(description = "선택 category CSV. 모르면 생략하고 먼저 검색하세요", required = false) String category,
             @ToolParam(description = "결과 수 1~10, 기본 5", required = false) Integer topK,
-            @ToolParam(description = "summary 또는 full, 기본 summary", required = false) String detail
+            @ToolParam(description = "summary 또는 full, 기본 summary", required = false) String detail,
+            @ToolParam(description = "json은 Markdown 중복 제외, both는 기존 JSON+Markdown, 기본 both. json+full은 fullRules에 전문 제공", required = false) String responseFormat
     ) {
+        if (query == null) throw new IllegalArgumentException("query is required; use a short commerce question");
+        ResponseFormat format = ResponseFormat.from(responseFormat);
+        int limit = topK == null ? SearchQuery.DEFAULT_TOP_K : topK;
+        ResponseDetail responseDetail = ResponseDetail.from(detail);
+        SearchQuery searchQuery = new SearchQuery(
+                query, values(domain), values(category), Set.of(), limit, responseDetail, false);
+        List<SearchResult> results = search.search(searchQuery);
         if (query == null || query.isBlank()) {
             return new KnowledgeSearchResponse(
                     query == null ? "" : query,
@@ -63,21 +73,10 @@ public class CommerceKnowledgeTool {
                     false,
                     "검색 질의를 입력하세요. domain, 기능, 실패 상황을 함께 적으면 더 정확하게 찾을 수 있습니다.",
                     TRUST_NOTICE,
-                    ""
+                    "",
+                    List.of()
             );
         }
-        int limit = topK == null ? SearchQuery.DEFAULT_TOP_K : topK;
-        ResponseDetail responseDetail = ResponseDetail.from(detail);
-        SearchQuery searchQuery = new SearchQuery(
-                query,
-                values(domain),
-                values(category),
-                Set.of(),
-                limit,
-                responseDetail,
-                false
-        );
-        List<SearchResult> results = search.search(searchQuery);
         List<RuleMatch> matches = results.stream().map(RuleMatch::from).toList();
         return new KnowledgeSearchResponse(
                 query,
@@ -85,53 +84,76 @@ public class CommerceKnowledgeTool {
                 matches,
                 !results.isEmpty(),
                 results.isEmpty()
-                        ? "관련성이 충분한 규칙을 찾지 못했습니다. domain, 기능, 실패 상황을 포함해 질문을 구체화하세요."
-                        : "관련 규칙 후보입니다. matchConfidence와 queryCoverage를 확인하세요.",
+                        ? "관련성이 충분한 규칙을 찾지 못했습니다. domain, 기능, 실패 상황을 포함해 질문을 구체화하세요. 예: 부분 환불 쿠폰 복원 금액."
+                        : "관련 규칙 후보입니다. matchConfidence와 queryCoverage는 검색 일치도입니다. get_rule로 적용 조건과 예외를 확인하세요.",
                 TRUST_NOTICE,
-                renderer.renderSearchResults(results, responseDetail)
+                format == ResponseFormat.JSON ? "" : renderer.renderSearchResults(results, responseDetail),
+                format == ResponseFormat.JSON && responseDetail == ResponseDetail.FULL
+                        ? results.stream().map(result -> RuleView.from(result.rule())).toList() : List.of()
         );
     }
 
+    public KnowledgeSearchResponse searchKnowledge(String query, String domain, String category, Integer topK, String detail) {
+        return searchKnowledge(query, domain, category, topK, detail, null);
+    }
+
     @Tool(name = "get_rule",
-          description = "knowledge rule ID로 단일 규칙의 적용 조건, 예외, 가이드, 체크리스트와 출처를 조회합니다.")
+          description = "로컬 읽기 전용 조회입니다. search/review의 ruleId로 적용 조건, 예외와 출처를 확인합니다. AI는 responseFormat=json으로 전문을 중복 없이 받으세요.")
     public RuleResponse getRule(
-            @ToolParam(description = "정확한 knowledge rule ID", required = true) String ruleId
+            @ToolParam(description = "정확한 knowledge rule ID", required = true) String ruleId,
+            @ToolParam(description = "json 또는 both, 기본 both. json도 조건·예외·근거 전문 유지", required = false) String responseFormat
     ) {
+        ResponseFormat format = ResponseFormat.from(responseFormat);
         KnowledgeRule rule = search.findById(ruleId)
                 .orElseThrow(() -> new IllegalArgumentException("Unknown knowledge rule: " + ruleId));
         return new RuleResponse(
                 RuleView.from(rule),
                 TRUST_NOTICE,
-                renderer.renderRules(List.of(rule), ResponseDetail.FULL));
+                format == ResponseFormat.JSON ? "" : renderer.renderRules(List.of(rule), ResponseDetail.FULL));
     }
 
+    public RuleResponse getRule(String ruleId) { return getRule(ruleId, null); }
+
     @Tool(name = "get_checklist",
-          description = "domain과 선택적인 시나리오에 맞는 중복 제거 체크리스트를 반환합니다.")
+          description = "로컬 읽기 전용 조회입니다. domain과 시나리오에 맞는 체크리스트를 최대 10개 규칙에서 구성합니다. partial과 domainRuleCount로 범위를 확인하세요. 같은 조건·신뢰 맥락의 중복 문항만 제거합니다.")
     public ChecklistResponse getChecklist(
-            @ToolParam(description = "domain", required = true) String domain,
-            @ToolParam(description = "선택 시나리오 또는 기능 설명", required = false) String scenario
+            @ToolParam(description = "단일 domain: inventory, payment, settlement, coupon, commerce, spring-commerce", required = true) String domain,
+            @ToolParam(description = "선택 시나리오 또는 기능 설명. partial이면 전체 domain 검토 완료가 아닙니다", required = false) String scenario,
+            @ToolParam(description = "json은 동일 문항·조건을 중복 표현 없이 제공, both는 Markdown 포함. 기본 both", required = false) String responseFormat
     ) {
-        List<KnowledgeRule> rules = checklistService.find(domain, scenario);
+        ResponseFormat format = ResponseFormat.from(responseFormat);
+        var selection = checklistService.select(domain, scenario);
+        List<KnowledgeRule> rules = selection.rules();
+        boolean partial = rules.size() < selection.domainRuleCount();
         return new ChecklistResponse(
-                domain,
+                domain.trim().toLowerCase(Locale.ROOT),
                 rules.stream().map(rule -> new ChecklistRule(
                         rule.id(), rule.title(), value(rule.severity()), value(rule.status()),
                         value(rule.evidenceLevel()), rule.governance().owner(),
-                        emptyToNull(rule.governance().verifiedBy()), rule.lastReviewedAt(), rule.checklist())).toList(),
+                        emptyToNull(rule.governance().verifiedBy()), rule.lastReviewedAt(), rule.checklist(),
+                        rule.applicability())).toList(),
                 TRUST_NOTICE,
-                renderer.renderChecklist(rules)
+                format == ResponseFormat.JSON ? "" : renderer.renderChecklist(rules),
+                selection.domainRuleCount(), partial,
+                rules.isEmpty() ? "관련 문항을 찾지 못했습니다. 결함 없음이 아닙니다. 업무·실패 상황을 구체화하거나 scenario를 생략해 재조회하세요."
+                        : partial ? "전체 domain 규칙 중 일부입니다. 최대 10개 규칙을 선택하며 전체 검토 완료를 뜻하지 않습니다. 구체적인 scenario로 재조회하세요."
+                        : "domain의 체크리스트 규칙을 모두 포함합니다. 각 문항의 적용 조건과 예외를 확인하세요."
         );
     }
 
+    public ChecklistResponse getChecklist(String domain, String scenario) { return getChecklist(domain, scenario, null); }
+
     @Tool(name = "review_commerce_design",
           description = """
-                  설계안, API 설명, DDL 또는 코드 조각에서 적용 가능성이 높은 커머스 규칙을 찾습니다.
+                  설계안, API 설명, DDL 또는 코드 조각에서 적용 가능성이 높은 커머스 규칙을 찾는 로컬 읽기 전용 도구입니다.
                   결과는 확정 버그가 아니라 검토가 필요한 규칙 기반 후보입니다.
+                  scenario에는 업무·실패 상황을 짧게 적으세요. analysisTruncated이면 관심 코드로 좁혀 재조회하세요.
+                  고위험 후보는 get_rule로 조건과 예외를 확인하세요. 후보 없음은 결함 없음이 아닙니다.
                   """)
     public ReviewResponse reviewCommerceDesign(
             @ToolParam(description = "검토할 설계안, API, DDL 또는 코드", required = true) String artifact,
             @ToolParam(description = "design, api, ddl, code 중 하나", required = false) String artifactType,
-            @ToolParam(description = "선택 domain", required = false) String domain,
+            @ToolParam(description = "선택 domain: inventory, payment, settlement, coupon, commerce, spring-commerce. 여러 값 CSV, 생략은 전체", required = false) String domain,
             @ToolParam(description = "선택 시나리오", required = false) String scenario,
             @ToolParam(description = "후보 수 1~10, 기본 5", required = false) Integer maxFindings
     ) {
@@ -149,7 +171,11 @@ public class CommerceKnowledgeTool {
         if (value == null || value.isBlank()) {
             return Set.of();
         }
-        return java.util.Arrays.stream(value.split(","))
+        String[] parts = value.split(",", -1);
+        if (java.util.Arrays.stream(parts).anyMatch(String::isBlank)) {
+            throw new IllegalArgumentException("domain/category filters must contain nonblank comma-separated values");
+        }
+        return java.util.Arrays.stream(parts)
                 .map(String::trim)
                 .filter(item -> !item.isBlank())
                 .map(item -> item.toLowerCase(Locale.ROOT))
@@ -171,7 +197,8 @@ public class CommerceKnowledgeTool {
             boolean answerable,
             String message,
             String notice,
-            String markdown
+            String markdown,
+            List<RuleView> fullRules
     ) {
     }
 
@@ -246,7 +273,8 @@ public class CommerceKnowledgeTool {
         }
     }
 
-    public record ChecklistResponse(String domain, List<ChecklistRule> rules, String notice, String markdown) {
+    public record ChecklistResponse(String domain, List<ChecklistRule> rules, String notice, String markdown,
+                                    int domainRuleCount, boolean partial, String message) {
     }
 
     public record ChecklistRule(
@@ -258,7 +286,8 @@ public class CommerceKnowledgeTool {
             String owner,
             String verifiedBy,
             LocalDate lastReviewedAt,
-            List<String> items
+            List<String> items,
+            com.commerce.context_engine.core.model.Applicability applicability
     ) {
     }
 
@@ -266,14 +295,16 @@ public class CommerceKnowledgeTool {
             String artifactType,
             Set<String> detectedDomains,
             List<ReviewFindingView> findings,
-            String notice
+            String notice,
+            int analyzedChunks,
+            boolean analysisTruncated
     ) {
         static ReviewResponse from(ReviewReport report) {
             return new ReviewResponse(
                     report.artifactType(),
                     report.detectedDomains(),
                     report.findings().stream().map(ReviewFindingView::from).toList(),
-                    report.notice()
+                    report.notice(), report.analyzedChunks(), report.analysisTruncated()
             );
         }
     }

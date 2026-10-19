@@ -10,6 +10,10 @@ public enum ResponseDetail {
         if (value == null || value.isBlank()) {
             return SUMMARY;
         }
-        return valueOf(value.trim().toUpperCase(Locale.ROOT));
+        try {
+            return valueOf(value.trim().toUpperCase(Locale.ROOT));
+        } catch (IllegalArgumentException exception) {
+            throw new IllegalArgumentException("detail must be summary or full");
+        }
     }
 }
