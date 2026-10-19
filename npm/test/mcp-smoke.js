@@ -121,7 +121,7 @@ output.on("line", (line) => {
   try {
     message = JSON.parse(line);
   } catch (error) {
-    finish(new Error(`Non-JSON MCP stdout: ${line.slice(0, 500)}\n${stderr}`, {cause: error}));
+    finish(new Error(`Non-JSON MCP stdout: ${error.message}; ${line.length} characters\n${JSON.stringify(line)}\n${stderr}`, {cause: error}));
     return;
   }
   if (message.id !== undefined && pending.has(message.id)) {
