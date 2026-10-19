@@ -36,6 +36,7 @@ function serverArguments(jarPath, args = []) {
 
 function startServer(jarPath, cacheDir, args = [], dependencies = {}) {
   const input = dependencies.stdin || process.stdin;
+  const output = dependencies.stdout || process.stdout;
   const parent = dependencies.process || process;
   const spawnChild = dependencies.spawn || spawn;
   const killTimeoutMs = dependencies.killTimeoutMs ?? 2_000;
@@ -45,7 +46,7 @@ function startServer(jarPath, cacheDir, args = [], dependencies = {}) {
     let child;
     try {
       child = spawnChild(dependencies.javaPath || "java", serverArguments(workspace.jar, args), {
-        stdio: ["pipe", "inherit", "inherit"], cwd: workspace.directory, windowsHide: true,
+        stdio: ["pipe", "pipe", "inherit"], cwd: workspace.directory, windowsHide: true,
       });
     } catch (error) { workspace.cleanup(); reject(error); return; }
     let timer;
@@ -79,10 +80,13 @@ function startServer(jarPath, cacheDir, args = [], dependencies = {}) {
     const cleanup = () => {
       clearTimeout(timer);
       input.unpipe(child.stdin);
+      child.stdout.unpipe(output);
       input.pause();
       input.removeListener("end", onEnd);
       input.removeListener("close", onEnd);
       input.removeListener("error", onInputError);
+      output.removeListener("error", onInputError);
+      child.stdout.removeListener("error", onInputError);
       parent.removeListener("SIGINT", onInterrupt);
       parent.removeListener("SIGTERM", onTerminate);
       workspace.cleanup();
@@ -100,11 +104,15 @@ function startServer(jarPath, cacheDir, args = [], dependencies = {}) {
       resolve(code ?? (128 + (constants.signals[signal] || 1)));
     });
     child.stdin.on("error", onPipeError);
+    child.stdout.on("error", onInputError);
+    output.on("error", onInputError);
     input.once("end", onEnd);
     input.once("close", onEnd);
     input.once("error", onInputError);
     parent.on("SIGINT", onInterrupt);
     parent.on("SIGTERM", onTerminate);
+    // A fresh pipe keeps Java's descriptor blocking; Node handles a slow MCP reader.
+    child.stdout.pipe(output, {end: false});
     if (input.readableEnded || input.destroyed) onEnd();
     else input.pipe(child.stdin);
   });

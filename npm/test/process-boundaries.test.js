@@ -1,7 +1,7 @@
 const {test} = require("node:test");
 const assert = require("node:assert/strict");
 const {EventEmitter, once} = require("node:events");
-const {PassThrough} = require("node:stream");
+const {PassThrough, Writable} = require("node:stream");
 const {spawn} = require("node:child_process");
 const fs = require("node:fs");
 const os = require("node:os");
@@ -12,27 +12,29 @@ function fixture(mode, input = new PassThrough()) {
   const parent = new EventEmitter();
   let child;
   let output = "";
+  const stdout = new PassThrough();
+  stdout.setEncoding("utf8");
   const ready = [];
+  stdout.on("data", chunk => {
+    output += chunk;
+    if (output.includes("READY\n")) ready.splice(0).forEach(resolve => resolve());
+  });
   const script = `process.stdout.write('READY\\n');
     if(process.argv[1]==='exit') process.exit(23);
     else if(process.argv[1]==='echo') process.stdin.pipe(process.stdout);
     else {process.stdin.resume();process.stdin.on('end',()=>{});setInterval(()=>{},1000);}`;
   const completion = startServer(path.join(process.cwd(), "server.jar"), process.cwd(), ["--fixture"], {
-    stdin: input, process: parent, killTimeoutMs: 100, javaPath: path.resolve("private-runtime/bin/java"),
+    stdin: input, stdout, process: parent, killTimeoutMs: 100, javaPath: path.resolve("private-runtime/bin/java"),
     spawn(command, args, options) {
       assert.equal(command, path.resolve("private-runtime/bin/java"));
       assert.deepEqual(args, ["-Dfile.encoding=UTF-8", "-Xlog:disable", "-Xlog:all=warning:stderr", "-jar", "server.jar", "--fixture"]);
       assert.equal(options.cwd, process.cwd());
       assert.equal(options.windowsHide, true);
       child = spawn(process.execPath, ["-e", script, mode], {...options, stdio: ["pipe", "pipe", "pipe"]});
-      child.stdout.on("data", chunk => {
-        output += chunk;
-        if (output.includes("READY\n")) ready.splice(0).forEach(resolve => resolve());
-      });
       return child;
     },
   });
-  return {input, parent, completion,
+  return {input, stdout, parent, completion,
     ready: () => output.includes("READY\n") ? Promise.resolve() : new Promise(resolve => ready.push(resolve)),
     output: () => output,
     assertStopped() {
@@ -43,6 +45,7 @@ function fixture(mode, input = new PassThrough()) {
       assert.equal(input.listenerCount("end"), 0);
       assert.equal(input.listenerCount("error"), 0);
       assert.equal(input.listenerCount("close"), 0);
+      assert.equal(stdout.listenerCount("error"), 0);
     },
     async cleanup() {
       if (child.exitCode === null && child.signalCode === null) {
@@ -89,6 +92,24 @@ test("STDIO bytes pass unchanged and EOF waits for normal child exit", async () 
     assert.equal(f.output(), 'READY\n{"method":"한글 요청"}\n');
     f.assertStopped();
   } finally {await f.cleanup();}
+});
+
+test("a slow MCP reader receives every byte across pipe backpressure", {timeout: 10_000}, async () => {
+  const input = new PassThrough();
+  const chunks = [];
+  const output = new Writable({highWaterMark: 1, write(chunk, encoding, callback) {
+    chunks.push(Buffer.from(chunk)); setTimeout(callback, 2);
+  }});
+  const payload = Buffer.from("한글-🧪-response\n".repeat(32_768));
+  const completion = startServer("fixture.jar", process.cwd(), [], {
+    stdin: input, stdout: output, process: new EventEmitter(),
+    spawn: (_command, _args, options) => spawn(process.execPath,
+      ["-e", "process.stdin.pipe(process.stdout)"], options),
+  });
+  input.end(payload);
+  assert.equal(await completion, 0);
+  await new Promise(resolve => output.end(resolve));
+  assert.deepEqual(Buffer.concat(chunks), payload);
 });
 
 test("a nonzero child exit is propagated and releases parent input listeners", async () => {
@@ -142,6 +163,16 @@ test("input errors stop the child and are reported", async () => {
     await f.ready();
     const rejected = assert.rejects(f.completion, /fixture input error/);
     f.input.destroy(new Error("fixture input error"));
+    await rejected; f.assertStopped();
+  } finally {await f.cleanup();}
+});
+
+test("output errors stop the child and release the owned writer", async () => {
+  const f = fixture("hang");
+  try {
+    await f.ready();
+    const rejected = assert.rejects(f.completion, /fixture output error/);
+    f.stdout.destroy(new Error("fixture output error"));
     await rejected; f.assertStopped();
   } finally {await f.cleanup();}
 });

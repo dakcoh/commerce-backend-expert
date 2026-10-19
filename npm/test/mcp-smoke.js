@@ -236,9 +236,14 @@ function finish(error) {
 
     // Concurrent tool completions must retain every JSON-RPC response.
     for (let round = 0; round < 4; round++) {
-      const replies = await Promise.all(Array.from({length: 64}, () => tool("get_rule", {
-        ruleId: "available-stock-query", responseFormat: "json",
-      })));
+      child.stdout.pause();
+      const resume = setTimeout(() => child.stdout.resume(), 250);
+      let replies;
+      try {
+        replies = await Promise.all(Array.from({length: 64}, () => tool("get_rule", {
+          ruleId: "available-stock-query", responseFormat: "json",
+        })));
+      } finally { clearTimeout(resume); child.stdout.resume(); }
       for (const reply of replies) assert.deepStrictEqual(data(reply).rule, data(ruleResult).rule);
     }
 
