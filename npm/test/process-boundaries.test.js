@@ -7,6 +7,7 @@ const fs = require("node:fs");
 const os = require("node:os");
 const path = require("node:path");
 const {startServer} = require("../lib/server-process");
+const {javaDirectory} = require("../lib/java-runtime");
 
 function fixture(mode, input = new PassThrough()) {
   const parent = new EventEmitter();
@@ -66,7 +67,7 @@ test("a Korean cache directory is passed as cwd and kept out of the Java JAR arg
       },
     });
     assert.equal(code, 0);
-    assert.deepEqual(invocation, {command: "java", args: ["-Dfile.encoding=UTF-8", "-Xlog:disable", "-Xlog:all=warning:stderr", "-jar", "server.jar", "--fixture"], cwd: cacheDir});
+    assert.deepEqual(invocation, {command: "java", args: ["-Dfile.encoding=UTF-8", "-Xlog:disable", "-Xlog:all=warning:stderr", "-jar", "server.jar", "--fixture"], cwd: javaDirectory(cacheDir)});
   } finally {
     input.destroy();
     assert.equal(path.dirname(path.resolve(cacheDir)), path.resolve(os.tmpdir()));

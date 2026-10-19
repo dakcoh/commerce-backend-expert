@@ -1,6 +1,7 @@
 const { spawn } = require("child_process");
 const { constants } = require("os");
 const path = require("path");
+const {javaDirectory} = require("./java-runtime");
 
 function serverArguments(jarPath, args = []) {
   return [
@@ -19,9 +20,9 @@ function startServer(jarPath, cacheDir, args = [], dependencies = {}) {
   const spawnChild = dependencies.spawn || spawn;
   const killTimeoutMs = dependencies.killTimeoutMs ?? 2_000;
   return new Promise((resolve, reject) => {
-    // Keep the Unicode cache directory in cwd; Windows Java launchers can corrupt non-ASCII arguments.
+    // Java resolves native libraries and the JAR against these paths; both must survive Windows codepages.
     const child = spawnChild(dependencies.javaPath || "java", serverArguments(path.relative(cacheDir, jarPath), args), {
-      stdio: ["pipe", "inherit", "inherit"], cwd: cacheDir, windowsHide: true,
+      stdio: ["pipe", "inherit", "inherit"], cwd: javaDirectory(cacheDir), windowsHide: true,
     });
     let timer;
     let requestedSignal;

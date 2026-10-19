@@ -11,7 +11,7 @@ const {run} = require("../lib/commands");
 const {cachePaths} = require("../lib/jar-cache");
 const {releaseInfo} = require("../lib/release-client");
 const manifest = require("../lib/runtime-manifest.json");
-const {javaExecutable} = require("../lib/java-runtime");
+const {javaExecutable, javaDirectory} = require("../lib/java-runtime");
 const digest = value => createHash("sha256").update(value).digest("hex");
 
 function fixture(t) {
@@ -43,21 +43,28 @@ test("pins six platform archives and rejects unsupported CPUs", () => {
   assert.throws(() => runtimeInfo("freebsd", "x64"), /Unsupported/);
 });
 
-test("Windows Unicode runtime paths use a short alias without interpolating paths into PowerShell", () => {
-  const long = "C:\\사용자\\한글-🧪\\java.exe";
-  const short = "C:\\Users\\USER~1\\java.exe";
-  const fail = () => {throw Error("unexpected process");};
-  assert.equal(javaExecutable("C:\\private\\java.exe", fail, "win32"), "C:\\private\\java.exe");
-  assert.equal(javaExecutable(long, fail, "linux"), long);
-  assert.equal(javaExecutable(long, (_command, args, options) => {
-    assert.equal(options.env.COMMERCE_RUNTIME_LONG_PATH, long);
-    assert.equal(args.includes(long), false);
-    assert.equal(args.at(-1).includes(long), false);
-    assert.equal(options.windowsHide, true);
-    return {status: 0, stdout: short};
-  }, "win32"), short);
-  for (const result of [{status: 1}, {status: 0, stdout: long}, {status: 0, stdout: "relative"}]) {
-    assert.throws(() => javaExecutable(long, () => result, "win32"), /COMMERCE_CONTEXT_CACHE_DIR/);
+test("Unicode Java directories use a verified private junction on Windows", t => {
+  const f = fixture(t);
+  const home = path.join(f.dir, "한글-🧪");
+  fs.mkdirSync(path.join(home, "bin"), {recursive: true});
+  const executable = path.join(home, "bin", "java.exe");
+  fs.writeFileSync(executable, "test executable");
+  const alias = javaDirectory(home);
+  if (process.platform === "win32") {
+    assert.match(alias, /^[\x20-\x7e]+$/);
+    assert.equal(fs.realpathSync(alias), fs.realpathSync(home));
+    assert.equal(javaDirectory(home), alias);
+    assert.equal(javaExecutable(executable), path.join(alias, "bin", "java.exe"));
+    const root = path.join(os.tmpdir(), ".commerce-context-mcp-java");
+    assert.equal(path.dirname(alias), root);
+    assert.match(path.basename(alias), /^[a-f0-9]{64}$/);
+    fs.rmSync(alias, {force: true});
+    fs.symlinkSync(f.dir, alias, "junction");
+    try { assert.throws(() => javaDirectory(home), /verified installation/); }
+    finally { fs.rmSync(alias, {force: true}); }
+  } else {
+    assert.equal(alias, home);
+    assert.equal(javaExecutable(executable), executable);
   }
 });
 

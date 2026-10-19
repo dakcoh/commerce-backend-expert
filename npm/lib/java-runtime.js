@@ -3,26 +3,26 @@ const MIN_JAVA_MAJOR = 21;
 const { spawnSync } = require("child_process");
 const path = require("node:path");
 
-function javaExecutable(executable, spawn = spawnSync, platform = process.platform) {
-  if (platform !== "win32" || /^[\x20-\x7e]+$/.test(executable)) return executable;
-  // The Windows Java launcher also resolves java.dll through the system codepage.
-  const script = `$ErrorActionPreference = 'Stop'; Add-Type -TypeDefinition 'using System; using System.Text; using System.Runtime.InteropServices;
-    public class RuntimePath { [DllImport("kernel32.dll", CharSet=CharSet.Unicode, SetLastError=true)]
-      public static extern uint GetShortPathName(string path, StringBuilder output, uint size); }';
-    $buffer = New-Object System.Text.StringBuilder 32768;
-    $length = [RuntimePath]::GetShortPathName($env:COMMERCE_RUNTIME_LONG_PATH, $buffer, 32768);
-    if ($length -eq 0 -or $length -ge 32768) { exit 1 }; [Console]::Write($buffer.ToString());`;
-  const result = spawn(path.join(process.env.SystemRoot || "C:\\Windows", "System32/WindowsPowerShell/v1.0/powershell.exe"),
-    ["-NoLogo", "-NoProfile", "-NonInteractive", "-Command", script], {
-      env: {...process.env, COMMERCE_RUNTIME_LONG_PATH: executable},
-      encoding: "utf8", timeout: 60_000, windowsHide: true,
-    });
-  const short = (result.stdout || "").trim();
-  if (result.status !== 0 || !path.win32.isAbsolute(short) || !/^[\x20-\x7e]+$/.test(short)) {
-    const reason = result.error?.message || result.stderr?.trim() || "8.3 short names are unavailable";
-    throw new Error(`Cannot launch managed Java from this Windows Unicode path. Set COMMERCE_CONTEXT_CACHE_DIR to a private writable ASCII-only path. ${reason}`);
+function javaDirectory(home) {
+  if (process.platform !== "win32" || /^[\x20-\x7e]+$/.test(home)) return home;
+  const fs = require("node:fs"), os = require("node:os"), {createHash} = require("node:crypto");
+  const root = path.join(os.tmpdir(), ".commerce-context-mcp-java");
+  if (!/^[\x20-\x7e]+$/.test(root)) {
+    throw new Error("Cannot launch managed Java from this Windows Unicode path. Set COMMERCE_CONTEXT_CACHE_DIR to a private writable ASCII-only path.");
   }
-  return short;
+  fs.mkdirSync(root, {recursive: true});
+  if (fs.lstatSync(root).isSymbolicLink()) throw new Error("Runtime alias directory must not be a link");
+  const alias = path.join(root, createHash("sha256").update(home).digest("hex"));
+  try { fs.symlinkSync(home, alias, "junction"); }
+  catch (error) { if (error.code !== "EEXIST") throw error; }
+  if (!fs.lstatSync(alias).isSymbolicLink() || fs.realpathSync(alias) !== fs.realpathSync(home)) {
+    throw new Error("Runtime alias does not point to the verified installation");
+  }
+  return alias;
+}
+
+function javaExecutable(executable) {
+  return path.join(javaDirectory(path.dirname(path.dirname(executable))), "bin", path.basename(executable));
 }
 
 function parseJavaMajor(output) {
@@ -48,4 +48,4 @@ function javaStatus(executable, spawn = spawnSync) {
   };
 }
 
-module.exports = { parseJavaMajor, javaStatus, javaExecutable };
+module.exports = { parseJavaMajor, javaStatus, javaExecutable, javaDirectory };

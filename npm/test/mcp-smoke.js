@@ -18,7 +18,7 @@ const launcherRoot = process.env.MCP_LAUNCHER_ROOT;
 let cacheDir;
 const launcherEnv = {...process.env};
 if (launcherRoot) {
-  cacheDir = fs.mkdtempSync(path.join(os.tmpdir(), "commerce-한글-smoke-"));
+  cacheDir = fs.mkdtempSync(path.join(os.tmpdir(), "commerce-한글-🧪-smoke-"));
   const pkg = require(path.join(path.resolve(launcherRoot), "package.json"));
   const cachedJar = path.join(cacheDir, `context-engine-${pkg.version}.jar`);
   fs.copyFileSync(jarPath, cachedJar);
