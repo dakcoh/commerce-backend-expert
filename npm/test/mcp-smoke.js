@@ -234,6 +234,14 @@ function finish(error) {
       && item.text.includes('"answerable":false')
       && item.text.includes("구체화")));
 
+    // Concurrent tool completions must retain every JSON-RPC response.
+    for (let round = 0; round < 4; round++) {
+      const replies = await Promise.all(Array.from({length: 64}, () => tool("get_rule", {
+        ruleId: "available-stock-query", responseFormat: "json",
+      })));
+      for (const reply of replies) assert.deepStrictEqual(data(reply).rule, data(ruleResult).rule);
+    }
+
     const checklistResponses = new Map();
     for (const domain of ["inventory", "payment", "settlement", "coupon", "commerce", "spring-commerce"]) {
       const checklist = data(await tool("get_checklist", { domain }));
@@ -345,7 +353,7 @@ function finish(error) {
     assert.ok(examples.length > 0, "The usage guide must include callable examples");
     for (const example of examples) data(await tool(example.name, example.arguments));
 
-    console.log(`MCP JSON-RPC smoke test passed: ${nextId - 1} requests, 4 tools, 3 resource reads, 2 prompt gets, ${invalidCalls.length + 3} error cases, ${examples.length} documentation examples, JSON mode, bounded review, UTF-8, 200KB input, recovery`);
+    console.log(`MCP JSON-RPC smoke test passed: ${nextId - 1} requests, 256 concurrent tool calls, 4 tools, 3 resource reads, 2 prompt gets, ${invalidCalls.length + 3} error cases, ${examples.length} documentation examples, JSON mode, bounded review, UTF-8, 200KB input, recovery`);
     finish();
   } catch (error) {
     finish(error);

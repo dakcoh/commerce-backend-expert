@@ -165,6 +165,8 @@ Linux/macOS에서는 JDK21을 설정한 뒤 `./gradlew`·`npm`을 사용합니�
 
 처리 흐름은 AI 클라이언트 → STDIO MCP → 검색·체크리스트·검토 → YAML입니다. 지식은 시작할 때 불변 객체로 읽고 외부 LLM·DB·HTTP 서버 없이 검색합니다. 최종 답변과 데이터 전송은 연결한 AI 클라이언트가 처리합니다.
 
+메모리 안의 지식만 다루는 현재 핸들러는 `McpSyncServerCustomizer.immediateExecution(true)`로 STDIO 입력 스레드에서 순서대로 실행합니다. SDK 0.18의 [동시 응답 누락 문제](https://github.com/modelcontextprotocol/java-sdk/pull/935)를 피하면서 한꺼번에 들어온 요청도 모두 응답합니다. MCP smoke는 64개 요청을 동시에 보내는 검사를 4회 반복합니다. 핸들러에 외부 I/O를 추가하거나 전송 방식을 바꿀 때는 이 실행 모델을 다시 검토하세요.
+
 | 위치 | 책임 |
 |---|---|
 | core/model·port | 지식 모델과 인터페이스 |
