@@ -1,34 +1,38 @@
 # Commerce Context MCP
 
+English · [한국어](README.ko.md)
+
 [![npm version](https://img.shields.io/npm/v/commerce-context-mcp)](https://www.npmjs.com/package/commerce-context-mcp)
 [![CI](https://github.com/dakcoh/commerce-context-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/dakcoh/commerce-context-mcp/actions/workflows/ci.yml)
 [![license](https://img.shields.io/npm/l/commerce-context-mcp)](LICENSE)
 
-**AI 코딩 도구가 한국 이커머스의 설계 기준을 찾아보고 코드 검토에 활용하도록 돕는 MCP 서버입니다.**
+**An MCP server that helps AI coding tools find design rules and review Korean ecommerce backends.**
 
-재고·결제·쿠폰·정산·주문·배송·회원·Java/Spring의 70개 규칙을 제공합니다. 자연어로 질문하면 연결한 AI가 관련 지침을 조회하고, 적용 조건과 예외를 확인하는 데 사용할 수 있습니다.
+The catalog contains 70 rules covering inventory, payments, coupons, settlement, orders, shipping, customers, and Java/Spring. Your AI client can retrieve relevant guidance, check when it applies, and use it while reviewing code or designs.
 
-## 어떤 일을 도와주나요?
+The documentation is available in English and Korean. **The knowledge catalog is currently in Korean.** The server uses keyword search; it does not translate queries. Ask your AI client to search with relevant Korean terms and explain the retrieved guidance in your preferred language. English search quality has not been established by the current regression suite.
 
-| 고민 | 요청 예시 |
+## What can it help with?
+
+| Concern | Example request to your AI client |
 |---|---|
-| 재고 초과 판매 | “예약 없이 DB에서 재고를 차감하는 설계를 검토해줘.” |
-| 결제 결과 미확정 | “PG 응답이 유실됐을 때 조회·재시도 흐름을 확인해줘.” |
-| 중복 웹훅 | “서명 검증과 중복 이벤트 처리가 빠진 곳을 찾아줘.” |
-| 부분 환불 | “쿠폰·포인트 배부와 반올림을 보존하는지 검토해줘.” |
-| 정산 차이 | “확정 명세와 실제 지급액을 대사할 기준을 정리해줘.” |
+| Overselling | “Review a design that deducts inventory directly in the database without reservations.” |
+| Unknown payment outcome | “Check the lookup and retry flow when a payment provider's response is lost.” |
+| Duplicate webhooks | “Find missing signature checks and duplicate-event handling.” |
+| Partial refunds | “Review coupon and point allocation, including rounding.” |
+| Settlement differences | “List the checks for reconciling a finalized statement against actual payouts.” |
 
-이 서버는 설계 지침을 제공하며 주문·결제·환불을 실행하지 않습니다. 특정 회사의 업무 정책을 공통 정답으로 가정하지 않습니다.
+The server provides design guidance. It does not execute orders, payments, or refunds, and does not treat one company's business policies as universal rules.
 
-## 시작하기
+## Quick start
 
-0.2.0의 요구사항은 **Node.js 22 이상 + 로컬 STDIO MCP를 지원하는 AI 클라이언트**입니다.
+Version 0.2.0 requires **Node.js 22 or later and an AI client that supports local STDIO MCP servers**.
 
-> **0.2.0부터 전용 Java 런타임을 자동 준비합니다.** 이전 버전 사용자는 실행 패키지를 갱신하세요. 소스에서 확인하려면 [로컬 패키지 검증](CONTRIBUTING.md#로컬에서-검증하기) 절차를 사용합니다.
+> **Automatic preparation of a private Java runtime is available from 0.2.0.** Update the package if you use an earlier version. To check unpublished source changes, follow the [local package validation guide](CONTRIBUTING.md#local-validation).
 
-사용자는 JDK를 별도로 설치할 필요가 없습니다. npm 설치에는 Java가 필요하지 않으며, 첫 실행에 전용 Java 21 런타임을 다운로드·검증하고 캐시합니다. 시스템 Java·JAVA_HOME·PATH는 변경하지 않습니다.
+You do not need to install a JDK or configure `JAVA_HOME`. npm installation requires no Java. On first launch, the package downloads, verifies, and caches a private Java 21 runtime and the server JAR. It does not change your system Java, `JAVA_HOME`, or `PATH`.
 
-다음 명령으로 런타임과 서버를 미리 준비하고 확인합니다.
+Prepare the runtime and server, then check the cache:
 
 ```bash
 node -v
@@ -36,7 +40,7 @@ npx -y commerce-context-mcp download
 npx -y commerce-context-mcp doctor
 ```
 
-사용 중인 클라이언트에 등록합니다.
+Register the server with your client.
 
 **Codex CLI**
 
@@ -50,48 +54,49 @@ codex mcp add commerce-context -- npx -y commerce-context-mcp
 claude mcp add --transport stdio commerce-context -- npx -y commerce-context-mcp
 ```
 
-JSON 설정을 사용하는 클라이언트와 연결 오류는 [설치 가이드](npm/README.md)를 확인하세요. 등록 후 연결 상태를 확인하고 새 대화에서 질문합니다.
+For clients using JSON configuration, connection troubleshooting, and cache recovery, see the [installation guide](npm/README.md). Check the connection after registration and start a new conversation:
 
-> “commerce-context의 규칙을 참고해서 이 결제 웹훅 코드를 검토해줘. 적용 조건과 추가 확인할 사항도 알려줘.”
+> “Use commerce-context to review this payment webhook. Search the Korean catalog for relevant rules, then explain their applicability and any remaining checks in English.”
 
-npm 설치 자체는 런타임을 내려받지 않습니다. 첫 실행이나 `download`에서 전용 Java 런타임과 서버 JAR를 내려받고 검증합니다. 첫 연결의 다운로드 대기를 줄이려면 위 `download` 명령으로 미리 준비하세요. 이후에는 검증된 캐시를 재사용합니다. 서버에 별도의 LLM API 키는 필요하지 않으며, 연결한 AI 클라이언트의 이용 조건은 해당 서비스에 따릅니다.
+npm installation only installs the launcher. Downloads happen on first launch or with `download`; subsequent launches reuse verified caches. Run `download` in advance to reduce the wait during the first MCP connection. The server needs no separate LLM API key. Your AI client's subscription and data handling terms still apply.
 
-## 결과는 이렇게 읽으세요
+## Reading the results
 
-| 표시 | 의미와 다음 행동 |
+| Field or label | Meaning and next step |
 |---|---|
-| `matchConfidence`, `queryCoverage` | 질문과 규칙의 검색 일치도. 사실성 점수는 아닙니다. |
-| `project-guidance` | 프로젝트가 관리하는 지침. 독립적인 외부 검증 자료는 아닙니다. |
-| `needs-review` | 적용 조건·근거·검토 기록을 더 확인하세요. |
-| `verifiedBy`, `lastReviewedAt` | 실제 검토 기록. 없으면 JSON에서 `null`입니다. |
-| `partial: true` | 체크리스트 일부만 반환했습니다. 시나리오를 나눠 추가 확인하세요. |
-| `analysisTruncated: true` | 큰 입력의 일부 구간을 검색했습니다. 관심 코드로 좁혀 다시 요청하세요. |
+| `matchConfidence`, `queryCoverage` | Query-to-rule search match, not a factual accuracy score. |
+| `project-guidance` | Guidance maintained by this project, not independent external verification. |
+| `needs-review` | Check applicability, evidence, and review records before relying on the rule. |
+| `verifiedBy`, `lastReviewedAt` | Actual review records; JSON contains `null` when no record exists. |
+| `partial: true` | Only part of a checklist was returned. Narrow the scenario and request more. |
+| `analysisTruncated: true` | Only selected sections of a large input were searched. Retry with the relevant code. |
 
-`active`는 카탈로그에서 사용 중이라는 뜻입니다. 검색 후보 없음이나 검토 후보 반환만으로 결함 유무를 확정하지 마세요. PG 계약·법률·세무·보안 판단에는 현재 적용되는 공식 자료와 실제 코드·운영 환경 확인이 필요합니다.
+`active` means a rule is enabled in the catalog. Neither an empty search nor a review candidate establishes whether a defect exists. Check current official material, actual code, and the operating environment for payment contracts, legal, tax, and security decisions.
 
-## 사용할 수 있는 도구
+## Tools
 
-| 도구 | 용도 |
+| Tool | Purpose |
 |---|---|
-| `search_knowledge` | 질문에 맞는 규칙 찾기 |
-| `get_rule` | 규칙 전문·적용 조건·예외·근거 확인 |
-| `get_checklist` | 업무별 확인 항목 받기 |
-| `review_commerce_design` | 설계·API·DDL·코드 조각의 검토 후보 찾기 |
+| `search_knowledge` | Find rules relevant to a query. |
+| `get_rule` | Read a full rule, applicability, exceptions, and evidence. |
+| `get_checklist` | Retrieve checks for a domain or scenario. |
+| `review_commerce_design` | Find review candidates in a design, API, DDL, or code excerpt. |
 
-클라이언트가 도구를 호출하므로 사용자가 매번 Tool 이름을 입력할 필요는 없습니다. 검색·규칙·체크리스트는 `responseFormat: "json"`으로 Markdown 중복을 줄일 수 있습니다. 실제 호출 예시는 [실무 시나리오](docs/USAGE_SCENARIOS.md)에 있습니다.
+Your client invokes the tools; you do not need to type a tool name in every message. Search, rule, and checklist calls accept `responseFormat: "json"` to avoid duplicate Markdown. See the [usage guide](docs/USAGE_SCENARIOS.md) for actual tool arguments.
 
-## 현재 제공 범위와 다음 개선
+## Supported environment and scope
 
-현재는 로컬 STDIO 방식으로 동작합니다. 지식 검색 자체는 외부 LLM·DB·HTTP 서버를 사용하지 않으며, 연결한 AI 클라이언트가 도구 결과를 활용합니다. 사용자 입력과 도구 결과가 AI 제공자에게 전달되는 범위는 클라이언트 설정에 따릅니다.
+The server runs locally over STDIO. Knowledge retrieval uses the YAML packaged in the JAR, without an external LLM, database, or HTTP server. Your connected AI client decides how tool results are used and which data is sent to its provider.
 
-**사용자가 JDK를 직접 설치하지 않아도 실행**할 수 있습니다. Windows·macOS·Linux(glibc)의 x64/ARM64에서 전용 Temurin JRE 21을 준비합니다. 압축 해제에는 OS의 `tar`가 필요합니다(Windows 10/11·macOS 기본 제공). 빌드에는 JDK 21이 필요하며 플러그인 설치형 배포는 후속 과제입니다. [다음 개선](CONTRIBUTING.md#다음-개선)
+The launcher prepares Temurin JRE 21 on Windows, macOS, and glibc-based Linux, for x64 and ARM64. It needs the OS `tar` command, included with Windows 10/11 and macOS. Alpine/musl and 32-bit systems are unsupported. Building from source requires JDK 21. Plugin-style distribution remains a [future improvement](CONTRIBUTING.md#next-improvements).
 
-## 더 알아보기
+## Documentation
 
-- [설치·연결·문제 해결](npm/README.md)
-- [사용 가이드 — 업무 예시·결과 해석·70개 규칙](docs/USAGE_SCENARIOS.md)
-- [기여 가이드 — 개발·평가·개선 계획·릴리스](CONTRIBUTING.md)
+- [Installation, connection, and troubleshooting](npm/README.md)
+- [Usage scenarios, result interpretation, and all 70 rules](docs/USAGE_SCENARIOS.md)
+- [Contributing, validation, runtime policy, and releases](CONTRIBUTING.md)
+- [한국어 안내](README.ko.md)
 
-## 공개 범위와 라이선스
+## Public data and license
 
-[MIT](LICENSE)로 제공합니다. 현재 기본 YAML은 소스와 배포 JAR에 포함되므로 공개 가능한 범용 지식만 담습니다. 회사별 정책·계약·내부 자료는 추가하지 마세요. 비공개 지식의 별도 저장·로딩은 추후 분리 대상입니다.
+Licensed under [MIT](LICENSE). The default YAML catalog is included in the source repository and distributed JAR. Contribute only public, general guidance; do not add company policies, contracts, private material, customer data, or keys. Separate storage and loading of private knowledge are future work.
