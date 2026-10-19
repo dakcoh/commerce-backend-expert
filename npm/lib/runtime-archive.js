@@ -63,7 +63,9 @@ function extractRuntime(archive, destination, info, timeoutMs = 90_000) {
     const listing = execFileSync(tar, ["-tvf", file], remaining());
     validateEntries(names, listing, info.java.split("/")[0]);
     fs.mkdirSync(destination);
-    execFileSync(tar, ["-xf", file, "-C", destination, "--no-same-owner", "--no-same-permissions"], remaining());
+    // Windows tar can mangle Unicode arguments under a different system codepage; cwd uses the wide OS API.
+    execFileSync(tar, ["-xf", path.relative(destination, archive), "--no-same-owner", "--no-same-permissions"],
+      {...remaining(), cwd: destination});
   } catch (error) {
     throw new Error(`Cannot extract Java runtime (tar is required): ${error.message}`, {cause: error});
   }

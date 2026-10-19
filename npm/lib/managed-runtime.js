@@ -5,7 +5,7 @@ const manifest = require("./runtime-manifest.json");
 const {cachePaths, ensureJar, acquireLock} = require("./jar-cache");
 const {sha256OfFile} = require("./checksum");
 const {download} = require("./release-client");
-const {javaStatus} = require("./java-runtime");
+const {javaStatus, javaExecutable} = require("./java-runtime");
 const {extractRuntime} = require("./runtime-archive");
 
 function runtimeInfo(platform = process.platform, arch = process.arch) {
@@ -53,10 +53,12 @@ function verifiedRuntime(paths, info) {
 }
 
 function checkJava(javaPath, info, spawn = spawnSync) {
+  javaPath = javaExecutable(javaPath);
   const status = javaStatus(javaPath, spawn);
   if (!status.ok || status.major !== 21 || !status.output.includes(`"${info.version.split("+")[0]}"`)) {
     throw new Error(`Managed Java ${info.version} cannot run: ${status.output || "missing executable or OS libraries"}`);
   }
+  return javaPath;
 }
 
 function removeOwnedChild(root, target) {
@@ -69,7 +71,7 @@ async function ensureRuntime(options = {}) {
   const paths = runtimePaths(options.cacheDir, info);
   if (fs.existsSync(paths.root) && fs.lstatSync(paths.root).isSymbolicLink()) throw new Error("Runtime cache must not be a symbolic link");
   const check = () => verifiedRuntime(paths, info);
-  if (check()) { checkJava(paths.javaPath, info, options.spawn); return paths.javaPath; }
+  if (check()) return checkJava(paths.javaPath, info, options.spawn);
   fs.mkdirSync(paths.root, {recursive: true});
   if (fs.lstatSync(paths.root).isSymbolicLink()) throw new Error("Runtime cache must not be a symbolic link");
   const now = options.lockOptions?.now || Date.now;
@@ -81,10 +83,10 @@ async function ensureRuntime(options = {}) {
   for (;;) {
     const lease = await acquireLock(paths, {...options.lockOptions, now,
       waitMs: Math.max(0, deadline - now()), isComplete: check});
-    if (!lease) { checkJava(paths.javaPath, info, options.spawn); return paths.javaPath; }
+    if (!lease) return checkJava(paths.javaPath, info, options.spawn);
     const stage = `${paths.home}.stage-${lease.token}`;
     try {
-      if (check()) { checkJava(paths.javaPath, info, options.spawn); return paths.javaPath; }
+      if (check()) return checkJava(paths.javaPath, info, options.spawn);
       lease.assertOwned();
       // Only the lock owner may remove interrupted extraction directories for this version/platform.
       for (const token of lease.abandonedTokens) removeOwnedChild(paths.root, `${paths.home}.stage-${token}`);
@@ -104,9 +106,9 @@ async function ensureRuntime(options = {}) {
       remaining();
       removeOwnedChild(paths.root, paths.home);
       fs.renameSync(stage, paths.home);
-      checkJava(paths.javaPath, info, options.spawn);
-      console.error(`Prepared Java ${info.version}: ${paths.javaPath}`);
-      return paths.javaPath;
+      const executable = checkJava(paths.javaPath, info, options.spawn);
+      console.error(`Prepared Java ${info.version}: ${executable}`);
+      return executable;
     } catch (error) {
       if (error.code !== "LOCK_OWNERSHIP_LOST") throw error;
     } finally {
