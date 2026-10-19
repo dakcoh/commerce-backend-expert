@@ -31,6 +31,8 @@ if (launcherRoot) {
   }
   launcherEnv.PATH = tools;
   launcherEnv.JAVA_HOME = path.join(cacheDir, "no-system-java");
+  // JVM diagnostics must never be emitted into the JSON-RPC channel.
+  launcherEnv.JDK_JAVA_OPTIONS = "-Xlog:os=info";
 }
 const launcherCode = `const cp=require('child_process'),spawn=cp.spawn;
   cp.spawn=(...args)=>{const child=spawn(...args);console.error('SMOKE_JAVA_PID:'+child.pid);return child;};
@@ -91,7 +93,7 @@ output.on("line", (line) => {
   try {
     message = JSON.parse(line);
   } catch (error) {
-    finish(error);
+    finish(new Error(`Non-JSON MCP stdout: ${line.slice(0, 500)}\n${stderr}`, {cause: error}));
     return;
   }
   if (message.id !== undefined && pending.has(message.id)) {

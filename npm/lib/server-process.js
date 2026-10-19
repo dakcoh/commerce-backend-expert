@@ -5,6 +5,8 @@ const path = require("path");
 function serverArguments(jarPath, args = []) {
   return [
     "-Dfile.encoding=UTF-8",
+    "-Xlog:disable",
+    "-Xlog:all=warning:stderr",
     "-jar",
     jarPath,
     ...args,

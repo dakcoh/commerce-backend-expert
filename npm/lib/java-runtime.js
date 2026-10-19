@@ -6,7 +6,7 @@ const path = require("node:path");
 function javaExecutable(executable, spawn = spawnSync, platform = process.platform) {
   if (platform !== "win32" || /^[\x20-\x7e]+$/.test(executable)) return executable;
   // The Windows Java launcher also resolves java.dll through the system codepage.
-  const script = `Add-Type -TypeDefinition 'using System; using System.Text; using System.Runtime.InteropServices;
+  const script = `$ErrorActionPreference = 'Stop'; Add-Type -TypeDefinition 'using System; using System.Text; using System.Runtime.InteropServices;
     public class RuntimePath { [DllImport("kernel32.dll", CharSet=CharSet.Unicode, SetLastError=true)]
       public static extern uint GetShortPathName(string path, StringBuilder output, uint size); }';
     $buffer = New-Object System.Text.StringBuilder 32768;
@@ -15,11 +15,12 @@ function javaExecutable(executable, spawn = spawnSync, platform = process.platfo
   const result = spawn(path.join(process.env.SystemRoot || "C:\\Windows", "System32/WindowsPowerShell/v1.0/powershell.exe"),
     ["-NoLogo", "-NoProfile", "-NonInteractive", "-Command", script], {
       env: {...process.env, COMMERCE_RUNTIME_LONG_PATH: executable},
-      encoding: "utf8", timeout: 15_000, windowsHide: true,
+      encoding: "utf8", timeout: 60_000, windowsHide: true,
     });
   const short = (result.stdout || "").trim();
   if (result.status !== 0 || !path.win32.isAbsolute(short) || !/^[\x20-\x7e]+$/.test(short)) {
-    throw new Error("Cannot launch managed Java from this Windows Unicode path. Set COMMERCE_CONTEXT_CACHE_DIR to a private writable ASCII-only path; 8.3 short names are unavailable.");
+    const reason = result.error?.message || result.stderr?.trim() || "8.3 short names are unavailable";
+    throw new Error(`Cannot launch managed Java from this Windows Unicode path. Set COMMERCE_CONTEXT_CACHE_DIR to a private writable ASCII-only path. ${reason}`);
   }
   return short;
 }
