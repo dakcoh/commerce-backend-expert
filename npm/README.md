@@ -1,14 +1,20 @@
 # commerce-context-mcp
 
-AI 코딩 도구에서 한국 이커머스와 Java/Spring의 설계 규칙을 검색하는 로컬 MCP 서버입니다.
+English · [한국어](https://github.com/dakcoh/commerce-context-mcp/blob/master/docs/INSTALLATION.ko.md)
 
-## 실행 환경
+A local MCP server that helps AI coding tools retrieve Korean ecommerce and Java/Spring design guidance.
 
-0.2.0은 **Node.js 22 이상 + 로컬 STDIO MCP 클라이언트**가 필요합니다. 사용자가 JDK/JRE를 설치하거나 JAVA_HOME을 설정할 필요가 없습니다. 시스템 Java가 있어도 사용하지 않습니다.
+**The documentation is available in English; the knowledge catalog is currently Korean.** The server does not translate queries. Ask your AI client to search with relevant Korean terms and explain the results in your preferred language. English query quality has not been established by the current regression suite.
 
-**첫 실행에서 전용 Temurin JRE 21.0.12.1+1을 자동 준비합니다.** npm 설치 스크립트에 의존하지 않으므로 `--ignore-scripts` 설치도 지원합니다. 이 기능은 **0.2.0부터 제공**합니다. 이전 버전 사용자는 패키지를 갱신하세요. 소스에서 검증할 때는 [기여 가이드의 로컬 패키지 절차](https://github.com/dakcoh/commerce-context-mcp/blob/master/CONTRIBUTING.md#로컬에서-검증하기)를 따릅니다.
+## Requirements
 
-구현 대상은 Windows·macOS·Linux(glibc)의 x64/ARM64입니다. 각 플랫폼의 실제 실행·복구·종료는 릴리스 CI에서 검사합니다. Node 프로세스의 CPU 아키텍처에 맞춥니다. Linux musl(Alpine)과 32비트는 지원하지 않습니다. 압축 해제용 `tar`가 필요하며 Windows 10/11·macOS에서는 기본 제공됩니다. Windows의 유니코드 런타임 경로는 개인 임시 폴더의 영문 junction으로 연결합니다. 한글·보충 문자가 있는 캐시의 서버 JAR는 영문 임시 작업 경로에 복사해 실행하고 종료 후 정리합니다. 관리자 권한·PowerShell·8.3 이름 생성은 필요하지 않습니다.
+Version 0.2.0 requires **Node.js 22 or later and a local STDIO MCP client**. You do not need to install a JDK/JRE or configure `JAVA_HOME`. An existing system Java installation is not used.
+
+**The first launch prepares a private Temurin JRE 21.0.12.1+1.** This does not depend on npm installation scripts; installation with `--ignore-scripts` is supported. Automatic runtime preparation is available **from 0.2.0**. Update older packages. For unpublished source changes, use the [local package validation procedure](https://github.com/dakcoh/commerce-context-mcp/blob/master/CONTRIBUTING.md#local-validation).
+
+Supported platforms are Windows, macOS, and glibc-based Linux on x64 and ARM64, selected according to the Node process architecture. Release CI checks actual startup, recovery, and shutdown on these platforms. Linux musl/Alpine and 32-bit systems are unsupported. Extraction requires the OS `tar` command, included with Windows 10/11 and macOS.
+
+On Windows, Unicode runtime paths use a junction in the user's private temporary directory. JARs in Unicode caches are copied to a private ASCII temporary workspace and removed on shutdown. Administrator access, PowerShell, and 8.3 filename generation are not required.
 
 ```bash
 node -v
@@ -16,27 +22,27 @@ npx -y commerce-context-mcp download
 npx -y commerce-context-mcp doctor
 ```
 
-`doctor`는 다운로드 없이 전용 런타임과 서버 JAR의 캐시를 검사합니다. **두 캐시가 모두 검증되면 종료코드 0**, 미준비·손상 상태면 1입니다. 첫 실행 전 `not prepared`·`cached jar: missing`은 준비가 필요하다는 뜻이며, `download` 실행 후 다시 확인하세요. OS 라이브러리·실제 실행 가능 여부는 `download` 또는 서버 기동에서 확인합니다.
+`doctor` checks runtime and JAR caches without downloading. **Both must pass verification for exit code 0**; missing or damaged caches produce exit code 1. Before first launch, `not prepared` or `cached jar: missing` means preparation is needed. Run `download` and check again. `download` or server startup also checks whether the runtime can actually execute with the available OS libraries.
 
-## 연결
+## Connect a client
 
-사용하는 클라이언트의 방법 하나를 선택합니다.
+Choose the method for your client.
 
-**Codex CLI** — [공식 안내](https://learn.chatgpt.com/docs/extend/mcp?surface=cli)
+**Codex CLI** — [official documentation](https://learn.chatgpt.com/docs/extend/mcp?surface=cli)
 
 ```bash
 codex mcp add commerce-context -- npx -y commerce-context-mcp
 ```
 
-**Claude Code** — [공식 안내](https://code.claude.com/docs/en/mcp)
+**Claude Code** — [official documentation](https://code.claude.com/docs/en/mcp)
 
 ```bash
 claude mcp add --transport stdio commerce-context -- npx -y commerce-context-mcp
 ```
 
-**Cursor·Claude Desktop 등 JSON 설정을 사용하는 앱**
+**Clients using JSON configuration, including Cursor and Claude Desktop**
 
-기존 `mcpServers`에 다음 항목을 병합합니다. 설정 위치·실행 방식은 클라이언트 안내를 따르세요.
+Merge the following entry into your existing `mcpServers` configuration. Follow your client's instructions for its configuration location and command execution requirements.
 
 ```json
 {
@@ -49,44 +55,44 @@ claude mcp add --transport stdio commerce-context -- npx -y commerce-context-mcp
 }
 ```
 
-연결을 새로고침하거나 앱을 재시작하고 도구 활성화 상태를 확인합니다. CLI와 실제 사용하는 앱의 설정이 같은지도 확인하세요.
+Refresh the connection or restart the app, then check that the tools are enabled. Confirm you configured the app you actually use; a CLI and its desktop app can have separate settings.
 
-## 사용
+## Use the server
 
-> “commerce-context를 참고해 이 결제 웹훅의 서명 검증·중복 처리·장애 복구를 검토해줘. 적용 조건과 추가 확인할 사항도 알려줘.”
+> “Use commerce-context to review signature checks, duplicate-event handling, and failure recovery in this payment webhook. Search the Korean catalog and explain applicability and remaining checks in English.”
 
-첫 실행은 버전에 맞는 JAR·체크섬을 받아 SHA-256을 확인하고 사용자 홈의 `.commerce-context-mcp`에 저장합니다. 이후 검증된 캐시를 재사용합니다. 전용 JRE는 같은 캐시의 `runtimes/`에 보관하며 고정 SHA-256으로 다운로드를 확인합니다. 압축을 풀 때 경로 탈출을 차단하고, 이후에는 파일별 해시를 검사해 손상된 설치를 복구합니다. 준비 완료 후에는 런타임·JAR 다운로드 없이 재실행할 수 있습니다.
+On first launch, the package retrieves the JAR matching its version and the release checksum, verifies SHA-256, and stores them under `~/.commerce-context-mcp`. The private JRE is stored under `runtimes/` in the same cache and checked against a pinned SHA-256. Archive paths are validated before extraction. Cached runtime files are checked on later launches and repaired if damaged. Once preparation succeeds, subsequent launches need no runtime or JAR download.
 
-서버에 별도 LLM API 키·DB는 필요하지 않습니다. AI 사용료와 데이터 전송 범위는 연결한 클라이언트의 조건·설정에 따릅니다. 검색 일치도는 사실성 점수가 아니며, 검토 후보·결과 없음으로 결함 유무를 확정하지 마세요. `partial`·`analysisTruncated`가 참이면 범위를 좁혀 추가 확인합니다.
+The server needs no separate LLM API key or database. AI usage charges and data transmission depend on your connected client's terms and settings. Search match is not factual accuracy; neither an empty result nor a review candidate establishes whether a defect exists. If `partial` or `analysisTruncated` is true, narrow the scope and check again.
 
-[업무 예시·결과 해석·70개 규칙](https://github.com/dakcoh/commerce-context-mcp/blob/master/docs/USAGE_SCENARIOS.md)
+[Usage scenarios, result interpretation, and all 70 rules](https://github.com/dakcoh/commerce-context-mcp/blob/master/docs/USAGE_SCENARIOS.md)
 
-## 문제 해결
+## Troubleshooting
 
-| 증상 | 다음 행동 |
+| Symptom | Next step |
 |---|---|
-| `Managed Java ... cannot run` | 지원 OS/CPU·OS 라이브러리를 확인하고 `download` 재실행. 잠긴 파일이 있으면 기존 MCP 종료 |
-| `Cannot launch managed Java from this Unicode path` | 임시 경로까지 영문 별칭을 만들 수 없는 환경입니다. 쓰기 가능한 개인용 영문 경로를 `COMMERCE_CONTEXT_CACHE_DIR`로 지정하고 재실행 |
-| `Cannot extract Java runtime` | OS의 `tar` 설치·실행 가능 여부와 디스크 여유 공간 확인 |
-| `Unsupported Java runtime platform` | 지원되는 OS·CPU와 Node 아키텍처 확인 |
-| `npx`를 찾지 못함 | Node 설치와 앱의 PATH·명령 실행 방식 확인 후 재시작 |
-| 실행했는데 끝나지 않음 | MCP 입력 대기 상태일 수 있음. 클라이언트의 실행 명령으로 등록 |
-| 다운로드·체크섬 오류 | GitHub Release 자산 접근 확인 후 재실행. 검증을 끄지 않음 |
-| 잠금 시간 초과 | 같은 버전의 다른 다운로드 확인. 활성 잠금을 삭제하지 않음 |
-| AI가 도구를 쓰지 않음 | 도구 허용·연결 상태 확인 후 서버를 참고하도록 명시적으로 요청 |
+| `Managed Java ... cannot run` | Check supported OS/CPU and OS libraries, then run `download`. Stop existing MCP processes if files are locked. |
+| `Cannot launch managed Java from this Unicode path` | An ASCII alias cannot be created, including in the temporary directory. Set `COMMERCE_CONTEXT_CACHE_DIR` to a writable, private ASCII path and retry. |
+| `Cannot extract Java runtime` | Check the OS `tar` command and available disk space. |
+| `Unsupported Java runtime platform` | Check supported OS/CPU and Node architecture. |
+| `npx` cannot be found | Check the Node installation and the app's command environment, then restart the app. |
+| The command keeps running | The server may be waiting for MCP input. Register it as your client's server command. |
+| Download or checksum failure | Check access to GitHub Release assets and retry. Do not disable verification. |
+| Lock wait timed out | Check whether another process is preparing the same version. Do not remove an active lock. |
+| The AI does not use the tools | Check connection and tool permissions, then explicitly ask the AI to consult the server. |
 
-우선 `download`를 다시 실행하세요. 손상된 런타임 파일은 캐시의 고정 해시 압축에서 복구하며, 압축까지 손상되면 다시 받습니다. 정상 압축이 남아 있으면 체크섬 보조 파일이 없어도 오프라인 런타임 복구가 가능합니다. 오프라인 실행에는 서버 JAR와 그 `.sha256`도 준비되어 있어야 합니다.
+First retry `download`. Damaged runtime files can be restored from the cached, pinned archive. If the archive is also damaged, it is downloaded again. Offline runtime repair works with an intact archive even if its checksum sidecar is missing. Offline JAR use requires both the JAR and its `.sha256` file.
 
-자동 복구가 실패하면 관련 MCP 클라이언트·다운로드 프로세스를 모두 종료한 뒤 `doctor`가 출력한 경로만 확인하세요. `runtime executable`은 실행 파일 경로이므로 그 파일이 속한 `runtimes/temurin-<버전>-<OS>-<CPU>` 폴더가 해당 설치입니다. 해당 버전 설치 폴더 또는 JAR·`.sha256`만 제거하고 `download`를 재실행합니다. 잠금 오류가 계속되면 활성 다운로드가 없는 것을 확인한 후 해당 버전의 `.lock`만 제거하세요. 다른 폴더·버전을 일괄 삭제하지 않습니다.
+If automatic recovery fails, stop related MCP clients and download processes. Inspect only the paths reported by `doctor`. `runtime executable` points to a file inside the affected version's `runtimes/temurin-<version>-<OS>-<CPU>` directory. Remove only that version's runtime directory or the affected JAR and `.sha256`, then run `download`. For a persistent lock error, remove only the relevant `.lock` after confirming no active download exists. Do not delete unrelated versions or directories.
 
-Windows의 사용자 임시 폴더에도 영문 별칭을 만들 수 없어 자동 준비가 실패한 경우에만 캐시 위치를 바꿉니다. 경로는 자신에게 쓰기 권한이 있는 개인용 영문 절대 경로로 바꾸고, MCP 클라이언트의 실행 환경에도 같은 변수를 설정하세요. 공유·공용 쓰기 폴더는 사용하지 않습니다.
+If Windows cannot create an ASCII alias even in the user's temporary directory, use a private cache path containing only ASCII characters. Replace the example with an absolute path writable by your account, and set the same variable in the MCP client's environment. Avoid shared or publicly writable folders.
 
 ```powershell
 $env:COMMERCE_CONTEXT_CACHE_DIR="C:\path\to\private-cache"
 npx -y commerce-context-mcp download
 ```
 
-## 명령과 다운로드 시점
+## Commands and download timing
 
 ```bash
 npx -y commerce-context-mcp --help
@@ -94,10 +100,10 @@ npx -y commerce-context-mcp --version
 npx -y commerce-context-mcp download
 ```
 
-npm 설치는 실행기 파일만 설치하고, `download`는 전용 Java 런타임과 JAR를 준비한 뒤 종료합니다. 인자 없이 실행해도 같은 준비 과정을 거친 후 MCP 연결을 기다립니다. 플러그인 설치형 배포는 후속 과제입니다.
+npm installation installs only launcher files. `download` prepares the private Java runtime and JAR, then exits. Running without a command performs the same preparation and waits for an MCP connection. Plugin-style distribution is future work.
 
-Windows x64 로컬 측정(2026-10-19): JRE 다운로드 49.0 MB, 압축 파일을 포함한 런타임 캐시 약 200.6 MB, 최초 준비 약 2.6초, 재검증 약 0.4초였습니다. 서버 JAR 용량·시작 시간은 별도이며 네트워크·디스크에 따라 달라집니다.
+Local Windows x64 measurement on 2026-10-19: the JRE download was 49.0 MB, the runtime cache including the archive was about 200.6 MB, initial runtime preparation took about 2.6 seconds, and revalidation took about 0.4 seconds. These figures exclude the server JAR and server startup. Network and disk performance affect actual times.
 
-런타임은 [Eclipse Temurin 공식 배포](https://github.com/adoptium/temurin21-binaries/releases/tag/jdk-21.0.12.1%2B1)에서 받습니다. 프로젝트 코드는 MIT이며 런타임에는 [OpenJDK 라이선스](https://adoptium.net/about/)와 압축에 포함된 `legal/` 고지가 별도로 적용됩니다. 런타임 보안 업데이트는 고정 버전·체크섬을 갱신한 npm 릴리스로 제공합니다.
+Runtime binaries come from the [official Eclipse Temurin release](https://github.com/adoptium/temurin21-binaries/releases/tag/jdk-21.0.12.1%2B1). Project code is MIT licensed. The runtime has its own [OpenJDK license](https://adoptium.net/about/) and notices under `legal/` in the archive. Runtime security updates are delivered through new npm releases that update the pinned version and checksums.
 
-[프로젝트 소개](https://github.com/dakcoh/commerce-context-mcp) · [업그레이드·개선 계획](https://github.com/dakcoh/commerce-context-mcp/blob/master/CONTRIBUTING.md) · [MIT](LICENSE)
+[Project](https://github.com/dakcoh/commerce-context-mcp) · [Contributing and roadmap](https://github.com/dakcoh/commerce-context-mcp/blob/master/CONTRIBUTING.md) · [MIT](LICENSE)
