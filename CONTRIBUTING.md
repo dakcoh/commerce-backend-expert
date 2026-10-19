@@ -207,7 +207,7 @@ JAR는 npm 버전과 맞춰 HTTPS로 받고 SHA-256을 검증합니다. 체크�
 
 - 배포판: Eclipse Temurin JRE **21.0.12.1+1**, [공식 릴리스](https://github.com/adoptium/temurin21-binaries/releases/tag/jdk-21.0.12.1%2B1). `npm/lib/runtime-manifest.json`에 OS/CPU별 URL·공식 SHA-256·크기를 고정합니다. 실행 중 latest 조회나 시스템 Java 재사용은 하지 않습니다.
 - 라이선스: [OpenJDK GPLv2 + Classpath/Assembly Exception](https://adoptium.net/about/) 및 런타임의 `legal/` 고지를 보존합니다. npm에는 런타임 바이너리를 넣지 않고 공식 공급처에서 받습니다.
-- 환경: Windows·macOS·Linux(glibc), x64/ARM64. musl/32비트는 명시적으로 거부합니다. OS `tar`를 사용하며 Windows에서는 System32의 tar를 직접 실행합니다. PATH·관리자 권한·시스템 JDK 설치를 변경하지 않습니다.
+- 환경: Windows·macOS·Linux(glibc), x64/ARM64. musl/32비트는 명시적으로 거부합니다. OS `tar`를 사용하며 Windows에서는 System32의 tar를 직접 실행합니다. 해제 대상은 cwd로 전달하고 archive 인자는 상대 경로로 유지합니다. Windows 런타임 경로는 사용자 임시 폴더의 영문 junction을 사용합니다. 유니코드 캐시의 JAR는 소유자 전용 영문 임시 작업 경로로 복사해 실행하고 자식 종료 후 해당 복사본만 제거합니다. 원본 캐시는 유지하며 JAR 한 개 크기의 임시 디스크 여유가 필요합니다. junction은 검증된 설치를 가리키는지 확인하며 관리자 권한·PowerShell·8.3 이름에 의존하지 않습니다. 별칭 폴더도 영문으로 만들 수 없으면 개인용 영문 절대 경로의 `COMMERCE_CONTEXT_CACHE_DIR` 설정을 안내합니다. JVM 진단 로그는 stderr로 보내 JSON-RPC stdout을 보존합니다. PATH·관리자 권한·시스템 JDK 설치를 변경하지 않습니다.
 - 캐시: 사용자 홈 `.commerce-context-mcp/runtimes/` 아래 버전·플랫폼별 저장. 고정 해시 확인 후 전체 archive 경로·링크를 사전 검사하고 임시 폴더에 해제합니다. 일반 파일로 향하는 내부 symlink만 허용합니다. 파일별 해시·실행 권한을 저장하고 매번 재검증합니다. 원본 압축 파일도 보관해 오프라인 손상 복구에 사용합니다.
 - 복구: 기존 PID/호스트/토큰 잠금을 재사용합니다. 최초 대기 예산600초를 소유권 변경 시에도 유지하며 전송은 시도당120초·최대3회, 해제는90초 이내입니다. 중단된 임시 파일·추출 폴더는 소유권 확인 후 정리합니다. 로그는 stderr이며 자식 Java는 절대 경로로 실행합니다.
 - 보안 업데이트: Temurin 보안/패치 릴리스를 확인하여 고정 버전과 6개 자산 해시·크기를 함께 변경하고, 단위 테스트·각 플랫폼의 실제 패키지 smoke 후 새 npm 버전으로 배포합니다. 구버전 캐시는 자동으로 사용하지 않으며 사용 중일 수 있으므로 자동 일괄 삭제하지 않습니다.

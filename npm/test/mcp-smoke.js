@@ -18,7 +18,7 @@ const launcherRoot = process.env.MCP_LAUNCHER_ROOT;
 let cacheDir;
 const launcherEnv = {...process.env};
 if (launcherRoot) {
-  cacheDir = fs.mkdtempSync(path.join(os.tmpdir(), "commerce-한글-smoke-"));
+  cacheDir = fs.mkdtempSync(path.join(os.tmpdir(), "commerce-한글-🧪-smoke-"));
   const pkg = require(path.join(path.resolve(launcherRoot), "package.json"));
   const cachedJar = path.join(cacheDir, `context-engine-${pkg.version}.jar`);
   fs.copyFileSync(jarPath, cachedJar);
@@ -31,9 +31,12 @@ if (launcherRoot) {
   }
   launcherEnv.PATH = tools;
   launcherEnv.JAVA_HOME = path.join(cacheDir, "no-system-java");
+  // JVM diagnostics must never be emitted into the JSON-RPC channel.
+  launcherEnv.JDK_JAVA_OPTIONS = "-Xlog:os=info";
 }
 const launcherCode = `const cp=require('child_process'),spawn=cp.spawn;
-  cp.spawn=(...args)=>{const child=spawn(...args);console.error('SMOKE_JAVA_PID:'+child.pid);return child;};
+  cp.spawn=(...args)=>{const child=spawn(...args);console.error('SMOKE_JAVA_PID:'+child.pid);
+    console.error('SMOKE_JAVA_CWD:'+JSON.stringify(args[2].cwd));return child;};
   require(process.argv[1]).run([],require(process.argv[2]),{cacheDir:process.argv[3]})
     .catch(e=>{console.error(e);process.exitCode=1});`;
 const child = spawn(launcherRoot ? process.execPath : "java", launcherRoot
@@ -49,14 +52,40 @@ const pending = new Map();
 let nextId = 1;
 let stderr = "";
 let settled = false;
+let diagnosing = false;
+let diagnosticOutput = "";
+let timeout;
+
+function armTimeout(milliseconds) {
+  clearTimeout(timeout);
+  timeout = setTimeout(() => {
+    diagnosing = true;
+    const pid = launcherRoot ? Number(stderr.match(/SMOKE_JAVA_PID:(\d+)/)?.[1]) : child.pid;
+    if (pid && process.platform !== "win32") {
+      try { process.kill(pid, "SIGQUIT"); } catch {}
+    }
+    setTimeout(() => {
+      const directory = stderr.match(/SMOKE_JAVA_CWD:(.+)/)?.[1];
+      let serverLog = "";
+      if (directory) {
+        try { serverLog = fs.readFileSync(path.join(JSON.parse(directory), "logs/context-engine-stdio.log"), "utf8"); } catch {}
+      }
+      finish(new Error(`MCP smoke test timed out; pending=${JSON.stringify([...pending.values()].map(item => item.method))}\n${stderr}\n${serverLog}\n${diagnosticOutput}`));
+    }, 1_500);
+  }, milliseconds);
+}
 
 child.stderr.setEncoding("utf8");
-child.stderr.on("data", (chunk) => { stderr += chunk; });
+child.stderr.on("data", (chunk) => {
+  const wasStarted = /SMOKE_JAVA_PID:\d+/.test(stderr);
+  stderr += chunk;
+  if (!wasStarted && /SMOKE_JAVA_PID:\d+/.test(stderr)) armTimeout(60_000);
+});
 
 function send(method, params) {
   const id = nextId++;
   child.stdin.write(`${JSON.stringify({ jsonrpc: "2.0", id, method, params })}\n`);
-  return new Promise((resolve, reject) => pending.set(id, { resolve, reject }));
+  return new Promise((resolve, reject) => pending.set(id, { resolve, reject, method }));
 }
 
 function notify(method, params = {}) {
@@ -86,12 +115,13 @@ async function expectFailure(method, params) {
 
 const output = readline.createInterface({ input: child.stdout });
 output.on("line", (line) => {
+  if (diagnosing) { diagnosticOutput += `${line}\n`; return; }
   if (!line.trim()) return;
   let message;
   try {
     message = JSON.parse(line);
   } catch (error) {
-    finish(error);
+    finish(new Error(`Non-JSON MCP stdout: ${line.slice(0, 500)}\n${stderr}`, {cause: error}));
     return;
   }
   if (message.id !== undefined && pending.has(message.id)) {
@@ -108,7 +138,7 @@ child.on("exit", (code, signal) => {
   if (!settled) finish(new Error(`MCP server exited early: code=${code}, signal=${signal}\n${stderr}`));
 });
 
-const timeout = setTimeout(() => finish(new Error(`MCP smoke test timed out\n${stderr}`)), launcherRoot ? 660_000 : 60_000);
+armTimeout(launcherRoot ? 660_000 : 60_000);
 
 function finish(error) {
   if (settled) return;

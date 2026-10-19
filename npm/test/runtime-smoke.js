@@ -8,7 +8,7 @@ const {promisify} = require("node:util");
 const {runtimeInfo, runtimePaths, verifiedRuntime} = require("../lib/managed-runtime");
 
 async function main() {
-  const cacheDir = fs.mkdtempSync(path.join(os.tmpdir(), "commerce-runtime-한글-real-"));
+  const cacheDir = fs.mkdtempSync(path.join(os.tmpdir(), "commerce-runtime-한글-🧪-real-"));
   const tools = path.join(cacheDir, "tools");
   fs.mkdirSync(tools);
   if (process.platform !== "win32") {
@@ -32,7 +32,8 @@ async function main() {
     const [one, two] = results.map(result => result.value);
     assert.equal(one, two);
     const info = runtimeInfo(), paths = runtimePaths(cacheDir, info);
-    assert.equal(one, paths.javaPath);
+    const launched = fs.statSync(one, {bigint: true}), installed = fs.statSync(paths.javaPath, {bigint: true});
+    assert.deepEqual([launched.dev, launched.ino], [installed.dev, installed.ino]);
     assert.ok(verifiedRuntime(paths, info));
     const coldMs = Date.now() - started;
     assert.equal(await run("offline"), one);
@@ -48,7 +49,7 @@ async function main() {
     console.log(`Managed runtime smoke passed: ${process.platform}/${process.arch}, two processes, no system Java, offline reuse/repair without sidecar, cold=${coldMs}ms`);
   } finally {
     assert.equal(path.dirname(path.resolve(cacheDir)), path.resolve(os.tmpdir()));
-    assert.ok(path.basename(cacheDir).startsWith("commerce-runtime-한글-real-"));
+    assert.ok(path.basename(cacheDir).startsWith("commerce-runtime-한글-🧪-real-"));
     fs.rmSync(cacheDir, {recursive: true, force: true});
   }
 }

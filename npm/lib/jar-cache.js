@@ -9,7 +9,8 @@ const MAX_ATTEMPTS = 3;
 // Checksum (15s), three transfers (120s each), and scheduling margin.
 const LOCK_WAIT_MS = 405_000;
 
-function cachePaths(info, cacheDir = path.join(os.homedir(), ".commerce-context-mcp")) {
+function cachePaths(info, cacheDir = process.env.COMMERCE_CONTEXT_CACHE_DIR || path.join(os.homedir(), ".commerce-context-mcp")) {
+  cacheDir = path.resolve(cacheDir);
   const jarPath = path.join(cacheDir, info.jarName);
   return {
     cacheDir,
