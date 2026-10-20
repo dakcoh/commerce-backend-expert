@@ -48,7 +48,8 @@ public class CommerceKnowledgeTool {
                   관련도, 질의 커버리지, 매칭 필드와 규칙 상태를 구조화해 반환합니다.
                   특정 규칙 ID를 모르는 일반적인 설계·구현 질문에서 우선 사용하세요.
                   업무·실패 상황을 짧게 질의하세요. AI는 responseFormat=json으로 중복 표현을 줄일 수 있습니다.
-                  후보의 적용 조건과 예외는 get_rule로 확인한 뒤 판단하세요. 점수는 사실성 확률이 아닙니다.
+                  summary 후보의 적용 조건과 예외는 get_rule로 확인하세요. 여러 규칙의 전문이 필요하면 detail=full로 한 번에 받고 같은 규칙을 다시 조회하지 마세요.
+                  점수는 사실성 확률이 아닙니다.
                   """)
     public KnowledgeSearchResponse searchKnowledge(
             @ToolParam(description = "검색 질의", required = true) String query,
@@ -85,7 +86,9 @@ public class CommerceKnowledgeTool {
                 !results.isEmpty(),
                 results.isEmpty()
                         ? "관련성이 충분한 규칙을 찾지 못했습니다. domain, 기능, 실패 상황을 포함해 질문을 구체화하세요. 예: 부분 환불 쿠폰 복원 금액."
-                        : "관련 규칙 후보입니다. matchConfidence와 queryCoverage는 검색 일치도입니다. get_rule로 적용 조건과 예외를 확인하세요.",
+                        : responseDetail == ResponseDetail.FULL
+                            ? "관련 규칙 전문입니다. 포함된 적용 조건·예외·근거를 확인하세요. 같은 규칙을 get_rule로 다시 조회할 필요는 없습니다. matchConfidence와 queryCoverage는 검색 일치도이며 사실성 확률이 아닙니다."
+                            : "관련 규칙 후보입니다. matchConfidence와 queryCoverage는 검색 일치도입니다. get_rule로 적용 조건과 예외를 확인하세요.",
                 TRUST_NOTICE,
                 format == ResponseFormat.JSON ? "" : renderer.renderSearchResults(results, responseDetail),
                 format == ResponseFormat.JSON && responseDetail == ResponseDetail.FULL

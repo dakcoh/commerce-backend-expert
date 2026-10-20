@@ -5,7 +5,7 @@ const path = require("path");
 const readline = require("readline");
 const { spawn } = require("child_process");
 const fs = require("fs");
-const os = require("os");
+const {temporaryDirectory, isolatedJavaEnvironment} = require("./support/fixtures");
 const {sha256OfFile} = require("../lib/checksum");
 
 const jarPath = process.argv[2] && path.resolve(process.argv[2]);
@@ -15,24 +15,19 @@ if (!jarPath) {
 }
 
 const launcherRoot = process.env.MCP_LAUNCHER_ROOT;
-let cacheDir;
-const launcherEnv = {...process.env};
+let cacheDir, cleanupCache;
+let launcherEnv = {...process.env};
 if (launcherRoot) {
-  cacheDir = fs.mkdtempSync(path.join(os.tmpdir(), "commerce-한글-🧪-smoke-"));
-  const pkg = require(path.join(path.resolve(launcherRoot), "package.json"));
-  const cachedJar = path.join(cacheDir, `context-engine-${pkg.version}.jar`);
-  fs.copyFileSync(jarPath, cachedJar);
-  fs.writeFileSync(`${cachedJar}.sha256`, sha256OfFile(cachedJar));
-  // Only extraction tools are on PATH: the packed launcher cannot use system Java.
-  const tools = path.join(cacheDir, "tools");
-  fs.mkdirSync(tools);
-  if (process.platform !== "win32") {
-    for (const name of ["tar", "gzip"]) fs.symlinkSync(fs.realpathSync(`/usr/bin/${name}`), path.join(tools, name));
-  }
-  launcherEnv.PATH = tools;
-  launcherEnv.JAVA_HOME = path.join(cacheDir, "no-system-java");
-  // JVM diagnostics must never be emitted into the JSON-RPC channel.
-  launcherEnv.JDK_JAVA_OPTIONS = "-Xlog:os=info";
+  ({dir: cacheDir, cleanup: cleanupCache} = temporaryDirectory("commerce-한글-🧪-smoke-"));
+  try {
+    const pkg = require(path.join(path.resolve(launcherRoot), "package.json"));
+    const cachedJar = path.join(cacheDir, `context-engine-${pkg.version}.jar`);
+    fs.copyFileSync(jarPath, cachedJar);
+    fs.writeFileSync(`${cachedJar}.sha256`, sha256OfFile(cachedJar));
+    launcherEnv = isolatedJavaEnvironment(cacheDir);
+    // JVM diagnostics must never be emitted into the JSON-RPC channel.
+    launcherEnv.JDK_JAVA_OPTIONS = "-Xlog:os=info";
+  } catch (error) { cleanupCache(); throw error; }
 }
 const launcherCode = `const cp=require('child_process'),spawn=cp.spawn;
   cp.spawn=(...args)=>{const child=spawn(...args);console.error('SMOKE_JAVA_PID:'+child.pid);
@@ -84,8 +79,11 @@ child.stderr.on("data", (chunk) => {
 
 function send(method, params) {
   const id = nextId++;
-  child.stdin.write(`${JSON.stringify({ jsonrpc: "2.0", id, method, params })}\n`);
-  return new Promise((resolve, reject) => pending.set(id, { resolve, reject, method }));
+  return new Promise((resolve, reject) => {
+    if (settled) { reject(new Error("MCP smoke session already stopped")); return; }
+    pending.set(id, { resolve, reject, method });
+    child.stdin.write(`${JSON.stringify({ jsonrpc: "2.0", id, method, params })}\n`);
+  });
 }
 
 function notify(method, params = {}) {
@@ -107,7 +105,7 @@ async function expectFailure(method, params) {
     result = await send(method, params);
   } catch (error) {
     // JSON-RPC errors and tools/call isError are both valid MCP error boundaries.
-    assert.ok(error.message);
+    assert.ok(error.rpcError, "A transport failure is not a valid MCP error response");
     return;
   }
   assert.strictEqual(result.isError, true, `Expected failure: ${JSON.stringify({ method, params, result })}`);
@@ -127,7 +125,7 @@ output.on("line", (line) => {
   if (message.id !== undefined && pending.has(message.id)) {
     const handler = pending.get(message.id);
     pending.delete(message.id);
-    if (message.error) handler.reject(new Error(JSON.stringify(message.error)));
+    if (message.error) handler.reject(Object.assign(new Error(JSON.stringify(message.error)), {rpcError: message.error}));
     else handler.resolve(message.result);
   }
 });
@@ -144,6 +142,10 @@ function finish(error) {
   if (settled) return;
   settled = true;
   clearTimeout(timeout);
+  if (error) {
+    for (const handler of pending.values()) handler.reject(error);
+    pending.clear();
+  }
   output.close();
   child.stdin.end();
   const forced = setTimeout(() => child.kill("SIGKILL"), 5_000);
@@ -156,12 +158,12 @@ function finish(error) {
     if (launcherRoot) {
       const pid = Number(stderr.match(/SMOKE_JAVA_PID:(\d+)/)?.[1]);
       try {
-        assert.ok(pid, "Launcher must report the owned Java PID");
-        assert.throws(() => process.kill(pid, 0), {code: "ESRCH"}, "Java must exit with its launcher");
+        if (!error || pid) {
+          assert.ok(pid, "Launcher must report the owned Java PID");
+          assert.throws(() => process.kill(pid, 0), {code: "ESRCH"}, "Java must exit with its launcher");
+        }
       } catch (failure) {console.error(failure); process.exitCode = 1;}
-      // This directory was exclusively created by this test, under the OS temp root.
-      assert.equal(path.dirname(path.resolve(cacheDir)), path.resolve(os.tmpdir()));
-      fs.rmSync(cacheDir, {recursive: true, force: true});
+      cleanupCache();
     }
   });
   if (error) {
@@ -347,8 +349,16 @@ function finish(error) {
     assert.ok(scenario.findings.some((finding) => finding.ruleId === "webhook-handling"));
     assert.strictEqual(scenario.analysisTruncated, true);
     assert.strictEqual(scenario.analyzedChunks, 32);
-    for (const query of ["재고가 아니라 오늘 기온이 궁금해", "부산 맛집 예약"]) {
+    for (const query of ["재고가 아니라 오늘 기온이 궁금해", "부산 맛집 예약", "식당 예약 취소 수수료가 궁금해요"]) {
       assert.strictEqual(data(await tool("search_knowledge", { query })).answerable, false);
+    }
+    assert.strictEqual(data(await tool("search_knowledge", {
+      query: "식당 예약 취소 수수료가 궁금해요", domain: "payment",
+    })).answerable, false);
+    for (const query of ["식당 예약 환불 API 설계", "미용실 예약 취소 환불"]) {
+      const refund = data(await tool("search_knowledge", {query, domain: "payment", responseFormat: "json"}));
+      assert.strictEqual(refund.answerable, true);
+      assert.ok(refund.results.some(result => result.ruleId === "partial-refund"));
     }
     const recovery = data(await tool("search_knowledge", { query: "결제 웹훅 서명", topK: 1 }));
     assert.strictEqual(recovery.results[0].ruleId, "webhook-handling");

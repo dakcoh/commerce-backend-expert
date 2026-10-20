@@ -1,9 +1,9 @@
+const {temporaryDirectory} = require("./support/fixtures");
 const {test} = require("node:test");
 const assert = require("node:assert/strict");
 const {EventEmitter} = require("node:events");
 const {PassThrough} = require("node:stream");
 const fs = require("node:fs");
-const os = require("node:os");
 const path = require("node:path");
 const {fetchText, download} = require("../lib/release-client");
 const URL = "https://github.com/fixture";
@@ -34,14 +34,9 @@ function transport(steps) {
   }};
 }
 
-function tempFile() {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "commerce-transfer-"));
-  return {file: path.join(dir, "asset.tmp"), cleanup() {
-    for (const name of fs.readdirSync(dir)) {
-      const file = path.resolve(dir, name); assert.equal(path.dirname(file), dir); fs.unlinkSync(file);
-    }
-    fs.rmdirSync(dir);
-  }};
+function tempFile(t) {
+  const {dir, cleanup} = temporaryDirectory("commerce-transfer-", t);
+  return {file: path.join(dir, "asset.tmp"), cleanup};
 }
 
 test("HTTPS allowlist is checked before every redirect and limits redirect loops", async () => {
@@ -80,8 +75,8 @@ test("idle timeout and caller abort terminate an unfinished body", async () => {
   await assert.rejects(fetchText(URL, {...transport([{body: "unused"}]), signal: controller.signal}), /fixture abort/);
 });
 
-test("failed transfers remove partial files and can be retried", async () => {
-  const f = tempFile();
+test("failed transfers remove partial files and can be retried", async t => {
+  const f = tempFile(t);
   try {
     const steps = [
       {headers: {"content-length": "20"}, body: "short"},
@@ -100,8 +95,8 @@ test("failed transfers remove partial files and can be retried", async () => {
   } finally {f.cleanup();}
 });
 
-test("an existing destination survives a write error", async () => {
-  const f = tempFile();
+test("an existing destination survives a write error", async t => {
+  const f = tempFile(t);
   try {
     fs.writeFileSync(f.file, "existing");
     await assert.rejects(download(URL, f.file, () => {}, transport([{body: "replacement"}])), {code: "EEXIST"});

@@ -8,11 +8,13 @@ AI 코딩 도구에서 한국 이커머스와 Java/Spring의 설계 규칙을 �
 
 ## 실행 환경
 
-0.2.0은 **Node.js 22 이상 + 로컬 STDIO MCP 클라이언트**가 필요합니다. 사용자가 JDK/JRE를 설치하거나 JAVA_HOME을 설정할 필요가 없습니다. 시스템 Java가 있어도 사용하지 않습니다.
+0.2.1은 **Node.js 22 이상 + 로컬 STDIO MCP 클라이언트**가 필요합니다. 사용자가 JDK/JRE를 설치하거나 JAVA_HOME을 설정할 필요가 없습니다. 시스템 Java가 있어도 사용하지 않습니다.
 
 **첫 실행에서 전용 Temurin JRE 21.0.12.1+1을 자동 준비합니다.** npm 설치 스크립트에 의존하지 않으므로 `--ignore-scripts` 설치도 지원합니다. 이 기능은 **0.2.0부터 제공**합니다. 이전 버전 사용자는 패키지를 갱신하세요. 소스에서 검증할 때는 [기여 가이드의 로컬 패키지 절차](https://github.com/dakcoh/commerce-context-mcp/blob/master/CONTRIBUTING.ko.md#로컬에서-검증하기)를 따릅니다.
 
-구현 대상은 Windows·macOS·Linux(glibc)의 x64/ARM64입니다. 각 플랫폼의 실제 실행·복구·종료는 릴리스 CI에서 검사합니다. Node 프로세스의 CPU 아키텍처에 맞춥니다. Linux musl(Alpine)과 32비트는 지원하지 않습니다. 압축 해제용 `tar`가 필요하며 Windows 10/11·macOS에서는 기본 제공됩니다. Windows의 유니코드 런타임 경로는 개인 임시 폴더의 영문 junction으로 연결합니다. 한글·보충 문자가 있는 캐시의 서버 JAR는 영문 임시 작업 경로에 복사해 실행하고 종료 후 정리합니다. 관리자 권한·PowerShell·8.3 이름 생성은 필요하지 않습니다.
+구현 대상은 Windows·macOS·Linux(glibc)의 x64/ARM64입니다. 각 플랫폼의 실제 실행·복구·종료는 릴리스 CI에서 검사합니다. Node 프로세스의 CPU 아키텍처에 맞춥니다. Linux musl(Alpine)과 32비트는 지원하지 않습니다. 압축 해제용 `tar`가 필요하며 Windows 10/11·macOS에서는 기본 제공됩니다.
+
+Windows의 유니코드 런타임 경로는 대상이 검증된 junction으로 연결합니다. 한글·보충 문자가 있는 캐시의 서버 JAR는 개인 작업 폴더에 복사해 실행하고 종료 후 정리합니다. 임시 경로에 한글·이모지 등이 있으면 사용자 홈의 `.commerce-context-mcp-java`와 `.commerce-context-mcp-launch`를 사용합니다. Windows Java가 지원하는 한글 사용자 경로는 그대로 이용할 수 있으며 관리자 권한·PowerShell·8.3 이름 생성은 필요하지 않습니다. 사용자 홈 자체가 Windows Java에서 표현할 수 없는 문자라면 아래 영문 캐시 경로 설정이 필요합니다.
 
 ```bash
 node -v
@@ -70,7 +72,7 @@ claude mcp add --transport stdio commerce-context -- npx -y commerce-context-mcp
 | 증상 | 다음 행동 |
 |---|---|
 | `Managed Java ... cannot run` | 지원 OS/CPU·OS 라이브러리를 확인하고 `download` 재실행. 잠긴 파일이 있으면 기존 MCP 종료 |
-| `Cannot launch managed Java from this Unicode path` | 임시 경로까지 영문 별칭을 만들 수 없는 환경입니다. 쓰기 가능한 개인용 영문 경로를 `COMMERCE_CONTEXT_CACHE_DIR`로 지정하고 재실행 |
+| Windows Java가 사용자 홈 경로에서 실행되지 않음 | 쓰기 가능한 개인용 영문 경로를 `COMMERCE_CONTEXT_CACHE_DIR`로 지정하고 재실행. 임시 경로에 한글·이모지가 있다는 이유만으로 실행을 차단하지는 않습니다. |
 | `Cannot extract Java runtime` | OS의 `tar` 설치·실행 가능 여부와 디스크 여유 공간 확인 |
 | `Unsupported Java runtime platform` | 지원되는 OS·CPU와 Node 아키텍처 확인 |
 | `npx`를 찾지 못함 | Node 설치와 앱의 PATH·명령 실행 방식 확인 후 재시작 |
@@ -83,7 +85,7 @@ claude mcp add --transport stdio commerce-context -- npx -y commerce-context-mcp
 
 자동 복구가 실패하면 관련 MCP 클라이언트·다운로드 프로세스를 모두 종료한 뒤 `doctor`가 출력한 경로만 확인하세요. `runtime executable`은 실행 파일 경로이므로 그 파일이 속한 `runtimes/temurin-<버전>-<OS>-<CPU>` 폴더가 해당 설치입니다. 해당 버전 설치 폴더 또는 JAR·`.sha256`만 제거하고 `download`를 재실행합니다. 잠금 오류가 계속되면 활성 다운로드가 없는 것을 확인한 후 해당 버전의 `.lock`만 제거하세요. 다른 폴더·버전을 일괄 삭제하지 않습니다.
 
-Windows의 사용자 임시 폴더에도 영문 별칭을 만들 수 없어 자동 준비가 실패한 경우에만 캐시 위치를 바꿉니다. 경로는 자신에게 쓰기 권한이 있는 개인용 영문 절대 경로로 바꾸고, MCP 클라이언트의 실행 환경에도 같은 변수를 설정하세요. 공유·공용 쓰기 폴더는 사용하지 않습니다.
+Windows 코드페이지에서 지원하지 않는 문자 등으로 사용자 홈에서 Java를 실행할 수 없는 경우에만 캐시 위치를 바꿉니다. 경로는 자신에게 쓰기 권한이 있는 개인용 영문 절대 경로로 바꾸고, MCP 클라이언트의 실행 환경에도 같은 변수를 설정하세요. 공유·공용 쓰기 폴더는 사용하지 않습니다.
 
 ```powershell
 $env:COMMERCE_CONTEXT_CACHE_DIR="C:\path\to\private-cache"

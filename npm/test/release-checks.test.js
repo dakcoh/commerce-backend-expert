@@ -1,7 +1,7 @@
+const {temporaryDirectory} = require("./support/fixtures");
 const {test} = require("node:test");
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
-const os = require("node:os");
 const path = require("node:path");
 const crypto = require("node:crypto");
 const {execFileSync} = require("node:child_process");
@@ -10,8 +10,8 @@ const source = path.resolve(__dirname, "..");
 const pkg = JSON.parse(fs.readFileSync(path.join(source, "package.json"), "utf8"));
 const hash = (file, algorithm = "sha256", encoding = "hex") => crypto.createHash(algorithm).update(fs.readFileSync(file)).digest(encoding);
 
-function fixture() {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "commerce-release-check-"));
+function fixture(t) {
+  const {dir, cleanup} = temporaryDirectory("commerce-release-check-", t);
   fs.mkdirSync(path.join(dir, "package"));
   for (const file of packageFiles) {
     fs.mkdirSync(path.dirname(path.join(dir, "package", file)), {recursive: true});
@@ -21,11 +21,7 @@ function fixture() {
   execFileSync("tar", ["-czf", filename, ...packageFiles.map(file => `package/${file}`)], {cwd: dir});
   const pack = {name: pkg.name, version: pkg.version, filename, files: packageFiles.map(file => ({path: file})),
     integrity: `sha512-${hash(path.join(dir, filename), "sha512", "base64")}`};
-  return {dir, pack, cleanup() {
-    assert.equal(path.dirname(path.resolve(dir)), path.resolve(os.tmpdir()));
-    assert.ok(path.basename(dir).startsWith("commerce-release-check-"));
-    fs.rmSync(dir, {recursive: true, force: true});
-  }};
+  return {dir, pack, cleanup};
 }
 
 test("release versions require exact safe tags and distinguish prerelease from build metadata", () => {
@@ -39,9 +35,9 @@ test("release versions require exact safe tags and distinguish prerelease from b
   assert.throws(() => releaseVersion({...pkg, engines: {node: ">=20"}}));
 });
 
-test("official wrapper and distribution checksums are required before Gradle execution", () => {
+test("official wrapper and distribution checksums are required before Gradle execution", t => {
   verifyWrapper();
-  const f = fixture();
+  const f = fixture(t);
   try {
     fs.mkdirSync(path.join(f.dir, "gradle/wrapper"), {recursive: true});
     fs.writeFileSync(path.join(f.dir, "gradle/wrapper/gradle-wrapper.jar"), "untrusted");
@@ -52,8 +48,8 @@ test("official wrapper and distribution checksums are required before Gradle exe
   } finally {f.cleanup();}
 });
 
-test("actual tarball bytes and files must match the source, metadata and integrity", () => {
-  const f = fixture();
+test("actual tarball bytes and files must match the source, metadata and integrity", t => {
+  const f = fixture(t);
   try {
     assert.equal(verifyPack(f.pack, f.dir, pkg), f.pack.filename);
     assert.throws(() => verifyPack({...f.pack, filename: "../outside.tgz"}, f.dir, pkg));
@@ -63,8 +59,8 @@ test("actual tarball bytes and files must match the source, metadata and integri
   } finally {f.cleanup();}
 });
 
-test("valid tar integrity cannot hide changed package source", () => {
-  const f = fixture();
+test("valid tar integrity cannot hide changed package source", t => {
+  const f = fixture(t);
   try {
     fs.writeFileSync(path.join(f.dir, "package/lib/commands.js"), "changed");
     execFileSync("tar", ["-czf", f.pack.filename, ...packageFiles.map(file => `package/${file}`)], {cwd: f.dir});
@@ -73,8 +69,8 @@ test("valid tar integrity cannot hide changed package source", () => {
   } finally {f.cleanup();}
 });
 
-test("sealed bundle rejects changed JARs and checksums instead of trusting downloaded checksums alone", () => {
-  const f = fixture();
+test("sealed bundle rejects changed JARs and checksums instead of trusting downloaded checksums alone", t => {
+  const f = fixture(t);
   try {
     const jar = `context-engine-${pkg.version}.jar`;
     fs.writeFileSync(path.join(f.dir, jar), "fixture JAR");

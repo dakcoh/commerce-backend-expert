@@ -1,6 +1,8 @@
-const assert = require("assert");
+const assert = require("node:assert/strict");
+const {test} = require("node:test");
+const {temporaryDirectory} = require("./support/fixtures");
+const os = require("node:os");
 const fs = require("fs");
-const os = require("os");
 const path = require("path");
 const { spawnSync } = require("child_process");
 const { parseJavaMajor, javaStatus } = require("../lib/java-runtime");
@@ -8,10 +10,88 @@ const { parseChecksum, sha256OfFile, verifyFile } = require("../lib/checksum");
 const { releaseInfo } = require("../lib/release-client");
 const { cachePaths, verifyCached, ensureJar } = require("../lib/jar-cache");
 const { serverArguments } = require("../lib/server-process");
-const { grade } = require("./grade-ai-transcripts");
+const { grade, evaluate } = require("./grade-ai-transcripts");
 
-const tests = [];
-function test(name, fn) { tests.push({ name, fn }); }
+test("fixture cleanup preserves linked targets and the original temporary root", t => {
+  const fixture = temporaryDirectory("commerce-cleanup-");
+  const outside = temporaryDirectory("commerce-preserved-");
+  t.after(outside.cleanup);
+  t.after(fixture.cleanup);
+  const preserved = path.join(outside.dir, "preserved.txt");
+  fs.writeFileSync(preserved, "preserved");
+  fs.symlinkSync(outside.dir, path.join(fixture.dir, "linked"), process.platform === "win32" ? "junction" : "dir");
+  t.mock.method(os, "tmpdir", () => outside.dir);
+  fixture.cleanup();
+  fixture.cleanup();
+  assert.equal(fs.existsSync(fixture.dir), false);
+  assert.equal(fs.readFileSync(preserved, "utf8"), "preserved");
+  assert.throws(() => temporaryDirectory("../outside"));
+});
+
+test("fixture cleanup refuses a replaced root", t => {
+  const fixture = temporaryDirectory("commerce-replaced-");
+  const outside = temporaryDirectory("commerce-preserved-");
+  t.after(outside.cleanup);
+  fs.rmdirSync(fixture.dir);
+  fs.symlinkSync(outside.dir, fixture.dir, process.platform === "win32" ? "junction" : "dir");
+  try { assert.throws(fixture.cleanup, /replaced fixture root/); }
+  finally { fs.unlinkSync(fixture.dir); }
+});
+
+test("a failing fixture setup still runs its registered cleanup", t => {
+  const {dir, cleanup} = temporaryDirectory("commerce-hook-test-");
+  t.after(cleanup);
+  const script = path.join(dir, "failure.test.cjs");
+  fs.writeFileSync(script, `const {test}=require('node:test');
+    const {temporaryDirectory}=require(${JSON.stringify(require.resolve("./support/fixtures"))});
+    test('expected fixture setup failure',t=>{
+      temporaryDirectory('commerce-hook-child-',t);
+      throw Error('injected fixture setup failure');
+    });`);
+  const env = {...process.env, TEMP: dir, TMP: dir, TMPDIR: dir};
+  delete env.NODE_TEST_CONTEXT; // This child is an independent test run, not another test worker.
+  const result = spawnSync(process.execPath, ["--test", script], {
+    encoding: "utf8", windowsHide: true, env, timeout: 10_000,
+  });
+  assert.ifError(result.error);
+  assert.equal(result.status, 1, result.stdout + result.stderr);
+  assert.match(result.stdout, /injected fixture setup failure/);
+  assert.deepEqual(fs.readdirSync(dir), ["failure.test.cjs"]);
+});
+
+for (const mode of ["missing-jar", "environment-failure", "launcher-failure"]) {
+  test(`smoke preparation cleans its cache after ${mode}`, t => {
+    const {dir, cleanup} = temporaryDirectory("commerce-smoke-failure-");
+    t.after(cleanup);
+    const target = path.join(__dirname, mode === "environment-failure" ? "runtime-smoke.js" : "mcp-smoke.js");
+    let launcherRoot = path.resolve(__dirname, ".."), jar = path.join(dir, "missing.jar");
+    if (mode === "launcher-failure") {
+      launcherRoot = path.join(dir, "fake-launcher");
+      fs.mkdirSync(path.join(launcherRoot, "lib"), {recursive: true});
+      fs.writeFileSync(path.join(launcherRoot, "package.json"), JSON.stringify({version: "0.2.0"}));
+      fs.writeFileSync(path.join(launcherRoot, "lib/commands.js"), "exports.run=async()=>{throw Error('injected launcher startup failure');};");
+      jar = path.join(dir, "fixture.jar");
+      fs.writeFileSync(jar, "fixture");
+    }
+    const script = mode !== "environment-failure" ? "require(process.argv[1]);" : `
+      const fs=require('fs'),path=require('path'),mkdir=fs.mkdirSync;
+      fs.mkdirSync=(file,...args)=>{
+        if(path.basename(file)==='tools')throw Error('injected environment setup failure');
+        return mkdir(file,...args);
+      };require(process.argv[1]);`;
+    const result = spawnSync(process.execPath, ["-e", script, target, jar], {
+      encoding: "utf8", windowsHide: true, timeout: 10_000,
+      env: {...process.env, TEMP: dir, TMP: dir, TMPDIR: dir, MCP_LAUNCHER_ROOT: launcherRoot},
+    });
+    assert.ifError(result.error);
+    assert.equal(result.status, 1);
+    const expectedError = {"missing-jar": /ENOENT/, "environment-failure": /injected environment setup failure/,
+      "launcher-failure": /injected launcher startup failure/};
+    assert.match(result.stderr, expectedError[mode]);
+    assert.doesNotMatch(result.stderr, /Launcher must report the owned Java PID/);
+    assert.deepEqual(fs.readdirSync(dir).sort(), mode === "launcher-failure" ? ["fake-launcher", "fixture.jar"] : []);
+  });
+}
 
 test("parses current and legacy Java versions", () => {
   assert.strictEqual(parseJavaMajor('openjdk version "17.0.19" 2026-04-21 LTS'), 17);
@@ -41,10 +121,54 @@ test("grades observed AI transcripts without treating missing human checks or me
   assert.strictEqual(grade({...checked, toolCalls: []}).status, "failed");
   assert.strictEqual(grade({...checked, humanChecks: {...checked.humanChecks, noFalseDefect: false}}).status, "failed");
   assert.throws(() => grade({...row, taskId: "unknown"}), /Unknown taskId/);
+  const {report, exitCode} = evaluate([checked, {...checked, client: "second-client"}]);
+  assert.equal(exitCode, 2);
+  assert.equal(report.executedTranscripts, 2);
+  assert.equal(report.missingTasks.filter(task => task.client === checked.client).length, 11);
+  assert.equal(report.missingTasks.filter(task => task.client === "second-client").length, 11);
+  assert.throws(() => evaluate([checked, checked]), /Duplicate/);
+  assert.throws(() => evaluate([]), /No transcripts/);
+});
+
+test("agent reviews require answer evidence and cannot conceal failed model execution", () => {
+  const row = {taskId: "AI-01", model: "test-fixture", client: "unit-test", run: 1,
+    finalAnswer: "실제 테스트 답변", toolCalls: [{result: {rule: {id: "webhook-handling"}}}],
+    reviewType: "agent", reviewedBy: "unit-test-agent", reviewedAt: "2026-10-20",
+    executionCode: 0, turnCompleted: true,
+    agentChecks: Object.fromEntries(["grounded", "conditionsChecked", "noFalseDefect"].map(key =>
+      [key, {passed: true, quote: "테스트 답변", rationale: "합성 채점기 검증 근거"}]))};
+  const result = grade(row);
+  assert.equal(result.status, "passed");
+  assert.equal(result.reviewType, "agent");
+  assert.deepEqual(result.pendingHumanChecks, []);
+  for (const check of [{passed: true}, {passed: true, quote: "없는 문구", rationale: "근거"},
+    {passed: true, quote: "테스트 답변", rationale: ""}]) {
+    assert.equal(grade({...row, agentChecks: {...row.agentChecks, grounded: check}}).status, "pending");
+  }
+  assert.equal(grade({...row, agentChecks: undefined, humanChecks: {grounded: true}}).status, "pending");
+  assert.equal(grade({...row, agentChecks: {...row.agentChecks, grounded: {...row.agentChecks.grounded, passed: false}}}).status, "failed");
+  assert.equal(grade({...row, executionCode: 1}).status, "failed");
+  assert.equal(grade({...row, turnCompleted: false}).status, "failed");
+  assert.equal(grade({...row, reviewType: "human", agentChecks: row.agentChecks}).status, "pending");
+  assert.throws(() => grade({...row, reviewType: "automatic"}), /reviewType/);
+});
+
+test("error recovery requires an actual failed call followed by success, including Codex status errors", () => {
+  const row = {taskId: "AI-12", model: "test-fixture", client: "unit-test", run: 1,
+    finalAnswer: "테스트 답변", reviewedBy: "unit-test-fixture", reviewedAt: "2026-10-20",
+    humanChecks: {grounded: true, errorRecovered: true}};
+  const success = {status: "completed", result: {results: []}};
+  for (const failure of [{status: "failed", error: null, result: {content: [{type: "text", text: "Invalid arguments"}]}},
+    {error: {message: "transport failed"}}, {result: {isError: true}}]) {
+    assert.equal(grade({...row, toolCalls: [failure, success]}).status, "passed");
+    assert.equal(grade({...row, toolCalls: [failure, success]}).toolErrorCount, 1);
+    assert.equal(grade({...row, toolCalls: [success, failure]}).status, "failed");
+  }
+  assert.equal(grade({...row, toolCalls: [success]}).status, "failed");
 });
 
 test("AI transcript CLI reports incomplete coverage and failures separately", () => {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "commerce-ai-eval-cli-"));
+  const {dir, cleanup} = temporaryDirectory("commerce-ai-eval-cli-");
   const input = path.join(dir, "synthetic-grader-test.jsonl");
   try {
     const row = {taskId: "AI-01", model: "test-fixture", client: "unit-test", run: 1,
@@ -61,8 +185,7 @@ test("AI transcript CLI reports incomplete coverage and failures separately", ()
     fs.writeFileSync(input, JSON.stringify(row) + "\n" + JSON.stringify(row) + "\n");
     assert.match(run().stderr, /Duplicate/);
   } finally {
-    fs.unlinkSync(input);
-    fs.rmdirSync(dir);
+    cleanup();
   }
 });
 
@@ -73,7 +196,7 @@ test("builds versioned release URLs", () => {
 });
 
 test("parses and verifies SHA-256", () => {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "commerce-context-test-"));
+  const {dir, cleanup} = temporaryDirectory("commerce-context-test-");
   try {
     const file = path.join(dir, "sample.jar");
     fs.writeFileSync(file, "verified-content");
@@ -83,12 +206,12 @@ test("parses and verifies SHA-256", () => {
     assert.throws(() => verifyFile(file, "0".repeat(64)), /Checksum mismatch/);
     assert.throws(() => parseChecksum("bad"), /Malformed/);
   } finally {
-    fs.rmSync(dir, { recursive: true, force: true });
+    cleanup();
   }
 });
 
 test("accepts only a cache with matching local checksum", () => {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "commerce-context-cache-"));
+  const {dir, cleanup} = temporaryDirectory("commerce-context-cache-");
   try {
     const info = releaseInfo({ version: "1.2.3" });
     const paths = cachePaths(info, dir);
@@ -98,12 +221,12 @@ test("accepts only a cache with matching local checksum", () => {
     fs.writeFileSync(paths.jarPath, "tampered");
     assert.strictEqual(verifyCached(paths).ok, false);
   } finally {
-    fs.rmSync(dir, { recursive: true, force: true });
+    cleanup();
   }
 });
 
 test("replaces a corrupt versioned cache with a verified download", async () => {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "commerce-context-recovery-"));
+  const {dir, cleanup} = temporaryDirectory("commerce-context-recovery-");
   try {
     const info = releaseInfo({ version: "0.1.0" });
     const paths = cachePaths(info, dir);
@@ -127,7 +250,7 @@ test("replaces a corrupt versioned cache with a verified download", async () => 
     assert.strictEqual(fs.readFileSync(paths.jarPath, "utf8"), expectedContent);
     assert.strictEqual(verifyCached(paths).ok, true);
   } finally {
-    fs.rmSync(dir, { recursive: true, force: true });
+    cleanup();
   }
 });
 
@@ -151,21 +274,3 @@ test("ships the repository MIT license in the npm package", () => {
   assert.ok(packageJson.files.includes("LICENSE"));
   assert.strictEqual(packagedLicense.replace(/\r\n/g, "\n"), repositoryLicense.replace(/\r\n/g, "\n"));
 });
-
-(async () => {
-  let failed = 0;
-  for (const entry of tests) {
-    try {
-      await entry.fn();
-      console.log(`ok - ${entry.name}`);
-    } catch (error) {
-      failed += 1;
-      console.error(`not ok - ${entry.name}`);
-      console.error(error.stack || error);
-    }
-  }
-  if (failed > 0) {
-    process.exit(1);
-  }
-  console.log(`${tests.length} npm launcher tests passed`);
-})();

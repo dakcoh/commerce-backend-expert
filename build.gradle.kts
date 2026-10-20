@@ -6,13 +6,13 @@ plugins {
 
 group = "com.commerce"
 // GitHub Actions 릴리즈 시: ./gradlew bootJar -Pversion=X.Y.Z
-// 로컬 개발 시: 0.2.0-SNAPSHOT (기본값)
+// 로컬 개발 시: 0.2.1-SNAPSHOT (기본값)
 version = if (project.hasProperty("version") &&
               project.property("version").toString().isNotBlank() &&
               project.property("version").toString() != "unspecified")
     project.property("version").toString()
 else
-    "0.2.0-SNAPSHOT"
+    "0.2.1-SNAPSHOT"
 
 java {
 	toolchain {

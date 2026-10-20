@@ -1,12 +1,17 @@
-const {test} = require("node:test");
+const {temporaryDirectory} = require("./support/fixtures");
+const {test, after} = require("node:test");
 const assert = require("node:assert/strict");
 const {EventEmitter, once} = require("node:events");
 const {PassThrough, Writable} = require("node:stream");
 const {spawn} = require("node:child_process");
 const fs = require("node:fs");
-const os = require("node:os");
 const path = require("node:path");
 const {startServer} = require("../lib/server-process");
+const {privateWorkspaceRoot} = require("../lib/workspace");
+const {dir: fixtureDir, cleanup: cleanupFixture} = temporaryDirectory("commerce-process-");
+after(cleanupFixture);
+const fixtureJar = path.join(fixtureDir, "server.jar");
+fs.writeFileSync(fixtureJar, "process fixture JAR");
 
 function fixture(mode, input = new PassThrough()) {
   const parent = new EventEmitter();
@@ -23,12 +28,12 @@ function fixture(mode, input = new PassThrough()) {
     if(process.argv[1]==='exit') process.exit(23);
     else if(process.argv[1]==='echo') process.stdin.pipe(process.stdout);
     else {process.stdin.resume();process.stdin.on('end',()=>{});setInterval(()=>{},1000);}`;
-  const completion = startServer(path.join(process.cwd(), "server.jar"), process.cwd(), ["--fixture"], {
+  const completion = startServer(fixtureJar, fixtureDir, ["--fixture"], {
     stdin: input, stdout, process: parent, killTimeoutMs: 100, javaPath: path.resolve("private-runtime/bin/java"),
     spawn(command, args, options) {
       assert.equal(command, path.resolve("private-runtime/bin/java"));
       assert.deepEqual(args, ["-Dfile.encoding=UTF-8", "-Xlog:disable", "-Xlog:all=warning:stderr", "-jar", "server.jar", "--fixture"]);
-      assert.equal(options.cwd, process.cwd());
+      assert.equal(fs.readFileSync(path.join(options.cwd, "server.jar"), "utf8"), "process fixture JAR");
       assert.equal(options.windowsHide, true);
       child = spawn(process.execPath, ["-e", script, mode], {...options, stdio: ["pipe", "pipe", "pipe"]});
       return child;
@@ -56,8 +61,8 @@ function fixture(mode, input = new PassThrough()) {
   };
 }
 
-test("a Unicode cache uses a temporary ASCII JAR workspace and preserves the verified cache", async () => {
-  const cacheDir = fs.mkdtempSync(path.join(os.tmpdir(), "commerce-한글-path-"));
+test("a Unicode cache uses a private JAR workspace and preserves the verified cache", async () => {
+  const {dir: cacheDir, cleanup} = temporaryDirectory("commerce-한글-path-");
   const input = new PassThrough();
   fs.writeFileSync(path.join(cacheDir, "server.jar"), "test JAR");
   let invocation;
@@ -71,15 +76,13 @@ test("a Unicode cache uses a temporary ASCII JAR workspace and preserves the ver
       },
     });
     assert.equal(code, 0);
-    assert.match(invocation.cwd, /^[\x20-\x7e]+$/);
+    assert.equal(path.dirname(invocation.cwd), privateWorkspaceRoot("launch"));
     assert.equal(fs.existsSync(invocation.cwd), false);
     assert.equal(fs.readFileSync(path.join(cacheDir, "server.jar"), "utf8"), "test JAR");
     assert.deepEqual(invocation, {command: "java", args: ["-Dfile.encoding=UTF-8", "-Xlog:disable", "-Xlog:all=warning:stderr", "-jar", "server.jar", "--fixture"], cwd: invocation.cwd});
   } finally {
     input.destroy();
-    assert.equal(path.dirname(path.resolve(cacheDir)), path.resolve(os.tmpdir()));
-    assert.ok(path.basename(cacheDir).startsWith("commerce-한글-path-"));
-    fs.rmSync(cacheDir, {recursive: true, force: true});
+    cleanup();
   }
 });
 
@@ -101,7 +104,7 @@ test("a slow MCP reader receives every byte across pipe backpressure", {timeout:
     chunks.push(Buffer.from(chunk)); setTimeout(callback, 2);
   }});
   const payload = Buffer.from("한글-🧪-response\n".repeat(32_768));
-  const completion = startServer("fixture.jar", process.cwd(), [], {
+  const completion = startServer(fixtureJar, fixtureDir, [], {
     stdin: input, stdout: output, process: new EventEmitter(),
     spawn: (_command, _args, options) => spawn(process.execPath,
       ["-e", "process.stdin.pipe(process.stdout)"], options),
@@ -180,7 +183,7 @@ test("output errors stop the child and release the owned writer", async () => {
 test("spawn failure is reported without leaving signal listeners", async () => {
   const input = new PassThrough(); const parent = new EventEmitter();
   try {
-    await assert.rejects(startServer("missing.jar", process.cwd(), [], {stdin: input, process: parent,
+    await assert.rejects(startServer(fixtureJar, fixtureDir, [], {stdin: input, process: parent,
       spawn: (_cmd, _args, options) => spawn("commerce-nonexistent-java-fixture", [], options)}), /Unable to start Java MCP server/);
     assert.equal(parent.listenerCount("SIGINT"), 0);
     assert.equal(parent.listenerCount("SIGTERM"), 0);
@@ -194,11 +197,11 @@ for (const [signal, expected] of [["SIGINT", 130], ["SIGTERM", 143]]) {
     timeout: 10_000,
   }, async () => {
     const script = `const cp=require('child_process');
-      require(process.argv[1]).startServer('fixture.jar',process.cwd(),[],{spawn:(_cmd,_args,options)=>{
+      require(process.argv[1]).startServer(process.argv[2],require('path').dirname(process.argv[2]),[],{spawn:(_cmd,_args,options)=>{
         const child=cp.spawn(process.execPath,['-e',"process.stdin.resume();process.stdin.on('end',()=>process.exit(0));process.stdout.write('READY\\\\n');setInterval(()=>{},1000)"],options);
         console.error('OWNED_PID:'+child.pid);return child;
       }}).then(code=>process.exitCode=code).catch(e=>{console.error(e);process.exitCode=1});`;
-    const wrapper = spawn(process.execPath, ["-e", script, require.resolve("../lib/server-process")], {stdio: ["pipe", "pipe", "pipe"], windowsHide: true});
+    const wrapper = spawn(process.execPath, ["-e", script, require.resolve("../lib/server-process"), fixtureJar], {stdio: ["pipe", "pipe", "pipe"], windowsHide: true});
     let stderr = "", output = "";
     const closed = once(wrapper, "close");
     wrapper.stderr.on("data", chunk => stderr += chunk);

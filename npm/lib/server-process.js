@@ -2,17 +2,11 @@ const { spawn } = require("child_process");
 const { constants } = require("os");
 const path = require("path");
 const fs = require("node:fs");
-const os = require("node:os");
+const {privateWorkspaceRoot} = require("./workspace");
 
 function serverWorkspace(jarPath, cacheDir) {
   if (/^[\x20-\x7e]+$/.test(cacheDir)) return {directory: cacheDir, jar: path.relative(cacheDir, jarPath), cleanup() {}};
-  const root = path.join(os.tmpdir(), `.commerce-context-mcp-launch${process.getuid ? `-${process.getuid()}` : ""}`);
-  if (!/^[\x20-\x7e]+$/.test(root)) throw new Error("Set COMMERCE_CONTEXT_CACHE_DIR to a private writable ASCII-only path.");
-  fs.mkdirSync(root, {recursive: true, mode: 0o700});
-  const stat = fs.lstatSync(root);
-  if (stat.isSymbolicLink() || (process.getuid && (stat.uid !== process.getuid() || (stat.mode & 0o077)))) {
-    throw new Error("Java workspace root must be a private directory owned by the current user");
-  }
+  const root = privateWorkspaceRoot("launch");
   const directory = fs.mkdtempSync(path.join(root, "run-"));
   const cleanup = () => {
     if (path.dirname(path.resolve(directory)) !== path.resolve(root)) throw new Error("Java workspace cleanup escaped root");

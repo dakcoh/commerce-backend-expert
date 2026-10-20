@@ -29,12 +29,18 @@ class AiResponseEfficiencyTest {
         var full = tool.searchKnowledge("결제 웹훅 서명", null, null, 3, "full", "json");
         assertThat(summary.markdown()).isEmpty();
         assertThat(summary.fullRules()).isEmpty();
+        assertThat(summary.message()).contains("get_rule로 적용 조건과 예외를 확인");
         assertThat(full.results()).isEqualTo(summary.results());
         assertThat(full.fullRules()).hasSameSizeAs(full.results()).allSatisfy(rule -> {
             assertThat(rule.applicability().appliesWhen()).isNotEmpty();
             assertThat(rule.evidence()).isNotEmpty();
             assertThat(rule.sections()).isNotEmpty();
+            assertThat(rule).isEqualTo(tool.getRule(rule.id(), "json").rule());
         });
+        assertThat(full.message()).contains("다시 조회할 필요는 없습니다");
+        var both = tool.searchKnowledge("결제 웹훅 서명", null, null, 3, "full", "both");
+        assertThat(both.message()).isEqualTo(full.message());
+        assertThat(both.markdown()).contains("webhook-handling");
     }
 
     @Test

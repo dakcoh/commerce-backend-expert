@@ -14,12 +14,15 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
 import java.util.Set;
+import java.util.regex.Pattern;
 
 @Service
 public class DefaultKnowledgeSearch implements KnowledgeSearch {
 
     private static final double MIN_RELEVANCE_SCORE = 10.0;
     private static final double MIN_QUERY_COVERAGE = 0.30;
+    private static final Pattern SERVICE_BOOKING = Pattern.compile("(?:식당|맛집|병원|미용실)(?:에서)?\\s*예약");
+    private static final Pattern COMMERCE_CONTEXT = Pattern.compile("상품|주문|결제|환불|카드|승인|쿠폰|재고|정산|포인트|멱등|웹훅|pg|트랜잭션");
 
     private final KnowledgeCatalog catalog;
     private final QueryNormalizer normalizer;
@@ -46,6 +49,11 @@ public class DefaultKnowledgeSearch implements KnowledgeSearch {
                     + categories.stream().sorted().toList());
         }
         QueryNormalizer.NormalizedQuery normalized = normalizer.normalize(query.query());
+        // Booking fees alone do not establish stock reservation or PG timeout context.
+        if (SERVICE_BOOKING.matcher(normalized.phrase()).find()
+                && !COMMERCE_CONTEXT.matcher(normalized.phrase()).find()) {
+            return List.of();
+        }
         var candidates = catalog.findByDomains(query.domains()).stream()
                 .filter(rule -> query.categories().isEmpty() || query.categories().contains(rule.category()))
                 .filter(rule -> query.severities().isEmpty() || query.severities().contains(rule.severity()))

@@ -2,13 +2,15 @@
 
 English · [한국어](USAGE_SCENARIOS.ko.md)
 
-Connect the server using the [installation guide](../npm/README.md). Users need Node.js 22 or later; the private Java 21 runtime is prepared automatically on first launch or with `download`. JDK 21 is only needed to build from source. These instructions describe version 0.2.0. To check unpublished source changes, follow [local validation](../CONTRIBUTING.md#local-validation).
+Connect the server using the [installation guide](../npm/README.md). Users need Node.js 22 or later; the private Java 21 runtime is prepared automatically on first launch or with `download`. JDK 21 is only needed to build from source. These instructions describe version 0.2.1. To check unpublished source changes, follow [local validation](../CONTRIBUTING.md#local-validation).
 
 **The catalog and returned guidance are currently Korean.** The examples intentionally keep tested Korean search terms. English explanations below describe how to use them; the server does not translate an English query. Ask your AI client to search with Korean terms and explain the result in English. English retrieval quality is not established by these tests.
 
 Give your AI client the **business scenario, failure mode, and relevant code**. The server supplies general design guidance; it does not execute orders, payments, or payouts.
 
 Workflow: describe a problem → search for rules → read applicability and exceptions → judge against actual code and contracts. The JSON below shows MCP tool arguments used by a client. You do not need to paste it verbatim into ordinary chat.
+
+Restaurant or clinic booking cancellation fees do not imply stock reservation guidance. If you are asking about that service's payment/refund API, coupons, or inventory design, include that context. For example, “식당 예약 환불 API 설계” retrieves refund guidance. No search results means insufficient relevance or coverage; it does not establish that a design is correct.
 
 [Scenarios](#1-prevent-overselling) · [Checklists](#find-missing-checklist-items) · [Interpreting results](#choose-the-next-step-from-the-result) · [All 70 rules](#rule-catalog)
 

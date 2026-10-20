@@ -1,3 +1,4 @@
+const {temporaryDirectory} = require("./support/fixtures");
 const {test} = require("node:test");
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
@@ -9,8 +10,8 @@ const {execFile, spawnSync} = require("node:child_process");
 const {promisify} = require("node:util");
 const {sha256OfFile} = require("../lib/checksum");
 
-function cacheFixture() {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "commerce-boundary-"));
+function cacheFixture(t) {
+  const {dir, cleanup} = temporaryDirectory("commerce-boundary-", t);
   const info = releaseInfo({version: "0.1.0"});
   const paths = cachePaths(info, dir);
   const source = path.join(dir, "source.jar");
@@ -18,18 +19,11 @@ function cacheFixture() {
   const checksum = sha256OfFile(source);
   return {dir, info, paths, source, checksum,
     publish() {fs.copyFileSync(source, paths.jarPath); fs.writeFileSync(paths.checksumPath, checksum);},
-    cleanup() {
-      for (const file of fs.readdirSync(dir)) {
-        const target = path.resolve(dir, file);
-        assert.equal(path.dirname(target), path.resolve(dir));
-        fs.unlinkSync(target);
-      }
-      fs.rmdirSync(dir);
-    }};
+    cleanup};
 }
 
-test("an old lock held by a live process is not stolen", async () => {
-  const f = cacheFixture(); let downloads = 0;
+test("an old lock held by a live process is not stolen", async t => {
+  const f = cacheFixture(t); let downloads = 0;
   fs.writeFileSync(f.paths.lockPath, String(process.pid));
   const old = new Date(Date.now() - 180_000); fs.utimesSync(f.paths.lockPath, old, old);
   const completed = setTimeout(() => f.publish(), 30);
@@ -41,8 +35,8 @@ test("an old lock held by a live process is not stolen", async () => {
   } finally {clearTimeout(completed); f.cleanup();}
 });
 
-test("ownership loss preserves the new lock and the original wait budget", async () => {
-  const f = cacheFixture(); const replacement = JSON.stringify({pid: process.pid, token: "replacement-owner", host: os.hostname()});
+test("ownership loss preserves the new lock and the original wait budget", async t => {
+  const f = cacheFixture(t); const replacement = JSON.stringify({pid: process.pid, token: "replacement-owner", host: os.hostname()});
   let now = 0;
   try {
     await assert.rejects(ensureJar(f.info, {cacheDir: f.dir, fetchText: async () => f.checksum,
@@ -59,8 +53,8 @@ test("ownership loss preserves the new lock and the original wait budget", async
   } finally {f.cleanup();}
 });
 
-test("ownership loss recovers when the replacement owner has terminated", async () => {
-  const f = cacheFixture(); let downloads = 0;
+test("ownership loss recovers when the replacement owner has terminated", async t => {
+  const f = cacheFixture(t); let downloads = 0;
   const exited = spawnSync(process.execPath, ["-e", ""], {windowsHide: true});
   assert.equal(exited.status, 0);
   try {
@@ -76,8 +70,8 @@ test("ownership loss recovers when the replacement owner has terminated", async 
   } finally {f.cleanup();}
 });
 
-test("repeated ownership loss cannot reset the recovery deadline", async () => {
-  const f = cacheFixture(); let now = 0, downloads = 0;
+test("repeated ownership loss cannot reset the recovery deadline", async t => {
+  const f = cacheFixture(t); let now = 0, downloads = 0;
   const exited = spawnSync(process.execPath, ["-e", ""], {windowsHide: true});
   assert.equal(exited.status, 0);
   try {
@@ -95,8 +89,8 @@ test("repeated ownership loss cannot reset the recovery deadline", async () => {
   } finally {f.cleanup();}
 });
 
-test("two processes recovering a dead lock both obtain the verified winner cache", {timeout: 30_000}, async () => {
-  const f = cacheFixture();
+test("two processes recovering a dead lock both obtain the verified winner cache", {timeout: 30_000}, async t => {
+  const f = cacheFixture(t);
   const exited = spawnSync(process.execPath, ["-e", ""], {windowsHide: true});
   assert.equal(exited.status, 0);
   fs.writeFileSync(f.paths.lockPath, String(exited.pid));
@@ -145,8 +139,8 @@ test("two processes recovering a dead lock both obtain the verified winner cache
   }
 });
 
-test("multiple processes share one verified transfer", async () => {
-  const f = cacheFixture();
+test("multiple processes share one verified transfer", async t => {
+  const f = cacheFixture(t);
   const script = `const fs=require('fs'),path=require('path');
     const {ensureJar}=require(process.argv[1]);
     ensureJar({jarName:'context-engine-0.1.0.jar',releaseUrl:'fixture',checksumUrl:'fixture'}, {
@@ -164,8 +158,8 @@ test("multiple processes share one verified transfer", async () => {
   } finally { f.cleanup(); }
 });
 
-test("default lock budget survives a simulated 36-second live transfer", async () => {
-  const f = cacheFixture(); let now = 0;
+test("default lock budget survives a simulated 36-second live transfer", async t => {
+  const f = cacheFixture(t); let now = 0;
   fs.writeFileSync(f.paths.lockPath, String(process.pid));
   try {
     const lease = await acquireLock(f.paths, {now: () => now, sleep: async () => {
@@ -178,8 +172,8 @@ test("default lock budget survives a simulated 36-second live transfer", async (
   } finally {f.cleanup();}
 });
 
-test("a terminated local PID lock is recovered but foreign and malformed locks are preserved", async () => {
-  const f = cacheFixture();
+test("a terminated local PID lock is recovered but foreign and malformed locks are preserved", async t => {
+  const f = cacheFixture(t);
   const exited = spawnSync(process.execPath, ["-e", ""], {windowsHide: true});
   assert.equal(exited.status, 0);
   try {
@@ -198,8 +192,8 @@ test("a terminated local PID lock is recovered but foreign and malformed locks a
   } finally {f.cleanup();}
 });
 
-test("checksum mismatch cleans all three attempts and the following run succeeds", async () => {
-  const f = cacheFixture(); let downloads = 0;
+test("checksum mismatch cleans all three attempts and the following run succeeds", async t => {
+  const f = cacheFixture(t); let downloads = 0;
   try {
     await assert.rejects(ensureJar(f.info, {cacheDir: f.dir, fetchText: async () => f.checksum,
       download: async (_url, destination) => {downloads++; fs.writeFileSync(destination, "corrupt");}}), /Checksum mismatch/);

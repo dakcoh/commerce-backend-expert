@@ -93,6 +93,38 @@ class SearchImprovementRegressionTest {
                 .isEqualTo("settlement-deduction");
     }
 
+    @Test
+    void bookingServices_doNotHideExplicitCommercePaymentQuestions() {
+        for (String query : List.of("식당 예약 플랫폼의 PG 결제 웹훅 서명 검증", "병원 예약 서비스의 결제 웹훅 멱등성")) {
+            assertThat(search.search(SearchQuery.of(query)))
+                    .as(query).extracting(r -> r.rule().id()).contains("webhook-handling");
+        }
+        assertThat(search.search(SearchQuery.of("식당 예약 쿠폰의 최소 구매액 검증")))
+                .extracting(r -> r.rule().id()).contains("coupon-validation");
+        assertThat(search.search(SearchQuery.of("병원 예약 카드 승인 타임아웃")))
+                .extracting(r -> r.rule().id()).contains("network-cancellation");
+    }
+
+    @Test
+    void bookingRefunds_remainSearchableWithOrWithoutExplicitPaymentDomain() {
+        for (String query : List.of("식당 예약 환불 API 설계", "미용실 예약 취소 환불")) {
+            assertThat(search.search(SearchQuery.of(query)))
+                    .as(query).extracting(r -> r.rule().id()).contains("partial-refund");
+            assertThat(search.search(new SearchQuery(query, Set.of("payment"), Set.of(), Set.of(),
+                    3, ResponseDetail.SUMMARY, false)))
+                    .as("explicit domain: %s", query).extracting(r -> r.rule().id()).contains("partial-refund");
+        }
+    }
+
+    @Test
+    void nonCommerceBookingFees_doNotBecomeStockOrPaymentAdvice() {
+        for (String query : List.of("식당에서 예약 취소 수수료", "병원 예약 취소 수수료", "미용실 예약 취소 수수료")) {
+            assertThat(search.search(SearchQuery.of(query))).as(query).isEmpty();
+            assertThat(search.search(new SearchQuery(query, Set.of("payment"), Set.of(), Set.of(),
+                    3, ResponseDetail.SUMMARY, false))).as("explicit domain: %s", query).isEmpty();
+        }
+    }
+
     private void assertWebhookCandidate(String artifact, String scenario) {
         var report = reviewer.review(new ReviewRequest(artifact, "code", Set.of("payment"), scenario, 5));
         assertThat(report.findings()).extracting(ReviewFinding::ruleId).contains("webhook-handling");

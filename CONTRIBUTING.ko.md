@@ -84,15 +84,17 @@ evidence:
 
 ## 로컬에서 검증하기
 
+`npm test`는 Node 표준 테스트 실행기로 기본 기능·캐시 잠금·다운로드·프로세스 종료·배포 파일·JRE 복구를 검사합니다. 테스트별 준비 데이터는 해당 파일에 두고, 임시 폴더 정리와 시스템 Java 격리는 `npm/test/support/fixtures.js`에서 공유합니다. `temporaryDirectory(prefix, t)`로 정리를 먼저 등록하면 준비 단계 실패에도 정리됩니다. 이 도우미는 npm 배포물에 포함되지 않습니다. 특정 영역만 확인하려면 저장소 루트에서 `node --test npm/test/runtime.test.js`처럼 실행합니다.
+
 아래 명령은 저장소 루트에서 PowerShell로 실행합니다. `JAVA_HOME`만 자신의 JDK21 경로로 바꾸세요. 이 JDK는 소스 빌드용이며 npm 사용자의 런타임 설치와는 별개입니다.
 
 ```powershell
 $env:JAVA_HOME="C:\path\to\jdk-21"
 $env:Path="$env:JAVA_HOME\bin;$env:Path"
-.\gradlew.bat clean validateKnowledge bootJar "-Pversion=0.2.0" --no-daemon
+.\gradlew.bat clean validateKnowledge bootJar "-Pversion=0.2.1" --no-daemon
 npm.cmd --prefix npm test
-$env:MCP_EXPECTED_VERSION="0.2.0"
-node npm/test/mcp-smoke.js build/libs/context-engine-0.2.0.jar
+$env:MCP_EXPECTED_VERSION="0.2.1"
+node npm/test/mcp-smoke.js build/libs/context-engine-0.2.1.jar
 ```
 
 전용 JRE의 실제 다운로드·동시 실행·오프라인 재사용·손상 복구는 다음 명령으로 확인합니다. 이 테스트는 자체 임시 캐시를 사용하고 자식 프로세스의 PATH에서 Java를 제거합니다. 공식 JRE를 한 번 다운로드하므로 네트워크와 디스크 공간이 필요합니다.
@@ -108,14 +110,14 @@ Push-Location npm
 npm.cmd pack --ignore-scripts --json --pack-destination ../build > ../build/npm-pack.json
 Pop-Location
 New-Item -ItemType Directory -Force build/packed | Out-Null
-tar -xzf build/commerce-context-mcp-0.2.0.tgz -C build/packed
+tar -xzf build/commerce-context-mcp-0.2.1.tgz -C build/packed
 $env:MCP_LAUNCHER_ROOT=(Resolve-Path build/packed/package).Path
-node npm/test/mcp-smoke.js build/libs/context-engine-0.2.0.jar
+node npm/test/mcp-smoke.js build/libs/context-engine-0.2.1.jar
 Remove-Item Env:\MCP_LAUNCHER_ROOT
 Remove-Item Env:\MCP_EXPECTED_VERSION
 ```
 
-패키지 smoke는 빌드한 로컬 JAR를 임시 캐시에 넣고, 시스템 Java 없이 전용 JRE 준비·MCP 호출·한글 캐시 경로·EOF 후 종료를 확인합니다. 게시된 서버 JAR의 콜드 다운로드는 릴리스 workflow의 별도 검사입니다. `--ignore-scripts` 설치는 `npm.cmd install --ignore-scripts --no-audit --no-fund --prefix build/local-install ./build/commerce-context-mcp-0.2.0.tgz`로 확인할 수 있습니다.
+패키지 smoke는 빌드한 로컬 JAR를 임시 캐시에 넣고, 시스템 Java 없이 전용 JRE 준비·MCP 호출·한글 캐시 경로·EOF 후 종료를 확인합니다. 게시된 서버 JAR의 콜드 다운로드는 릴리스 workflow의 별도 검사입니다. `--ignore-scripts` 설치는 `npm.cmd install --ignore-scripts --no-audit --no-fund --prefix build/local-install ./build/commerce-context-mcp-0.2.1.tgz`로 확인할 수 있습니다.
 
 Linux/macOS에서는 JDK21을 설정한 뒤 `./gradlew`·`npm`을 사용합니다. 실제 OS 신호 테스트는 Linux/macOS에서 실행되며 Windows에서 생략한 결과와 구분합니다.
 
@@ -198,7 +200,7 @@ Stage ID·버전·tag·산출물을 확인한 관리자가 npm의 **Staged Packa
 - 일반 검색은 NFKC·일부 조사/활용형·별칭을 정규화한 단어 기반 검색입니다. 최대 32개 고유 검색어와 필드별 일치 비율을 사용하고 동점은 domain·category·ID로 정렬합니다.
 - 코드 검토는 package/import를 제외하고 원문과 scenario를 독립 검색합니다. 긴 입력은 겹치는 16단어 구간을 최대 32개 추가 검색하며 더 큰 입력은 표본 검색을 표시합니다. 코드 실행·AST 분석은 아닙니다.
 - 체크리스트는 조건·신뢰 맥락까지 같은 문항만 중복 제거합니다. JSON·Markdown의 문항과 순서를 보존합니다.
-- 검색·규칙·체크리스트의 `responseFormat`은 `json` 또는 기본 `both`입니다. json은 `markdown`을 빈 문자열로 유지하고 search의 json+full은 `fullRules`에 전문을 제공합니다. 검토에는 이 옵션이 없습니다.
+- 검색·규칙·체크리스트의 `responseFormat`은 `json` 또는 기본 `both`입니다. json은 `markdown`을 빈 문자열로 유지하고 search의 json+full은 `fullRules`에 전문을 제공합니다. summary 후보는 `get_rule`로 조건을 확인하고, full에 이미 포함된 같은 규칙은 다시 조회할 필요가 없습니다. 검토에는 이 옵션이 없습니다.
 - 검색·검토의 domain은 CSV, 체크리스트는 단일 값입니다. 필수 값·타입·enum·범위·모르는 필터·빈 CSV 요소는 오류로 구분합니다. enum의 공백·대소문자는 정규화합니다.
 - 빈 질문·유효한 무관 질문은 옵션 검증 후 정상적인 결과 없음입니다. Tool은 `isError`, Resource는 JSON-RPC 오류로 알리고 다음 유효 요청을 계속 처리합니다.
 - 현재 ToolCallback은 text JSON을 반환하며 native `outputSchema`·`structuredContent`·annotations 전환은 미구현입니다.
@@ -245,7 +247,7 @@ Java stdout은 별도 파이프로 받아 Node 스트림으로 전달합니다. 
 
 1. 클라이언트·모델·버전·설정을 기록하고 각 task와 artifact를 새 대화에 전달합니다. 호출 순서는 강제하지 않습니다.
 2. 실제 도구 호출·인자·결과, 최종 답변, 관측 가능한 토큰·시간을 JSONL로 기록합니다. 미관측 토큰은 null이며 비공개 추론 과정은 수집하지 않습니다.
-3. 사람이 각 humanChecks를 확인하고 실제 reviewedBy/reviewedAt을 기록합니다. 한 조합당12개를 모두 포함하고, 초기 비교는 각3회 반복을 권장하며 실제 횟수를 보고합니다.
+3. 사람이 검토하면 `humanChecks`에 판정을 기록합니다. AI에 검토를 맡기면 `reviewType: "agent"`와 `agentChecks`를 사용합니다. 실제 `reviewedBy`/`reviewedAt`을 기록하고, AI 검토를 사람 검토로 표시하지 않습니다. 한 조합당12개를 모두 포함하며, 초기 비교는 각3회 반복을 권장하고 실제 횟수를 보고합니다.
 4. 조건·근거 보존, 잘못된 확정 판단, 부분 결과 설명, 오류 복구와 효율을 비교합니다. 개발에 쓴 표현과 최종 검증용 질문을 구분합니다.
 
 아래는 미완성 형식 예시입니다. 빈 결과·검토 정보로 실제 평가를 통과했다고 기록하지 않습니다. 실제 JSONL은 한 줄에 객체 하나씩 저장합니다.
@@ -273,7 +275,9 @@ Java stdout은 별도 파이프로 받아 Node 스트림으로 전달합니다. 
 }
 ```
 
-result에는 실제 MCP 결과나 파싱한 응답을 넣습니다. 채점기는 관련 규칙과 사람이 기록한 결과를 확인하며 특정 호출 순서를 강제하지 않습니다.
+result에는 실제 MCP 결과나 파싱한 응답을 넣습니다. 채점기는 관련 규칙과 기록된 검토 결과를 확인하며 특정 호출 순서를 강제하지 않습니다. 실행 상태를 수집했다면 `executionCode`와 `turnCompleted`도 기록합니다. 실패하거나 완료되지 않은 실행은 검토 점수와 관계없이 실패합니다.
+
+AI 검토는 같은 평가 항목마다 `agentChecks`에 `{ "passed": true, "quote": "최종 답변의 실제 인용", "rationale": "판정 근거" }`를 기록합니다. 인용이 최종 답변에 없거나 근거가 비어 있으면 판정 대기입니다. `reviewType` 생략 시 기존 사람 검토 형식을 사용합니다. AI-12는 실제 오류 후 성공 호출이 있어야 하며, Codex 기록의 `status: "failed"`도 오류로 셉니다.
 
 저장소의 npm 폴더에서 실행합니다. 경로는 실제 기록으로 바꾸세요.
 
@@ -282,7 +286,9 @@ cd npm
 npm.cmd run test:ai-eval -- "C:\path\reviewed-transcripts.jsonl"
 ```
 
-종료코드0은 제공 기록 통과·사례 완비, 1은 실패·잘못된 입력, 2는 검토·사례 누락으로 판정 대기입니다. 합성 기록으로 채점기를 시험한 결과를 모델 성능으로 보고하지 않습니다. 채점기는 사람 검토의 진실성까지 증명하지 않습니다.
+종료코드0은 제공 기록 통과·사례 완비, 1은 실패·잘못된 입력, 2는 검토·사례 누락으로 판정 대기입니다. 결과의 `reviewType`으로 사람/AI 검토를 구분합니다. 합성 기록으로 채점기를 시험한 결과를 모델 성능으로 보고하지 않습니다. 채점기가 판정의 정확성이나 검토자의 신원을 증명하지는 않습니다.
+
+2026-10-20 Windows x64에서 Codex CLI 0.163.0·gpt-6.1-sol(high)로 12개 사례를 각 1회 실행하고, 실제 답변 인용을 남긴 AI 검토에서 모두 통과했습니다. AI-12는 잘못된 입력을 지시한 복구 시험입니다. 전문 중복 조회 안내를 수정한 뒤 AI-11·12를 추가 실행해 조회 수 19→11회·7→2회를 관측했습니다. 단일 모델·소수 실행 결과이며 다른 모델·클라이언트의 품질, 일반적인 토큰·시간 절감률이나 독립적인 사람 검증을 뜻하지 않습니다.
 
 ## 다음 개선
 

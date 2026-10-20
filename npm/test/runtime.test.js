@@ -1,3 +1,4 @@
+const {temporaryDirectory} = require("./support/fixtures");
 const {test} = require("node:test");
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
@@ -12,15 +13,11 @@ const {cachePaths} = require("../lib/jar-cache");
 const {releaseInfo} = require("../lib/release-client");
 const manifest = require("../lib/runtime-manifest.json");
 const {javaExecutable, javaDirectory} = require("../lib/java-runtime");
+const {privateWorkspaceRoot} = require("../lib/workspace");
 const digest = value => createHash("sha256").update(value).digest("hex");
 
 function fixture(t) {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "commerce-runtime-"));
-  t.after(() => {
-    assert.equal(path.dirname(dir), path.resolve(os.tmpdir()));
-    assert.ok(path.basename(dir).startsWith("commerce-runtime-"));
-    fs.rmSync(dir, {recursive: true, force: true});
-  });
+  const {dir} = temporaryDirectory("commerce-runtime-", t);
   const bytes = "verified-runtime-archive";
   const info = {id: "test-runtime", version: "21.0.12.1+1", java: "jre/bin/java",
     url: "https://github.com/example/runtime.zip", size: Buffer.byteLength(bytes), sha256: digest(bytes)};
@@ -51,11 +48,10 @@ test("Unicode Java directories use a verified private filesystem alias", t => {
   fs.writeFileSync(executable, "test executable");
   const alias = javaDirectory(home);
   if (process.platform === "win32") {
-    assert.match(alias, /^[\x20-\x7e]+$/);
     assert.equal(fs.realpathSync(alias), fs.realpathSync(home));
     assert.equal(javaDirectory(home), alias);
     assert.equal(javaExecutable(executable), path.join(alias, "bin", "java.exe"));
-    const root = path.join(os.tmpdir(), `.commerce-context-mcp-java${process.getuid ? `-${process.getuid()}` : ""}`);
+    const root = privateWorkspaceRoot("java");
     assert.equal(path.dirname(alias), root);
     assert.match(path.basename(alias), /^[a-f0-9]{64}$/);
     fs.rmSync(alias, {force: true});
@@ -77,6 +73,24 @@ test("the private cache directory can be selected without changing system Java",
   } finally {
     if (previous === undefined) delete process.env.COMMERCE_CONTEXT_CACHE_DIR;
     else process.env.COMMERCE_CONTEXT_CACHE_DIR = previous;
+  }
+});
+
+test("Unicode TEMP falls back to a private user-home workspace and rejects a replacement link", t => {
+  const name = `test-${require("node:crypto").randomUUID()}`;
+  const temporary = path.join(os.tmpdir(), "임시-🧪");
+  t.mock.method(os, "tmpdir", () => temporary);
+  const root = privateWorkspaceRoot(name);
+  assert.equal(path.dirname(root), os.homedir());
+  assert.equal(privateWorkspaceRoot(name), root);
+  try {
+    fs.rmdirSync(root);
+    fs.symlinkSync(os.homedir(), root, process.platform === "win32" ? "junction" : "dir");
+    assert.throws(() => privateWorkspaceRoot(name), /private directory/);
+  } finally {
+    assert.equal(path.dirname(root), os.homedir());
+    if (fs.lstatSync(root).isSymbolicLink()) fs.unlinkSync(root);
+    else fs.rmdirSync(root);
   }
 });
 
@@ -111,9 +125,40 @@ test("a missing archive sidecar does not prevent offline runtime repair", async 
   fs.unlinkSync(f.paths.javaPath);
   fs.unlinkSync(path.join(f.paths.root, "runtime.zip.sha256"));
   const repaired = await ensureRuntime({...f.options, download: async () => {throw Error("offline");}});
-  assert.equal(repaired, f.paths.javaPath);
+  assert.equal(fs.realpathSync(repaired), fs.realpathSync(f.paths.javaPath));
   assert.equal(f.counts().downloads, 1);
   assert.ok(verifiedRuntime(f.paths, f.info));
+});
+
+test("Windows runtime publication retries a transient directory lock", {skip: process.platform !== "win32"}, async t => {
+  const f = fixture(t), rename = fs.renameSync;
+  let attempts = 0;
+  t.mock.method(fs, "renameSync", (source, target) => {
+    if (target === f.paths.home && ++attempts <= 2) throw Object.assign(Error("busy directory"), {code: "EPERM"});
+    return rename(source, target);
+  });
+  await ensureRuntime(f.options);
+  assert.equal(attempts, 3);
+  assert.equal(f.counts().extracts, 1);
+  assert.ok(verifiedRuntime(f.paths, f.info));
+});
+
+test("Windows publication retries retain the original deadline and clean the stage", {skip: process.platform !== "win32"}, async t => {
+  const f = fixture(t), rename = fs.renameSync;
+  let elapsed = 0, attempts = 0;
+  f.options.lockOptions.now = () => elapsed;
+  t.mock.method(fs, "renameSync", (source, target) => {
+    if (target === f.paths.home) {
+      attempts++; elapsed = 2000;
+      throw Object.assign(Error("busy directory"), {code: "EPERM"});
+    }
+    return rename(source, target);
+  });
+  await assert.rejects(ensureRuntime(f.options), /Timed out preparing Java runtime/);
+  assert.equal(attempts, 1);
+  assert.equal(fs.existsSync(f.paths.home), false);
+  assert.equal(fs.existsSync(f.paths.lockPath), false);
+  assert.ok(!fs.readdirSync(f.paths.root).some(name => name.includes(".stage-")));
 });
 
 test("doctor fails on a missing or damaged JAR and succeeds only with both caches ready", async t => {

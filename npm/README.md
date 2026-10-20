@@ -8,13 +8,13 @@ A local MCP server that helps AI coding tools retrieve Korean ecommerce and Java
 
 ## Requirements
 
-Version 0.2.0 requires **Node.js 22 or later and a local STDIO MCP client**. You do not need to install a JDK/JRE or configure `JAVA_HOME`. An existing system Java installation is not used.
+Version 0.2.1 requires **Node.js 22 or later and a local STDIO MCP client**. You do not need to install a JDK/JRE or configure `JAVA_HOME`. An existing system Java installation is not used.
 
 **The first launch prepares a private Temurin JRE 21.0.12.1+1.** This does not depend on npm installation scripts; installation with `--ignore-scripts` is supported. Automatic runtime preparation is available **from 0.2.0**. Update older packages. For unpublished source changes, use the [local package validation procedure](https://github.com/dakcoh/commerce-context-mcp/blob/master/CONTRIBUTING.md#local-validation).
 
 Supported platforms are Windows, macOS, and glibc-based Linux on x64 and ARM64, selected according to the Node process architecture. Release CI checks actual startup, recovery, and shutdown on these platforms. Linux musl/Alpine and 32-bit systems are unsupported. Extraction requires the OS `tar` command, included with Windows 10/11 and macOS.
 
-On Windows, Unicode runtime paths use a junction in the user's private temporary directory. JARs in Unicode caches are copied to a private ASCII temporary workspace and removed on shutdown. Administrator access, PowerShell, and 8.3 filename generation are not required.
+On Windows, Unicode runtime paths use a verified junction. JARs in Unicode caches are copied to a private workspace and removed on shutdown. If the temporary path contains non-ASCII characters, these workspaces use `.commerce-context-mcp-java` and `.commerce-context-mcp-launch` in your user home instead. This avoids emoji in TEMP while allowing Korean profiles supported by Windows Java. Administrator access, PowerShell, and 8.3 filename generation are not required. If Windows Java cannot represent your user profile path, use the private ASCII cache override below.
 
 ```bash
 node -v
@@ -72,7 +72,7 @@ The server needs no separate LLM API key or database. AI usage charges and data 
 | Symptom | Next step |
 |---|---|
 | `Managed Java ... cannot run` | Check supported OS/CPU and OS libraries, then run `download`. Stop existing MCP processes if files are locked. |
-| `Cannot launch managed Java from this Unicode path` | An ASCII alias cannot be created, including in the temporary directory. Set `COMMERCE_CONTEXT_CACHE_DIR` to a writable, private ASCII path and retry. |
+| Windows Java fails on the user profile path | Set `COMMERCE_CONTEXT_CACHE_DIR` to a writable, private ASCII path and retry. Unicode TEMP alone no longer blocks startup. |
 | `Cannot extract Java runtime` | Check the OS `tar` command and available disk space. |
 | `Unsupported Java runtime platform` | Check supported OS/CPU and Node architecture. |
 | `npx` cannot be found | Check the Node installation and the app's command environment, then restart the app. |
@@ -85,7 +85,7 @@ First retry `download`. Damaged runtime files can be restored from the cached, p
 
 If automatic recovery fails, stop related MCP clients and download processes. Inspect only the paths reported by `doctor`. `runtime executable` points to a file inside the affected version's `runtimes/temurin-<version>-<OS>-<CPU>` directory. Remove only that version's runtime directory or the affected JAR and `.sha256`, then run `download`. For a persistent lock error, remove only the relevant `.lock` after confirming no active download exists. Do not delete unrelated versions or directories.
 
-If Windows cannot create an ASCII alias even in the user's temporary directory, use a private cache path containing only ASCII characters. Replace the example with an absolute path writable by your account, and set the same variable in the MCP client's environment. Avoid shared or publicly writable folders.
+If Windows Java cannot run from your user profile path (for example, characters unsupported by its Windows codepage), use a private cache path containing only ASCII characters. Replace the example with an absolute path writable by your account, and set the same variable in the MCP client's environment. Avoid shared or publicly writable folders.
 
 ```powershell
 $env:COMMERCE_CONTEXT_CACHE_DIR="C:\path\to\private-cache"

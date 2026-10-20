@@ -119,7 +119,7 @@ rules:
       checklist:
         - "망취소 상황 (응답 타임아웃) 처리 로직이 있는가?"
       tags: [network-cancel, timeout, scheduler, payment-status, uncertainty]
-      aliases: [망취소, 결제 응답 유실, unknown payment, 승인 결과 불명]
+      aliases: [망취소, 결제 응답 유실, unknown payment, 승인 결과 불명, 카드 승인 타임아웃]
 
     - id: partial-refund
       category: refund
@@ -145,7 +145,7 @@ rules:
         - "환불 요청 전 허용 상태와 잔여 환불 가능액·처리 중 금액을 원자적으로 검증하는가?"
         - "반복 환불의 배부 잔차와 출고 전 취소·반품 검수의 재고 복구가 구분되는가?"
       tags: [partial-refund, coupon, point, settlement, refund-calculation]
-      aliases: [할인 쿠폰 환불 배분, 부분 환불 prorate, coupon allocation refund, 카드 취소액, 쿠폰 복원]
+      aliases: [할인 쿠폰 환불 배분, 부분 환불 prorate, coupon allocation refund, 카드 취소액, 쿠폰 복원, 예약 환불]
 
     - id: payment-idempotency
       category: idempotency

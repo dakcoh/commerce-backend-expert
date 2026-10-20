@@ -84,15 +84,17 @@ Validation rejects duplicate fields or IDs, invalid references, empty required v
 
 ## Local validation
 
+`npm test` uses the standard Node test runner to check basic behavior, cache locks, downloads, process shutdown, package contents, and JRE recovery. Keep scenario data in its test file; temporary directory cleanup and system-Java isolation are shared in `npm/test/support/fixtures.js`. Use `temporaryDirectory(prefix, t)` to register cleanup before fixture setup can fail. This helper is excluded from the npm package. To check one area, run a command such as `node --test npm/test/runtime.test.js` from the repository root.
+
 Run these commands from the repository root in PowerShell. Replace `JAVA_HOME` with your JDK 21 path. This JDK is for source builds, separate from the npm user's private runtime.
 
 ```powershell
 $env:JAVA_HOME="C:\path\to\jdk-21"
 $env:Path="$env:JAVA_HOME\bin;$env:Path"
-.\gradlew.bat clean validateKnowledge bootJar "-Pversion=0.2.0" --no-daemon
+.\gradlew.bat clean validateKnowledge bootJar "-Pversion=0.2.1" --no-daemon
 npm.cmd --prefix npm test
-$env:MCP_EXPECTED_VERSION="0.2.0"
-node npm/test/mcp-smoke.js build/libs/context-engine-0.2.0.jar
+$env:MCP_EXPECTED_VERSION="0.2.1"
+node npm/test/mcp-smoke.js build/libs/context-engine-0.2.1.jar
 ```
 
 To check real JRE download, two-process preparation, offline reuse, and corruption repair:
@@ -110,14 +112,14 @@ Push-Location npm
 npm.cmd pack --ignore-scripts --json --pack-destination ../build > ../build/npm-pack.json
 Pop-Location
 New-Item -ItemType Directory -Force build/packed | Out-Null
-tar -xzf build/commerce-context-mcp-0.2.0.tgz -C build/packed
+tar -xzf build/commerce-context-mcp-0.2.1.tgz -C build/packed
 $env:MCP_LAUNCHER_ROOT=(Resolve-Path build/packed/package).Path
-node npm/test/mcp-smoke.js build/libs/context-engine-0.2.0.jar
+node npm/test/mcp-smoke.js build/libs/context-engine-0.2.1.jar
 Remove-Item Env:\MCP_LAUNCHER_ROOT
 Remove-Item Env:\MCP_EXPECTED_VERSION
 ```
 
-The package smoke test places the locally built JAR in a temporary cache, prepares the private JRE without system Java, invokes MCP, checks a Korean/Unicode cache path, and verifies shutdown after EOF. Cold download of the published JAR is a separate release-workflow check. To check installation without scripts, run `npm.cmd install --ignore-scripts --no-audit --no-fund --prefix build/local-install ./build/commerce-context-mcp-0.2.0.tgz`.
+The package smoke test places the locally built JAR in a temporary cache, prepares the private JRE without system Java, invokes MCP, checks a Korean/Unicode cache path, and verifies shutdown after EOF. Cold download of the published JAR is a separate release-workflow check. To check installation without scripts, run `npm.cmd install --ignore-scripts --no-audit --no-fund --prefix build/local-install ./build/commerce-context-mcp-0.2.1.tgz`.
 
 On Linux/macOS, configure JDK 21 and use `./gradlew` and `npm`. Real OS signal tests run on Linux/macOS; distinguish these results from Windows skips.
 
@@ -200,7 +202,7 @@ Public tools: `search_knowledge`, `get_rule`, `get_checklist`, `review_commerce_
 - Search normalizes NFKC, selected Korean particles/inflections, and aliases. It uses at most 32 distinct terms and field match ratios; ties are ordered by domain, category, and ID.
 - Code review excludes package/import lines and searches the original input and scenario separately. Long input adds at most 32 overlapping 16-word windows, reporting sampled analysis for larger inputs. It does not execute code or parse an AST.
 - Checklists deduplicate only items with the same conditions and trust context. JSON and Markdown preserve items and order.
-- Search/rule/checklist accept `responseFormat` `json` or default `both`. JSON keeps `markdown` empty; search with JSON and `detail: "full"` supplies `fullRules`. Review does not accept this option.
+- Search/rule/checklist accept `responseFormat` `json` or default `both`. JSON keeps `markdown` empty; search with JSON and `detail: "full"` supplies `fullRules`. Use `get_rule` to inspect conditions for summary candidates; rules already included in full results need no repeat lookup. Review does not accept this option.
 - Search/review domains accept CSV; checklist accepts one domain. Required values, types, enums, bounds, unknown filters, and empty CSV elements are validated. Enums normalize case and whitespace.
 - Empty or valid unrelated queries return no results after option validation. Tool failures use `isError`; resources use JSON-RPC errors. A subsequent valid request still works.
 - Tool callbacks return text JSON. Native `outputSchema`, `structuredContent`, and annotation support are future work.
@@ -247,7 +249,7 @@ The 12 development tasks are in [ai-workflows.json](npm/test/fixtures/ai-workflo
 
 1. Record client, model, version, and settings. Give each task and artifact to a new conversation without forcing tool-call order.
 2. Record actual tool names/arguments/results, final answers, and observable tokens/time as JSONL. Use null for unobserved tokens; do not collect private reasoning.
-3. Have a person check each humanChecks entry and record actual reviewedBy/reviewedAt. Include all 12 tasks per combination. Three repetitions per task are recommended for an initial comparison; report actual counts.
+3. Use `humanChecks` for a person's review. For an AI review, set `reviewType: "agent"` and use `agentChecks`. Record actual `reviewedBy`/`reviewedAt`; do not label AI review as human review. Include all 12 tasks per combination. Three repetitions per task are recommended for an initial comparison; report actual counts.
 4. Compare applicability/evidence preservation, unsupported assertions, partial-result handling, recovery, and efficiency. Keep development expressions separate from final evaluation queries.
 
 This incomplete example illustrates the format; empty results and review fields do not establish a successful evaluation. Actual JSONL stores one object per line.
@@ -275,14 +277,20 @@ This incomplete example illustrates the format; empty results and review fields 
 }
 ```
 
-Put the actual MCP result or parsed response in result. The grader checks relevant rules and human-recorded outcomes without forcing a particular call sequence. Run from the repository's npm folder, replacing the path with your actual transcript:
+Put the actual MCP result or parsed response in result. The grader checks relevant rules and recorded review outcomes without forcing a particular call sequence. When execution status is available, also record `executionCode` and `turnCompleted`. Failed or incomplete executions fail regardless of review scores.
+
+For AI review, each rubric entry in `agentChecks` contains `{ "passed": true, "quote": "Exact text from the final answer", "rationale": "Reason for the judgment" }`. A missing answer quote or empty rationale leaves the review pending. Omitting `reviewType` preserves the existing human review format. AI-12 requires an actual failed call followed by success; Codex records with `status: "failed"` also count as errors.
+
+Run from the repository's npm folder, replacing the path with your actual transcript:
 
 ```powershell
 cd npm
 npm.cmd run test:ai-eval -- "C:\path\reviewed-transcripts.jsonl"
 ```
 
-Exit code 0 means supplied records passed and required cases are complete; 1 means failed/invalid input; 2 means review or cases are missing and judgment is pending. Synthetic grader tests are not model performance results. The grader cannot establish whether human review records are truthful.
+Exit code 0 means supplied records passed and required cases are complete; 1 means failed/invalid input; 2 means review or cases are missing and judgment is pending. Results identify human or AI review with `reviewType`. Synthetic grader tests are not model performance results. The grader cannot establish judgment accuracy or reviewer identity.
+
+On 2026-10-20, all 12 cases ran once on Windows x64 with Codex CLI 0.163.0 and gpt-6.1-sol (high), passing AI review with quotes from actual answers. AI-12 explicitly injected invalid inputs to test recovery. After correcting guidance that encouraged duplicate full-rule lookups, additional AI-11/12 runs used 19→11 and 7→2 calls. These are limited observations from one model, not evidence of other clients/models, general token/time savings, or independent human validation.
 
 ## Next improvements
 

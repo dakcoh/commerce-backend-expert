@@ -26,7 +26,7 @@ The server provides design guidance. It does not execute orders, payments, or re
 
 ## Quick start
 
-Version 0.2.0 requires **Node.js 22 or later and an AI client that supports local STDIO MCP servers**.
+Version 0.2.1 requires **Node.js 22 or later and an AI client that supports local STDIO MCP servers**.
 
 > **Automatic preparation of a private Java runtime is available from 0.2.0.** Update the package if you use an earlier version. To check unpublished source changes, follow the [local package validation guide](CONTRIBUTING.md#local-validation).
 

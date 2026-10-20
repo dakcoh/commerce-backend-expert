@@ -56,7 +56,8 @@ function checkJava(javaPath, info, spawn = spawnSync) {
   javaPath = javaExecutable(javaPath);
   const status = javaStatus(javaPath, spawn);
   if (!status.ok || status.major !== 21 || !status.output.includes(`"${info.version.split("+")[0]}"`)) {
-    throw new Error(`Managed Java ${info.version} cannot run: ${status.output || "missing executable or OS libraries"}`);
+    throw new Error(`Managed Java ${info.version} cannot run: ${status.output || "missing executable or OS libraries"}.` +
+      (process.platform === "win32" ? " If the user profile path is unsupported by Windows Java, set COMMERCE_CONTEXT_CACHE_DIR to a private writable ASCII-only path." : ""));
   }
   return javaPath;
 }
@@ -105,7 +106,16 @@ async function ensureRuntime(options = {}) {
       lease.assertOwned();
       remaining();
       removeOwnedChild(paths.root, paths.home);
-      fs.renameSync(stage, paths.home);
+      for (let attempt = 0; ; attempt++) {
+        lease.assertOwned();
+        remaining();
+        try { fs.renameSync(stage, paths.home); break; }
+        catch (error) {
+          // Windows can briefly keep an extracted directory open after tar has exited.
+          if (process.platform !== "win32" || attempt >= 20 || !["EPERM", "EACCES", "EBUSY"].includes(error.code)) throw error;
+          await new Promise(resolve => setTimeout(resolve, Math.min(100, remaining())));
+        }
+      }
       const executable = checkJava(paths.javaPath, info, options.spawn);
       console.error(`Prepared Java ${info.version}: ${executable}`);
       return executable;
