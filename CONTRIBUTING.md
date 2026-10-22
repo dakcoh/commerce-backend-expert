@@ -4,7 +4,7 @@ English · [한국어](CONTRIBUTING.ko.md)
 
 For usage, start with the [README](README.md). For installation problems, see the [installation guide](npm/README.md). This document covers changes to code, knowledge, documentation, and releases.
 
-[Development environment](#development-environment) · [Knowledge changes](#editing-knowledge) · [Validation](#local-validation) · [Runtime policy](#private-java-runtime-policy) · [Server contract](#server-architecture-and-contract) · [AI evaluation](#evaluating-real-ai-workflows) · [Roadmap](#next-improvements) · [Releases](#release-checks)
+[Development environment](#development-environment) · [Knowledge changes](#editing-knowledge) · [Validation](#local-validation) · [Runtime policy](#private-java-runtime-policy) · [Server contract](#server-architecture-and-contract) · [Answer checks](#checking-ai-answers) · [Roadmap](#next-improvements) · [Releases](#release-checks)
 
 ## Commitments to users
 
@@ -80,7 +80,7 @@ evidence:
     note: "Applicability and scope checked"
 ```
 
-Validation rejects duplicate fields or IDs, invalid references, empty required values, incomplete review records, invalid dates, and future dates. External HTTP(S) evidence needs an access date. Blogs, AI answers, and project YAML paths are not official evidence. Do not encode a provider status code, timeout, tax rate, or retention period as a universal constant.
+Validation rejects duplicate fields or IDs, invalid references, empty required values, incomplete review records, invalid dates, and future dates. Date validation uses Korean time (`Asia/Seoul`) regardless of the host's time zone. External HTTP(S) evidence needs an access date. Blogs, AI answers, and project YAML paths are not official evidence. Do not encode a provider status code, timeout, tax rate, or retention period as a universal constant.
 
 ## Local validation
 
@@ -91,10 +91,10 @@ Run these commands from the repository root in PowerShell. Replace `JAVA_HOME` w
 ```powershell
 $env:JAVA_HOME="C:\path\to\jdk-21"
 $env:Path="$env:JAVA_HOME\bin;$env:Path"
-.\gradlew.bat clean validateKnowledge bootJar "-Pversion=0.2.1" --no-daemon
+.\gradlew.bat clean validateKnowledge bootJar "-Pversion=0.2.2" --no-daemon
 npm.cmd --prefix npm test
-$env:MCP_EXPECTED_VERSION="0.2.1"
-node npm/test/mcp-smoke.js build/libs/context-engine-0.2.1.jar
+$env:MCP_EXPECTED_VERSION="0.2.2"
+node npm/test/mcp-smoke.js build/libs/context-engine-0.2.2.jar
 ```
 
 To check real JRE download, two-process preparation, offline reuse, and corruption repair:
@@ -112,14 +112,14 @@ Push-Location npm
 npm.cmd pack --ignore-scripts --json --pack-destination ../build > ../build/npm-pack.json
 Pop-Location
 New-Item -ItemType Directory -Force build/packed | Out-Null
-tar -xzf build/commerce-context-mcp-0.2.1.tgz -C build/packed
+tar -xzf build/commerce-context-mcp-0.2.2.tgz -C build/packed
 $env:MCP_LAUNCHER_ROOT=(Resolve-Path build/packed/package).Path
-node npm/test/mcp-smoke.js build/libs/context-engine-0.2.1.jar
+node npm/test/mcp-smoke.js build/libs/context-engine-0.2.2.jar
 Remove-Item Env:\MCP_LAUNCHER_ROOT
 Remove-Item Env:\MCP_EXPECTED_VERSION
 ```
 
-The package smoke test places the locally built JAR in a temporary cache, prepares the private JRE without system Java, invokes MCP, checks a Korean/Unicode cache path, and verifies shutdown after EOF. Cold download of the published JAR is a separate release-workflow check. To check installation without scripts, run `npm.cmd install --ignore-scripts --no-audit --no-fund --prefix build/local-install ./build/commerce-context-mcp-0.2.1.tgz`.
+The package smoke test places the locally built JAR in a temporary cache, prepares the private JRE without system Java, invokes MCP, checks a Korean/Unicode cache path, and verifies shutdown after EOF. Cold download of the published JAR is a separate release-workflow check. To check installation without scripts, run `npm.cmd install --ignore-scripts --no-audit --no-fund --prefix build/local-install ./build/commerce-context-mcp-0.2.2.tgz`.
 
 On Linux/macOS, configure JDK 21 and use `./gradlew` and `npm`. Real OS signal tests run on Linux/macOS; distinguish these results from Windows skips.
 
@@ -129,10 +129,10 @@ On Linux/macOS, configure JDK 21 and use `./gradlew` and `npm`. Real OS signal t
 | Search | Existing 100 queries, new expressions, irrelevant queries, ranking, and counts; do not silently change expected IDs |
 | Review and checklists | Existing 20 review, 10 checklist, and 15 trust cases; preserve conditions, items, and partial-result reporting |
 | MCP | Four tools, three resource types, two prompts, recovery after invalid input, actual JSON-RPC |
-| Launcher | No-Java PATH, two processes, offline repair, missing checksum sidecars, doctor exit codes, EOF, child exit, npm pack contents |
+| Launcher | No-Java PATH, two processes, Windows lock-read errors and replacement-owner protection, offline repair, missing checksum sidecars, doctor exit codes, EOF, child exit, npm pack contents |
 | Documentation | Run JSON examples through MCP smoke; compare all 70 IDs, local links and anchors, and local versus published instructions |
 
-`validateKnowledge` depends on the complete Java test suite. Run actual-JAR MCP smoke and npm checks separately. Policy tests are not live payment-provider, bank, or database concurrency/failure tests. Tool selection, final AI answers, and token comparisons need [separate evaluation](#evaluating-real-ai-workflows).
+`validateKnowledge` depends on the complete Java test suite. Run actual-JAR MCP smoke and npm checks separately. Policy tests are not live payment-provider, bank, or database concurrency/failure tests. Check tool selection and final answers separately using [AI answer checks](#checking-ai-answers).
 
 ## Upgrading
 
@@ -149,21 +149,21 @@ From 0.2.0, npm execution needs Node 22 or later and automatically obtains a pri
 
 ## Release checks
 
-A normal push or PR to `master` runs CI. Publishing a GitHub Release triggers validation and publication. The shared [.github/workflows/validate.yml](.github/workflows/validate.yml) builds with JDK 21/Node 22 on Ubuntu and checks the same artifacts with JDK 21/Node 24 on Ubuntu and JDK 21/Node 22 and 24 on Windows. Private runtimes are also checked on Windows ARM64, Ubuntu ARM64, and macOS Intel/ARM64. Package smoke tests leave only extraction tools on `PATH` and use a nonexistent `JAVA_HOME`.
+A normal push or PR to `master` runs CI. Publishing a GitHub Release triggers validation and npm staging for maintainer approval. The shared [.github/workflows/validate.yml](.github/workflows/validate.yml) builds with JDK 21/Node 22 on Ubuntu and checks the same artifacts with JDK 21/Node 24 on Ubuntu and JDK 21/Node 22 and 24 on Windows. Private runtimes are also checked on Windows ARM64, Ubuntu ARM64, and macOS Intel/ARM64. Package smoke tests leave only extraction tools on `PATH` and use a nonexistent `JAVA_HOME`.
 
 - Check Java, knowledge, npm, and actual MCP regression results.
 - Match npm, tag, manifest, and `serverInfo` versions; verify application major version 65.
-- Check JAR YAML and forbidden web-server dependencies, all 13 tarball files and their contents/integrity, and bundle hashes.
+- Check JAR YAML and forbidden web-server dependencies, all 14 tarball files and their contents/integrity, and bundle hashes.
 - Check Unicode caches, Java exit after EOF, and Linux signals on supported platforms.
 - Match public documentation to actual code and packaged files.
 
-Publication order: check an unused npm version, tag commit, and authentication; upload the tested JAR/checksum; download and compare them; publish **the tested tarball itself** with provenance. Verify the registry afterward. Never reuse a published version or assume a working tree equals a registry package because their version strings match.
+Publication order: check an unused npm version, tag commit, and authentication; upload the tested JAR/checksum; download and compare them; stage **the tested tarball itself** with provenance; approve it on npm with 2FA. Verify the registry afterward. Never reuse a published version or assume a working tree equals a registry package because their version strings match.
 
 Do not overwrite existing assets. GitHub and npm publication is not atomic: inspect remaining assets and registry state before retrying a failure. The workflow does not automatically delete assets, overwrite them, or increment versions. Check `NPM_TOKEN` permissions/expiry and any external Trusted Publisher registration separately. The current workflow's OIDC permission is for provenance.
 
 ### Staged npm publication
 
-Release 0.2.0 used staged publication after the token required approval. The checked-in workflow still uses direct `npm publish`; it does not automatically handle `E_STAGE_REQUIRED`. Use a controlled staging job with the validated bundle when approval is required.
+The release workflow uses `npm stage publish` with npm CLI 11.21.1. It submits the validated bundle for approval with provenance; a successful workflow means staging completed, not that npm publication is complete.
 
 Staging needs npm CLI 11.15+ and Node 22.14+. In the authenticated CI environment, verify the sealed bundle, then submit the same tarball, with `VERSION` and `NPM_TAG` set from validation:
 
@@ -198,6 +198,8 @@ The current handlers only read in-memory knowledge. `McpSyncServerCustomizer.imm
 
 Public tools: `search_knowledge`, `get_rule`, `get_checklist`, `review_commerce_design`. Resources: `commerce://catalog`, `commerce://domains/{domain}`, `commerce://rules/{ruleId}`. Prompts: `review-commerce-api`, `review-payment-webhook`.
 
+Both review prompts and the tool description ask the client to pass the code with the user's business and failure context in `scenario`, without inventing contracts, policies, or defects. Prompt field guidance must match the actual review response. `matchedEvidence` contains matched search terms, not evidence establishing a defect.
+
 - Search/review default to five results, at most ten. Checklists select at most ten rules.
 - Search normalizes NFKC, selected Korean particles/inflections, and aliases. It uses at most 32 distinct terms and field match ratios; ties are ordered by domain, category, and ID.
 - Code review excludes package/import lines and searches the original input and scenario separately. Long input adds at most 32 overlapping 16-word windows, reporting sampled analysis for larger inputs. It does not execute code or parse an AST.
@@ -225,6 +227,8 @@ Java stdout is read through a separate pipe and forwarded through Node streams. 
 
 Locks check PID, hostname, and a token. Only dead local owners are reclaimed. Ambiguous, foreign-host, or active owners are not removed automatically. Losing ownership stops publication; a process can reacquire within the remaining budget or use the verified winner's cache. Duplicate transfers remain possible; shared disks do not have a strict mutual-exclusion guarantee.
 
+Before ownership is acquired, Windows `EPERM` errors during lock creation or inspection share at most three retries within the original wait budget. A failed read is not treated as a missing lock. Retries recheck the owner; persistent permission errors and other error codes are returned to the caller.
+
 Temporary files are cleaned up. Signal exits use 130/143; normal shutdown preserves the child code. Cleanup is not guaranteed after power loss or a forced launcher kill.
 
 ## Private Java runtime policy
@@ -237,73 +241,48 @@ Preparation runs on first launch or `download`, without npm installation scripts
 - **Cache:** Under `~/.commerce-context-mcp/runtimes/`, by version/platform. Check the pinned hash and archive paths/links before extracting into a temporary directory. Only internal symlinks to regular files are allowed. Record file hashes and execution permissions and revalidate on every launch. Retain the archive for offline repair.
 - **Recovery:** Reuse PID/hostname/token locks. Keep the original 600-second budget across ownership changes, 120-second transfer attempts (at most three), and 90-second extraction. Clean abandoned temporary files/directories only after ownership checks. Log to stderr; execute Java by absolute path.
 - **Security updates:** Check Temurin security/patch releases, update the pinned version and all six archive hashes/sizes, run unit and actual-package tests on supported platforms, and publish a new npm version. Old caches are not reused for another version or automatically bulk-deleted while they might be in use.
-- **Local measurement:** On Windows x64, 2026-10-19: 49.0 MB JRE download, 200.6 MB cache including the archive, 2.6 seconds initial runtime preparation, 0.4 seconds revalidation. JAR preparation is separate; these are not guaranteed timings. Actual startup and recovery were checked locally on Windows/Ubuntu x64; macOS/ARM64 execution is checked separately in release CI.
 
 A successful `doctor` means cache integrity passed. `download` also checks the selected JRE executes; complete MCP smoke checks connection, tools, and shutdown. Runtime archives use pinned SHA-256, so a lost runtime checksum sidecar does not block offline repair. The server JAR still needs its release `.sha256`.
 
-## Evaluating real AI workflows
+## Checking AI answers
 
-Separate server regression from an AI's task success. Reduced JSON bytes are not a measured token or cost reduction. Normal execution and CI do not automatically run paid LLM evaluations.
+Keep server regression tests separate from checks of the client's tool selection and final answer. Use synthetic cases in [ai-workflows.json](npm/test/fixtures/ai-workflows.json), without company code, customer data, or real keys. Normal execution and CI do not automatically call paid LLMs.
 
-The 12 development tasks are in [ai-workflows.json](npm/test/fixtures/ai-workflows.json). Use these synthetic artifacts rather than company code, customer data, or real keys.
+1. Run each case in a new conversation and record actual tool calls, arguments, results, and the final answer as JSONL.
+2. Record the model, client, run number, actual reviewer, and review date. Include every case.
+3. Use `humanChecks` for a person's review. For an AI review, use `reviewType: "agent"` and `agentChecks`, with exact final-answer quotes and reasons.
+4. Check applicability, evidence preservation, unsupported assertions, partial results, and error recovery. Incomplete executions or missing reviews cannot pass.
 
-1. Record client, model, version, and settings. Give each task and artifact to a new conversation without forcing tool-call order.
-2. Record actual tool names/arguments/results, final answers, and observable tokens/time as JSONL. Use null for unobserved tokens; do not collect private reasoning.
-3. Use `humanChecks` for a person's review. For an AI review, set `reviewType: "agent"` and use `agentChecks`. Record actual `reviewedBy`/`reviewedAt`; do not label AI review as human review. Include all 12 tasks per combination. Three repetitions per task are recommended for an initial comparison; report actual counts.
-4. Compare applicability/evidence preservation, unsupported assertions, partial-result handling, recovery, and efficiency. Keep development expressions separate from final evaluation queries.
+Include `taskId`, `model`, `client`, `run`, `toolCalls`, `finalAnswer`, `reviewedBy`, and `reviewedAt`. Each `agentChecks` item records `passed`, `quote`, and `rationale`.
 
-This incomplete example illustrates the format; empty results and review fields do not establish a successful evaluation. Actual JSONL stores one object per line.
-
-```json
-{
-  "taskId": "AI-01",
-  "model": "Actual model and version",
-  "client": "Actual client",
-  "run": 1,
-  "toolCalls": [
-    {
-      "name": "search_knowledge",
-      "arguments": {"query": "결제 웹훅 서명", "responseFormat": "json"},
-      "result": {}
-    }
-  ],
-  "finalAnswer": "Actual final answer",
-  "inputTokens": null,
-  "outputTokens": null,
-  "elapsedMs": null,
-  "reviewedBy": null,
-  "reviewedAt": null,
-  "humanChecks": {}
-}
-```
-
-Put the actual MCP result or parsed response in result. The grader checks relevant rules and recorded review outcomes without forcing a particular call sequence. When execution status is available, also record `executionCode` and `turnCompleted`. Failed or incomplete executions fail regardless of review scores.
-
-For AI review, each rubric entry in `agentChecks` contains `{ "passed": true, "quote": "Exact text from the final answer", "rationale": "Reason for the judgment" }`. A missing answer quote or empty rationale leaves the review pending. Omitting `reviewType` preserves the existing human review format. AI-12 requires an actual failed call followed by success; Codex records with `status: "failed"` also count as errors.
-
-Run from the repository's npm folder, replacing the path with your actual transcript:
+From the repository root, replace the path with the reviewed transcript file:
 
 ```powershell
-cd npm
-npm.cmd run test:ai-eval -- "C:\path\reviewed-transcripts.jsonl"
+npm.cmd --prefix npm run test:ai-eval -- "C:\path\reviewed-transcripts.jsonl"
 ```
 
-Exit code 0 means supplied records passed and required cases are complete; 1 means failed/invalid input; 2 means review or cases are missing and judgment is pending. Results identify human or AI review with `reviewType`. Synthetic grader tests are not model performance results. The grader cannot establish judgment accuracy or reviewer identity.
-
-On 2026-10-20, all 12 cases ran once on Windows x64 with Codex CLI 0.163.0 and gpt-6.1-sol (high), passing AI review with quotes from actual answers. AI-12 explicitly injected invalid inputs to test recovery. After correcting guidance that encouraged duplicate full-rule lookups, additional AI-11/12 runs used 19→11 and 7→2 calls. These are limited observations from one model, not evidence of other clients/models, general token/time savings, or independent human validation.
+Exit code 0 means the supplied records and required cases passed, 1 means failed or invalid input, and 2 means missing review or cases. The grader does not establish reviewer identity or judgment accuracy.
 
 ## Next improvements
 
-**Java 21 builds and automatic private JRE preparation are implemented.** npm users prepare Node 22 or later. Plugin distribution and real-AI comparisons remain future work.
+**npm execution without a manually installed JDK and Java 21 source builds are implemented.** The next distribution task is client plugin installation support, described below.
 
-| Order | User-visible behavior | Completion criteria |
-|---|---|---|
-| 1. Private runtime (implemented) | Download, verify, cache, and reuse Java 21 | Startup without system Java; per-platform corruption, interruption, and concurrent preparation recovery; no PATH or administrator changes |
-| 2. Java 21 baseline (implemented) | Clear build/runtime requirements | Version, toolchain, artifacts, CI, documentation, and upgrade guide agree; knowledge/MCP contracts remain compatible |
-| 3. Connection and evaluation | Client guidance, optional plugin packaging, real-AI comparisons | Verify client installation/activation; evaluate real task records and separate held-out expressions |
+### Plugin installation package
 
-User projects reviewed through MCP do not need to migrate to Java 21. Runtime migration alone does not establish better knowledge accuracy or speed.
+The current distribution is **an npm launcher**. The planned installation package would register and enable MCP execution through an AI client's plugin installation flow. **No plugin installation package is available yet.**
+
+| Area | Plan and completion criteria |
+|---|---|
+| Installation experience | Add plugin → review permissions → enable → confirm all four MCP tools. Reduce manual editing of MCP configuration files |
+| Package contents | Official client plugin manifest, MCP registration settings, and install/update/removal guidance. Run a tested npm version through the existing launcher |
+| Runtime | Users prepare Node.js 22 or later. Reuse private JRE 21 downloading, verification, and caching without a manually installed JDK/JRE |
+| Compatibility | Check the client's official distribution and registration format first; implement for one client initially. Record other clients' support and configuration differences separately |
+| Verification | Install, enable, restart, update, and remove in a new client profile. Preserve existing MCP settings; check stdout JSON-RPC, error recovery, and shutdown |
+
+Standalone OS installers such as Windows `.exe`/`.msi` or macOS `.dmg`, and distributions bundling Node.js, are outside the current plan. Those would need separate OS, runtime-bundling, and update requirements.
+
+User projects reviewed through MCP do not need to migrate to Java 21.
 
 Evaluate native MCP metadata only after checking text-response compatibility and actual benefit without duplicating tools. Design private-knowledge loading separately from public repository/package contents. Multilingual knowledge/search, country filters, paid plans, and private-repository conversion are separate work; this documentation translation does not implement them.
 
-Remote CI, macOS/ARM64 execution, real-AI evaluation, public GitHub JAR downloads, and npm publication/provenance are separate from local Windows/Ubuntu results. Commit, push, publication, and deployment require the corresponding requested scope.
+Record local checks, remote CI/platform execution, AI answer checks, public GitHub JAR downloads, and npm publication/provenance separately by version and artifact. Commit, push, publication, and deployment require the corresponding requested scope.

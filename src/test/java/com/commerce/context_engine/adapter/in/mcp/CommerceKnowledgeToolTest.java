@@ -6,6 +6,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.ai.tool.ToolCallbackProvider;
 
 import java.util.Arrays;
+import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -40,7 +41,7 @@ class CommerceKnowledgeToolTest {
             assertThat(result.ruleId()).isNotBlank();
             assertThat(result.score()).isPositive();
             assertThat(result.matchedFields()).isNotEmpty();
-            assertThat(result.evidenceLevel()).isEqualTo("project-guidance");
+            assertThat(result.evidenceLevel()).isEqualTo(tool.getRule(result.ruleId(), "json").rule().evidenceLevel());
             assertThat(result.matchConfidence()).isIn("high", "medium", "low");
             assertThat(result.owner()).isEqualTo("commerce-context-maintainers");
             assertThat(result.verifiedBy()).isNull();
@@ -122,7 +123,7 @@ class CommerceKnowledgeToolTest {
             assertThat(finding.evidenceLevel()).isNotNull();
             assertThat(finding.status()).isEqualTo("review-required");
             assertThat(finding.ruleStatus()).isIn("active", "needs-review", "deprecated");
-            assertThat(finding.evidenceLevel()).isEqualTo("project-guidance");
+            assertThat(finding.evidenceLevel()).isEqualTo(tool.getRule(finding.ruleId(), "json").rule().evidenceLevel());
             assertThat(finding.owner()).isEqualTo("commerce-context-maintainers");
         });
         assertThat(response.notice()).contains("확정");
@@ -133,5 +134,26 @@ class CommerceKnowledgeToolTest {
         assertThat(resources.catalog()).contains("rules", "domains", "project-guidance", "needs-review");
         assertThat(resources.rule("available-stock-query")).contains("가용 재고", "knowledgeId");
         assertThat(prompts.reviewPaymentWebhook()).contains("review_commerce_design");
+    }
+
+    @Test
+    void reviewPromptExplainsFieldsThatExistInReviewFindings() {
+        var fields = Arrays.stream(CommerceKnowledgeTool.ReviewFindingView.class.getRecordComponents())
+                .map(component -> component.getName()).toList();
+        String prompt = prompts.reviewCommerceApi("payment");
+        for (String field : List.of("ruleStatus", "evidenceLevel", "verifiedBy", "lastReviewedAt", "matchedEvidence")) {
+            assertThat(fields).contains(field);
+            assertThat(prompt).contains(field);
+        }
+        assertThat(prompt).doesNotContain("matchConfidence")
+                .contains("검색 일치 단어", "입증 자료가 아닙니다");
+    }
+
+    @Test
+    void reviewPromptsAskForCodeAndUserProvidedScenarioWithoutInventingContext() {
+        for (String prompt : List.of(prompts.reviewCommerceApi(null),
+                prompts.reviewCommerceApi("payment"), prompts.reviewPaymentWebhook())) {
+            assertThat(prompt).contains("review_commerce_design", "artifact", "scenario", "사용자가 제공한", "추측하지");
+        }
     }
 }

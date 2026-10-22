@@ -51,6 +51,13 @@ class KnowledgePolicyRegressionTest {
     }
 
     @Test
+    void inventoryRestoration_waitsForAuthenticatedPaymentResults() {
+        assertThat(tool.getRule("stock-reservation").markdown())
+                .contains("미확정", "인증된 조회", "검증된 웹훅", "커밋", "한 번")
+                .contains("DB 조건부");
+    }
+
+    @Test
     void saga_distinguishesOutboxPublicationFromCompensationCompletion() {
         assertThat(tool.getRule("saga-pattern").markdown())
                 .contains("로컬 트랜잭션", "소비자", "재시도", "대사")

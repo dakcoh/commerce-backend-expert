@@ -6,6 +6,9 @@ import org.junit.jupiter.api.Test;
 import org.springframework.core.io.ByteArrayResource;
 
 import java.nio.charset.StandardCharsets;
+import java.time.Clock;
+import java.time.Instant;
+import java.time.ZoneId;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -72,6 +75,20 @@ class KnowledgeTrustValidationTest {
     @Test void futureAccessDate_isRejected() {
         assertThatThrownBy(() -> map(VALID.replace("accessed-at: 2026-07-21", "accessed-at: 2999-01-01")))
                 .hasMessageContaining("evidence[0].accessed-at");
+    }
+
+    @Test void koreanAccessDate_isAcceptedWhileTheHostIsStillOnThePreviousDay() {
+        var clock = Clock.fixed(Instant.parse("2026-10-21T06:30:00Z"), ZoneId.of("America/Los_Angeles"));
+        var catalog = new YamlKnowledgeCatalog(clock);
+        catalog.load(resource("today.yml", VALID.replace("accessed-at: 2026-07-21", "accessed-at: 2026-10-21")));
+        assertThat(catalog.findById("example-rule")).isPresent();
+    }
+
+    @Test void futureKoreanAccessDate_isRejectedEvenWhenTheHostHasEnteredThatDay() {
+        var clock = Clock.fixed(Instant.parse("2026-10-20T13:30:00Z"), ZoneId.of("Pacific/Kiritimati"));
+        assertThatThrownBy(() -> new YamlKnowledgeCatalog(clock).load(resource("future.yml",
+                VALID.replace("accessed-at: 2026-07-21", "accessed-at: 2026-10-21"))))
+                .hasMessageContaining("evidence[0].accessed-at").hasMessageContaining("future");
     }
 
     @Test void missingExplicitEvidence_cannotActivateAHighRiskRule() throws Exception {

@@ -150,14 +150,15 @@ public class CommerceKnowledgeTool {
           description = """
                   설계안, API 설명, DDL 또는 코드 조각에서 적용 가능성이 높은 커머스 규칙을 찾는 로컬 읽기 전용 도구입니다.
                   결과는 확정 버그가 아니라 검토가 필요한 규칙 기반 후보입니다.
-                  scenario에는 업무·실패 상황을 짧게 적으세요. analysisTruncated이면 관심 코드로 좁혀 재조회하세요.
+                  사용자가 제공한 업무·실패 상황을 요약해 scenario에 함께 전달하세요. 제시되지 않은 계약·정책·결함은 추측하지 마세요.
+                  analysisTruncated이면 관심 코드로 좁혀 재조회하세요.
                   고위험 후보는 get_rule로 조건과 예외를 확인하세요. 후보 없음은 결함 없음이 아닙니다.
                   """)
     public ReviewResponse reviewCommerceDesign(
             @ToolParam(description = "검토할 설계안, API, DDL 또는 코드", required = true) String artifact,
             @ToolParam(description = "design, api, ddl, code 중 하나", required = false) String artifactType,
             @ToolParam(description = "선택 domain: inventory, payment, settlement, coupon, commerce, spring-commerce. 여러 값 CSV, 생략은 전체", required = false) String domain,
-            @ToolParam(description = "선택 시나리오", required = false) String scenario,
+            @ToolParam(description = "사용자가 제공한 업무·실패 상황 요약. 코드의 업무 맥락을 함께 전달하고, 제시되지 않은 계약·정책·결함은 추측하지 마세요", required = false) String scenario,
             @ToolParam(description = "후보 수 1~10, 기본 5", required = false) Integer maxFindings
     ) {
         ReviewReport report = reviewer.review(new ReviewRequest(

@@ -7,7 +7,6 @@ import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 public class RelevanceScorer {
 
@@ -32,16 +31,29 @@ public class RelevanceScorer {
         score += scoreField("category", rule.category(), query, 3, fields, matchedTerms);
         score += scoreField("summary", rule.summary(), query, 4, fields, matchedTerms);
 
-        String body = body(rule);
-        if (matchTerms(body, query, matchedTerms)) {
-            fields.add("body");
-            score += 2;
+        // Keep topic coverage separate from terms scattered across unrelated guidance items.
+        int topicTerms = matchedTerms.size();
+        double topicCoverage = query.terms().isEmpty() ? 0
+                : (double) topicTerms / query.terms().size();
+        double passageCoverage = 0;
+        for (String passage : body(rule)) {
+            Set<String> passageTerms = new LinkedHashSet<>();
+            if (matchTerms(passage, query, passageTerms)) {
+                fields.add("body");
+                matchedTerms.addAll(passageTerms);
+                if (!query.terms().isEmpty()) {
+                    passageCoverage = Math.max(passageCoverage,
+                            (double) passageTerms.size() / query.terms().size());
+                }
+            }
         }
+        if (fields.contains("body")) score += 2;
 
         double coverage = query.terms().isEmpty()
                 ? 0
                 : (double) matchedTerms.size() / query.terms().size();
-        score += coverage * 10;
+        // Multiple topic terms support multi-step guidance; one generic alias alone does not.
+        score += (topicTerms >= 2 ? coverage : Math.max(topicCoverage, passageCoverage)) * 10;
 
         if ("checklist".equals(rule.category())) {
             boolean checklistIntent = query.terms().stream().anyMatch(CHECKLIST_TERMS::contains);
@@ -146,7 +158,7 @@ public class RelevanceScorer {
         return matched;
     }
 
-    private static String body(KnowledgeRule rule) {
+    private static List<String> body(KnowledgeRule rule) {
         List<String> values = new ArrayList<>();
         values.add(rule.rationale());
         values.add(rule.content());
@@ -154,8 +166,7 @@ public class RelevanceScorer {
         values.addAll(rule.checklist());
         values.addAll(rule.applicability().appliesWhen());
         values.addAll(rule.applicability().doesNotApplyWhen());
-        return values.stream().filter(value -> value != null && !value.isBlank())
-                .collect(Collectors.joining(" "));
+        return values.stream().filter(value -> value != null && !value.isBlank()).toList();
     }
 
     private static double round(double value) {

@@ -6,9 +6,17 @@ A local MCP server that helps AI coding tools retrieve Korean ecommerce and Java
 
 **The documentation is available in English; the knowledge catalog is currently Korean.** The server does not translate queries. Ask your AI client to search with relevant Korean terms and explain the results in your preferred language. English query quality has not been established by the current regression suite.
 
+## How it helps
+
+- Use the catalog's 70 Korean ecommerce rules as shared checks for designs and code reviews.
+- Review failure and recovery flows, including duplicate requests, unknown payment outcomes, and partial refunds.
+- Read applicability, exceptions, recorded references, and review status before applying guidance to your code.
+
+Describe the business scenario and provide the relevant code to your connected AI client. See [Use the server](#use-the-server) for an example.
+
 ## Requirements
 
-Version 0.2.1 requires **Node.js 22 or later and a local STDIO MCP client**. You do not need to install a JDK/JRE or configure `JAVA_HOME`. An existing system Java installation is not used.
+Version 0.2.2 requires **Node.js 22 or later and a local STDIO MCP client**. You do not need to install a JDK/JRE or configure `JAVA_HOME`. An existing system Java installation is not used.
 
 **The first launch prepares a private Temurin JRE 21.0.12.1+1.** This does not depend on npm installation scripts; installation with `--ignore-scripts` is supported. Automatic runtime preparation is available **from 0.2.0**. Update older packages. For unpublished source changes, use the [local package validation procedure](https://github.com/dakcoh/commerce-context-mcp/blob/master/CONTRIBUTING.md#local-validation).
 
@@ -78,6 +86,7 @@ The server needs no separate LLM API key or database. AI usage charges and data 
 | `npx` cannot be found | Check the Node installation and the app's command environment, then restart the app. |
 | The command keeps running | The server may be waiting for MCP input. Register it as your client's server command. |
 | Download or checksum failure | Check access to GitHub Release assets and retry. Do not disable verification. |
+| Windows cache lock reports `EPERM` | Let other preparation processes finish, then retry `download`. If it persists, check write access to the cache path reported by `doctor`. |
 | Lock wait timed out | Check whether another process is preparing the same version. Do not remove an active lock. |
 | The AI does not use the tools | Check connection and tool permissions, then explicitly ask the AI to consult the server. |
 
@@ -100,9 +109,7 @@ npx -y commerce-context-mcp --version
 npx -y commerce-context-mcp download
 ```
 
-npm installation installs only launcher files. `download` prepares the private Java runtime and JAR, then exits. Running without a command performs the same preparation and waits for an MCP connection. Plugin-style distribution is future work.
-
-Local Windows x64 measurement on 2026-10-19: the JRE download was 49.0 MB, the runtime cache including the archive was about 200.6 MB, initial runtime preparation took about 2.6 seconds, and revalidation took about 0.4 seconds. These figures exclude the server JAR and server startup. Network and disk performance affect actual times.
+npm installation installs only launcher files. `download` prepares the private Java runtime and JAR, then exits. Running without a command performs the same preparation and waits for an MCP connection. [Plugin installation packaging](https://github.com/dakcoh/commerce-context-mcp/blob/master/CONTRIBUTING.md#plugin-installation-package) is planned.
 
 Runtime binaries come from the [official Eclipse Temurin release](https://github.com/adoptium/temurin21-binaries/releases/tag/jdk-21.0.12.1%2B1). Project code is MIT licensed. The runtime has its own [OpenJDK license](https://adoptium.net/about/) and notices under `legal/` in the archive. Runtime security updates are delivered through new npm releases that update the pinned version and checksums.
 

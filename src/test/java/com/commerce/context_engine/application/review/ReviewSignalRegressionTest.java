@@ -34,6 +34,31 @@ class ReviewSignalRegressionTest {
         assertThat(reviewer.review(new ReviewRequest(artifact, "code", Set.of(), "", 5)).findings()).isEmpty();
     }
 
+    @Test
+    void userScenarioFindsRulesForJavaCodeWithoutKoreanComments() {
+        String[][] cases = {
+                {"payment",
+                        "@PostMapping(\"/webhook\") public void receive(PaymentEvent event) { order.markPaid(event.orderId()); }",
+                        "결제 웹훅 서명 검증과 중복 이벤트 멱등성 처리", "webhook-handling"},
+                {"inventory",
+                        "int stock = inventoryRepository.findStock(sku); if (stock >= quantity) { inventoryRepository.updateStock(sku, stock - quantity); }",
+                        "동시 주문 재고 조건부 차감과 초과 판매 방지", "available-stock-query"},
+                {"spring-commerce",
+                        "@Transactional public void createOrder(Order order) { orderRepository.save(order); kafkaTemplate.send(\"order-created\", order); }",
+                        "트랜잭션 커밋과 이벤트 발행 Outbox 유실 방지", "spring-commerce-events-outbox"}
+        };
+        for (String[] entry : cases) {
+            var result = reviewer.review(new ReviewRequest(entry[1], "code", Set.of(entry[0]), entry[2], 5));
+            assertThat(result.findings()).as(entry[0]).extracting(finding -> finding.ruleId()).contains(entry[3]);
+            assertThat(result.findings()).hasSizeLessThanOrEqualTo(5)
+                    .allSatisfy(finding -> assertThat(finding.status().name()).isEqualTo("REVIEW_REQUIRED"));
+            var withoutScenario = reviewer.review(new ReviewRequest(entry[1], "code", Set.of(entry[0]), "", 5));
+            if (withoutScenario.findings().isEmpty()) {
+                assertThat(withoutScenario.notice()).contains("결함 없음이 아닙니다", "scenario");
+            }
+        }
+    }
+
     private void assertWebhook(String artifact, String scenario) {
         var result = reviewer.review(new ReviewRequest(artifact, "code", Set.of("payment"), scenario, 5));
         assertThat(result.findings()).as("scenario=%s", scenario).extracting(f -> f.ruleId()).contains("webhook-handling");

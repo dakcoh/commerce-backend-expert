@@ -43,6 +43,8 @@ jobs:
         with:
           java-version: '21'
           distribution: corretto
+      - name: Install npm CLI with staged publishing support
+        run: npm install --global npm@11.21.1 --ignore-scripts --no-audit --no-fund
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           artifact-ids: ${{ needs.validate.outputs.artifact-id }}
@@ -78,8 +80,8 @@ jobs:
           node -e 'require("./npm/lib/commands").run(["download"], require("./npm/package.json"), {cacheDir:"build/launcher-download"}).catch(e=>{console.error(e);process.exitCode=1})'
           cmp "build/release/context-engine-$VERSION.jar" "build/launcher-download/context-engine-$VERSION.jar"
           cmp "build/release/context-engine-$VERSION.jar.sha256" "build/launcher-download/context-engine-$VERSION.jar.sha256"
-      - name: Publish the tested tarball with provenance
+      - name: Stage the tested tarball with provenance for maintainer approval
         working-directory: npm
-        run: npm publish "../build/release/commerce-context-mcp-$VERSION.tgz" --ignore-scripts --provenance --access public --tag "$NPM_TAG"
+        run: npm stage publish "../build/release/commerce-context-mcp-$VERSION.tgz" --ignore-scripts --provenance --access public --tag "$NPM_TAG"
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

@@ -1,7 +1,7 @@
 # rule id<TAB>status<TAB>evidence level<TAB>review date
 webhook-handling	needs-review	project-guidance	NONE
-partial-refund	needs-review	project-guidance	NONE
-payment-idempotency	needs-review	project-guidance	NONE
+partial-refund	needs-review	external-source	NONE
+payment-idempotency	needs-review	external-source	NONE
 payment-status-machine	needs-review	project-guidance	NONE
 concurrency-optimistic	needs-review	project-guidance	NONE
 concurrency-pessimistic	needs-review	project-guidance	NONE

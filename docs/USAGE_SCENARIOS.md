@@ -2,7 +2,7 @@
 
 English · [한국어](USAGE_SCENARIOS.ko.md)
 
-Connect the server using the [installation guide](../npm/README.md). Users need Node.js 22 or later; the private Java 21 runtime is prepared automatically on first launch or with `download`. JDK 21 is only needed to build from source. These instructions describe version 0.2.1. To check unpublished source changes, follow [local validation](../CONTRIBUTING.md#local-validation).
+Connect the server using the [installation guide](../npm/README.md). Users need Node.js 22 or later; the private Java 21 runtime is prepared automatically on first launch or with `download`. JDK 21 is only needed to build from source. These instructions describe version 0.2.2. To check unpublished source changes, follow [local validation](../CONTRIBUTING.md#local-validation).
 
 **The catalog and returned guidance are currently Korean.** The examples intentionally keep tested Korean search terms. English explanations below describe how to use them; the server does not translate an English query. Ask your AI client to search with Korean terms and explain the result in English. English retrieval quality is not established by these tests.
 
@@ -114,7 +114,7 @@ General search uses at most 32 distinct terms. Review of long input uses the ori
 
 For search, rule, and checklist calls, `responseFormat: "json"` preserves conditions and evidence without duplicate Markdown. Search with `detail: "full"` also puts full rules in `fullRules`. Review does not accept these options. Search/review accept a CSV domain list; checklist accepts a single domain.
 
-The JSON tool examples in this document run through the actual MCP smoke test to check arguments and response contracts. A successful call does not establish the quality of an AI's final answer. For comparisons, see [real AI evaluation](../CONTRIBUTING.md#evaluating-real-ai-workflows). Check your AI client's data handling settings before supplying sensitive material.
+The JSON tool examples in this document run through the actual MCP smoke test to check arguments and response contracts. Check final answers separately using [AI answer checks](../CONTRIBUTING.md#checking-ai-answers). Check your AI client's data handling settings before supplying sensitive material.
 
 ## Rule catalog
 

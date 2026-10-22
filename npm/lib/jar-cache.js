@@ -164,10 +164,28 @@ async function acquireLock(paths, { waitMs = LOCK_WAIT_MS, pollMs = 250,
   isComplete = () => verifyCached(paths).ok } = {}) {
   const started = now();
   const abandonedTokens = [];
+  let permissionRetries = 0;
   while (now() - started < waitMs) {
     let descriptor;
     try {
-      descriptor = fs.openSync(paths.lockPath, "wx");
+      try {
+        descriptor = fs.openSync(paths.lockPath, "wx");
+      } catch (error) {
+        if (error.code !== "EEXIST") throw error;
+        const observed = readLock(paths.lockPath);
+        if (!observed) continue;
+        // shortcut: path checks are not OS lock CAS; use OS-backed locking for shared caches.
+        if (ownerIsDead(observed.text) && sameLock(observed, readLock(paths.lockPath))) {
+          const abandoned = JSON.parse(observed.text).token;
+          if (abandoned) abandonedTokens.push(abandoned);
+          try { fs.unlinkSync(paths.lockPath); }
+          catch (unlinkError) { if (unlinkError.code !== "ENOENT") throw unlinkError; }
+          continue;
+        }
+        if (isComplete()) return null;
+        await sleep(pollMs);
+        continue;
+      }
       const token = randomUUID();
       const text = JSON.stringify({ pid: process.pid, host: os.hostname(), token });
       fs.writeFileSync(descriptor, text);
@@ -186,6 +204,13 @@ async function acquireLock(paths, { waitMs = LOCK_WAIT_MS, pollMs = 250,
         },
       };
     } catch (error) {
+      // Retry Windows cleanup races before ownership, including inspection of an existing lock.
+      if (descriptor === undefined && process.platform === "win32" && error.code === "EPERM" && permissionRetries < 3) {
+        permissionRetries++;
+        if (isComplete()) return null;
+        await sleep(Math.min(pollMs, Math.max(0, waitMs - (now() - started))));
+        continue;
+      }
       if (descriptor !== undefined) {
         const stat = fs.fstatSync(descriptor);
         fs.closeSync(descriptor);
@@ -194,23 +219,7 @@ async function acquireLock(paths, { waitMs = LOCK_WAIT_MS, pollMs = 250,
           fs.unlinkSync(paths.lockPath);
         }
       }
-      if (error.code !== "EEXIST") {
-        throw error;
-      }
-      const observed = readLock(paths.lockPath);
-      if (!observed) continue;
-      // shortcut: path checks are not OS lock CAS; use OS-backed locking for shared caches.
-      if (ownerIsDead(observed.text) && sameLock(observed, readLock(paths.lockPath))) {
-        const abandoned = JSON.parse(observed.text).token;
-        if (abandoned) abandonedTokens.push(abandoned);
-        try { fs.unlinkSync(paths.lockPath); }
-        catch (unlinkError) { if (unlinkError.code !== "ENOENT") throw unlinkError; }
-        continue;
-      }
-      if (isComplete()) {
-        return null;
-      }
-      await sleep(pollMs);
+      throw error;
     }
   }
   throw new Error(`Timed out waiting for cache lock: ${paths.lockPath}. Stop other clients before manually removing an unreadable or abandoned lock.`);

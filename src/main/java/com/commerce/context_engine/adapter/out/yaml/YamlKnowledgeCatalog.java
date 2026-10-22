@@ -16,7 +16,9 @@ import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
 import org.springframework.stereotype.Repository;
 
 import java.io.IOException;
+import java.time.Clock;
 import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
@@ -32,12 +34,22 @@ public class YamlKnowledgeCatalog implements KnowledgeCatalog {
 
     private static final String LOCATION = "classpath*:knowledge/*.yml";
     private static final Pattern RULE_ID = Pattern.compile("[a-z0-9]+(?:-[a-z0-9]+)*");
+    private static final ZoneId KNOWLEDGE_DATE_ZONE = ZoneId.of("Asia/Seoul");
     private final YAMLMapper mapper = YAMLMapper.builder()
             .findAndAddModules()
             .enable(StreamReadFeature.STRICT_DUPLICATE_DETECTION)
             .enable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)
             .build();
     private final PathMatchingResourcePatternResolver resolver = new PathMatchingResourcePatternResolver();
+    private final Clock clock;
+
+    public YamlKnowledgeCatalog() {
+        this(Clock.systemUTC());
+    }
+
+    YamlKnowledgeCatalog(Clock clock) {
+        this.clock = clock.withZone(KNOWLEDGE_DATE_ZONE);
+    }
 
     private List<KnowledgeRule> rules = List.of();
     private Map<String, KnowledgeRule> byId = Map.of();
@@ -163,7 +175,7 @@ public class YamlKnowledgeCatalog implements KnowledgeCatalog {
         }
     }
 
-    private static void validateSource(KnowledgeYamlDocument.RuleDocument source) {
+    private void validateSource(KnowledgeYamlDocument.RuleDocument source) {
         if (source == null) {
             throw new IllegalStateException("rules entry must not be null");
         }
@@ -226,12 +238,12 @@ public class YamlKnowledgeCatalog implements KnowledgeCatalog {
         }
     }
 
-    private static void validateDate(String value, String field) {
+    private void validateDate(String value, String field) {
         if (value == null || value.isBlank()) {
             return;
         }
         try {
-            if (LocalDate.parse(value.trim()).isAfter(LocalDate.now())) {
+            if (LocalDate.parse(value.trim()).isAfter(LocalDate.now(clock))) {
                 throw new IllegalStateException(field + " must not be in the future");
             }
         }

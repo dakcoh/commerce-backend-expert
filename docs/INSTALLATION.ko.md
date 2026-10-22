@@ -8,7 +8,7 @@ AI 코딩 도구에서 한국 이커머스와 Java/Spring의 설계 규칙을 �
 
 ## 실행 환경
 
-0.2.1은 **Node.js 22 이상 + 로컬 STDIO MCP 클라이언트**가 필요합니다. 사용자가 JDK/JRE를 설치하거나 JAVA_HOME을 설정할 필요가 없습니다. 시스템 Java가 있어도 사용하지 않습니다.
+0.2.2은 **Node.js 22 이상 + 로컬 STDIO MCP 클라이언트**가 필요합니다. 사용자가 JDK/JRE를 설치하거나 JAVA_HOME을 설정할 필요가 없습니다. 시스템 Java가 있어도 사용하지 않습니다.
 
 **첫 실행에서 전용 Temurin JRE 21.0.12.1+1을 자동 준비합니다.** npm 설치 스크립트에 의존하지 않으므로 `--ignore-scripts` 설치도 지원합니다. 이 기능은 **0.2.0부터 제공**합니다. 이전 버전 사용자는 패키지를 갱신하세요. 소스에서 검증할 때는 [기여 가이드의 로컬 패키지 절차](https://github.com/dakcoh/commerce-context-mcp/blob/master/CONTRIBUTING.ko.md#로컬에서-검증하기)를 따릅니다.
 
@@ -78,6 +78,7 @@ claude mcp add --transport stdio commerce-context -- npx -y commerce-context-mcp
 | `npx`를 찾지 못함 | Node 설치와 앱의 PATH·명령 실행 방식 확인 후 재시작 |
 | 실행했는데 끝나지 않음 | MCP 입력 대기 상태일 수 있음. 클라이언트의 실행 명령으로 등록 |
 | 다운로드·체크섬 오류 | GitHub Release 자산 접근 확인 후 재실행. 검증을 끄지 않음 |
+| Windows 캐시 잠금의 `EPERM` | 다른 준비 작업이 끝난 뒤 `download` 재실행. 계속되면 `doctor`가 안내한 캐시 경로의 쓰기 권한 확인 |
 | 잠금 시간 초과 | 같은 버전의 다른 다운로드 확인. 활성 잠금을 삭제하지 않음 |
 | AI가 도구를 쓰지 않음 | 도구 허용·연결 상태 확인 후 서버를 참고하도록 명시적으로 요청 |
 
@@ -100,9 +101,7 @@ npx -y commerce-context-mcp --version
 npx -y commerce-context-mcp download
 ```
 
-npm 설치는 실행기 파일만 설치하고, `download`는 전용 Java 런타임과 JAR를 준비한 뒤 종료합니다. 인자 없이 실행해도 같은 준비 과정을 거친 후 MCP 연결을 기다립니다. 플러그인 설치형 배포는 후속 과제입니다.
-
-Windows x64 로컬 측정(2026-10-19): JRE 다운로드 49.0 MB, 압축 파일을 포함한 런타임 캐시 약 200.6 MB, 최초 준비 약 2.6초, 재검증 약 0.4초였습니다. 서버 JAR 용량·시작 시간은 별도이며 네트워크·디스크에 따라 달라집니다.
+npm 설치는 실행기 파일만 설치하고, `download`는 전용 Java 런타임과 JAR를 준비한 뒤 종료합니다. 인자 없이 실행해도 같은 준비 과정을 거친 후 MCP 연결을 기다립니다. [플러그인 설치형 배포](../CONTRIBUTING.ko.md#플러그인-설치형-배포)는 후속 과제입니다.
 
 런타임은 [Eclipse Temurin 공식 배포](https://github.com/adoptium/temurin21-binaries/releases/tag/jdk-21.0.12.1%2B1)에서 받습니다. 프로젝트 코드는 MIT이며 런타임에는 [OpenJDK 라이선스](https://adoptium.net/about/)와 압축에 포함된 `legal/` 고지가 별도로 적용됩니다. 런타임 보안 업데이트는 고정 버전·체크섬을 갱신한 npm 릴리스로 제공합니다.
 

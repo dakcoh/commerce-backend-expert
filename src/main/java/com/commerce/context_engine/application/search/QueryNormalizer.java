@@ -18,7 +18,7 @@ public class QueryNormalizer {
     );
     private static final List<String> KOREAN_PARTICLES = List.of(
             "으로부터", "에서", "에게", "처럼", "보다", "으로", "하고", "하며",
-            "라고", "이라", "은", "는", "이", "가", "을", "를", "의", "에", "로", "도", "만"
+            "라고", "이라", "과", "와", "은", "는", "이", "가", "을", "를", "의", "에", "로", "도", "만"
     );
     private static final List<String> KOREAN_VERB_ENDINGS = List.of(
             "했습니다", "했는데", "했어요", "하려고", "하려면", "합니다", "했어", "한다"

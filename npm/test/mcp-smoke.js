@@ -31,7 +31,10 @@ if (launcherRoot) {
 }
 const launcherCode = `const cp=require('child_process'),spawn=cp.spawn;
   cp.spawn=(...args)=>{const child=spawn(...args);console.error('SMOKE_JAVA_PID:'+child.pid);
-    console.error('SMOKE_JAVA_CWD:'+JSON.stringify(args[2].cwd));return child;};
+    console.error('SMOKE_JAVA_CWD:'+JSON.stringify(args[2].cwd));
+    child.once('exit',code=>{if(code!==0){try{
+      console.error('SMOKE_JAVA_LOG:'+require('fs').readFileSync(require('path').join(args[2].cwd,'logs/context-engine-stdio.log'),'utf8'));
+    }catch{}}});return child;};
   require(process.argv[1]).run([],require(process.argv[2]),{cacheDir:process.argv[3]})
     .catch(e=>{console.error(e);process.exitCode=1});`;
 const child = spawn(launcherRoot ? process.execPath : "java", launcherRoot
@@ -270,7 +273,16 @@ function finish(error) {
     }
     for (const name of ["review-commerce-api", "review-payment-webhook"]) {
       const prompt = await send("prompts/get", { name, arguments: name === "review-commerce-api" ? { domain: "payment" } : {} });
-      assert.ok(prompt.messages.some((message) => message.content.text.includes("review_commerce_design")));
+      const text = prompt.messages.map(message => message.content.text || "").join("\n");
+      for (const part of ["review_commerce_design", "artifact", "scenario", "사용자가 제공한", "추측하지"]) {
+        assert.ok(text.includes(part), `${name} must explain ${part}`);
+      }
+      if (name === "review-commerce-api") {
+        assert.ok(!text.includes("matchConfidence"));
+        for (const field of ["ruleStatus", "evidenceLevel", "verifiedBy", "lastReviewedAt", "matchedEvidence"]) {
+          assert.ok(text.includes(field), `${name} must explain ${field}`);
+        }
+      }
     }
     for (const artifactType of ["design", "api", "ddl", "code"]) {
       const review = data(await tool("review_commerce_design", {
@@ -278,6 +290,9 @@ function finish(error) {
       }));
       assert.ok(review.findings.length > 0 && review.findings.length <= 3);
       assert.ok(review.findings.every((finding) => finding.status === "review-required"));
+      for (const field of ["ruleStatus", "evidenceLevel", "verifiedBy", "lastReviewedAt", "matchedEvidence"]) {
+        assert.ok(review.findings.every(finding => Object.hasOwn(finding, field)), `Review must supply ${field}`);
+      }
       assert.ok(review.notice.includes("matchedEvidence") && review.notice.includes("get_rule"));
     }
 

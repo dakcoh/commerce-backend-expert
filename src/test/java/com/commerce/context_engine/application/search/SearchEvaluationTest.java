@@ -21,15 +21,16 @@ class SearchEvaluationTest {
 
     @Test
     void representativeQueries_findExpectedRuleWithinTopThree() throws Exception {
-        evaluate("search-evaluation.tsv", 100, 90, 10);
+        evaluate("search-evaluation.tsv", 100, 90, 10, 87);
     }
 
     @Test
     void conversationalQueries_rejectUnrelatedBookingAndKeepBusinessAlternatives() throws Exception {
-        evaluate("search-additional-evaluation.tsv", 26, 18, 8);
+        evaluate("search-additional-evaluation.tsv", 26, 18, 8, 17);
     }
 
-    private void evaluate(String resource, int expectedRows, int expectedPositive, int expectedNoAnswer) throws Exception {
+    private void evaluate(String resource, int expectedRows, int expectedPositive, int expectedNoAnswer,
+                          int minimumTopOne) throws Exception {
         String fixture = new ClassPathResource(resource)
                 .getContentAsString(StandardCharsets.UTF_8);
         var failures = new ArrayList<String>();
@@ -74,6 +75,8 @@ class SearchEvaluationTest {
         assertThat(positiveCount).isEqualTo(expectedPositive);
         assertThat(noAnswerCount).isEqualTo(expectedNoAnswer);
         assertThat(failures).as("search evaluation failures").isEmpty();
+        assertThat(topOneCount).as("first-place search regression: %s", resource)
+                .isGreaterThanOrEqualTo(minimumTopOne);
         System.out.printf("Search evaluation: top1=%d/%d (%.1f%%), top3=%d/%d, no-answer=%d/%d%n",
                 topOneCount, positiveCount, topOneCount * 100.0 / positiveCount,
                 positiveCount, positiveCount, noAnswerCount, noAnswerCount);

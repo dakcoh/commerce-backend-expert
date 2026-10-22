@@ -35,6 +35,115 @@ test("an old lock held by a live process is not stolen", async t => {
   } finally {clearTimeout(completed); f.cleanup();}
 });
 
+test("Windows lock creation retries transient permission errors", {skip: process.platform !== "win32"}, async t => {
+  const f = cacheFixture(t), open = fs.openSync;
+  let denied = 0, now = 0;
+  t.mock.method(fs, "openSync", (file, flags, ...args) => {
+    if (file === f.paths.lockPath && flags === "wx" && denied++ < 2) {
+      throw Object.assign(new Error("delete pending"), {code: "EPERM"});
+    }
+    return open(file, flags, ...args);
+  });
+  const lease = await acquireLock(f.paths, {waitMs: 100, pollMs: 10, now: () => now,
+    sleep: async ms => {now += ms;}});
+  try {lease.assertOwned(); assert.equal(now, 20);}
+  finally {lease.release();}
+});
+
+test("Windows permanent lock permissions fail without exhausting the wait budget", {skip: process.platform !== "win32"}, async t => {
+  const f = cacheFixture(t), open = fs.openSync;
+  let attempts = 0, now = 0;
+  t.mock.method(fs, "openSync", (file, flags, ...args) => {
+    if (file === f.paths.lockPath && flags === "wx") {
+      attempts++;
+      throw Object.assign(new Error("access denied"), {code: "EPERM"});
+    }
+    return open(file, flags, ...args);
+  });
+  await assert.rejects(acquireLock(f.paths, {waitMs: 100, pollMs: 10, now: () => now,
+    sleep: async ms => {now += ms;}}), {code: "EPERM"});
+  assert.ok(attempts < 10);
+  assert.ok(now < 100);
+  assert.equal(fs.existsSync(f.paths.lockPath), false);
+});
+
+test("Windows lock inspection retries transient reads and reuses the verified cache", {skip: process.platform !== "win32"}, async t => {
+  const f = cacheFixture(t), read = fs.readFileSync, owner = String(process.pid);
+  fs.writeFileSync(f.paths.lockPath, owner);
+  let reads = 0, now = 0;
+  t.mock.method(fs, "readFileSync", (file, ...args) => {
+    if (file === f.paths.lockPath && ++reads <= 2) throw Object.assign(Error("busy lock"), {code: "EPERM"});
+    return read(file, ...args);
+  });
+  const lease = await acquireLock(f.paths, {waitMs: 100, pollMs: 10, now: () => now,
+    sleep: async ms => {now += ms; if (now === 20) f.publish();}});
+  assert.equal(lease, null);
+  assert.equal(now, 20);
+  assert.equal(verifyCached(f.paths).ok, true);
+  assert.equal(read(f.paths.lockPath, "utf8"), owner);
+});
+
+for (const method of ["readFileSync", "statSync"]) {
+  test(`Windows lock confirmation rechecks a replacement owner after ${method} fails`, {skip: process.platform !== "win32"}, async t => {
+    const f = cacheFixture(t), inspect = fs[method];
+    const exited = spawnSync(process.execPath, ["-e", ""], {windowsHide: true});
+    assert.equal(exited.status, 0);
+    fs.writeFileSync(f.paths.lockPath, String(exited.pid));
+    const replacement = JSON.stringify({pid: process.pid, host: os.hostname(), token: "replacement-owner"});
+    let inspections = 0, now = 0;
+    t.mock.method(fs, method, (file, ...args) => {
+      if (file === f.paths.lockPath && ++inspections === 2) throw Object.assign(Error("busy lock"), {code: "EPERM"});
+      return inspect(file, ...args);
+    });
+    const lease = await acquireLock(f.paths, {waitMs: 100, pollMs: 10, now: () => now,
+      sleep: async ms => {now += ms; fs.writeFileSync(f.paths.lockPath, replacement); f.publish();}});
+    assert.equal(lease, null);
+    assert.equal(now, 10);
+    assert.equal(fs.readFileSync(f.paths.lockPath, "utf8"), replacement);
+    assert.equal(verifyCached(f.paths).ok, true);
+  });
+}
+
+test("Windows lock inspection fails promptly on permanent permissions", {skip: process.platform !== "win32"}, async t => {
+  const f = cacheFixture(t), read = fs.readFileSync, owner = String(process.pid);
+  fs.writeFileSync(f.paths.lockPath, owner);
+  let reads = 0, now = 0;
+  t.mock.method(fs, "readFileSync", (file, ...args) => {
+    if (file === f.paths.lockPath) {reads++; throw Object.assign(Error("access denied"), {code: "EPERM"});}
+    return read(file, ...args);
+  });
+  await assert.rejects(acquireLock(f.paths, {waitMs: 100, pollMs: 10, now: () => now,
+    sleep: async ms => {now += ms;}}), {code: "EPERM"});
+  assert.ok(reads > 1 && reads < 10);
+  assert.ok(now > 0 && now < 100);
+  assert.equal(read(f.paths.lockPath, "utf8"), owner);
+});
+
+test("Windows lock inspection keeps the original deadline", {skip: process.platform !== "win32"}, async t => {
+  const f = cacheFixture(t), read = fs.readFileSync, owner = String(process.pid);
+  fs.writeFileSync(f.paths.lockPath, owner);
+  let now = 0;
+  t.mock.method(fs, "readFileSync", (file, ...args) => {
+    if (file === f.paths.lockPath) throw Object.assign(Error("busy lock"), {code: "EPERM"});
+    return read(file, ...args);
+  });
+  await assert.rejects(acquireLock(f.paths, {waitMs: 15, pollMs: 10, now: () => now,
+    sleep: async ms => {now += ms;}}), /Timed out waiting for cache lock/);
+  assert.equal(now, 15);
+  assert.equal(read(f.paths.lockPath, "utf8"), owner);
+});
+
+test("lock inspection preserves non-retryable errors and the live owner", async t => {
+  const f = cacheFixture(t), read = fs.readFileSync, owner = String(process.pid);
+  fs.writeFileSync(f.paths.lockPath, owner);
+  t.mock.method(fs, "readFileSync", (file, ...args) => {
+    if (file === f.paths.lockPath) throw Object.assign(Error("read denied"), {code: "EACCES"});
+    return read(file, ...args);
+  });
+  await assert.rejects(acquireLock(f.paths, {sleep: async () => assert.fail("Unexpected retry")}), {code: "EACCES"});
+  assert.equal(read(f.paths.lockPath, "utf8"), owner);
+});
+
 test("ownership loss preserves the new lock and the original wait budget", async t => {
   const f = cacheFixture(t); const replacement = JSON.stringify({pid: process.pid, token: "replacement-owner", host: os.hostname()});
   let now = 0;

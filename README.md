@@ -14,6 +14,13 @@ The documentation is available in English and Korean. **The knowledge catalog is
 
 ## What can it help with?
 
+- **Use shared review criteria.** Retrieve 70 Korean ecommerce rules and use the same checks for design, implementation, and code review.
+- **Review failure and recovery flows.** Get checks for duplicate requests, unknown payment outcomes, and partial refunds alongside the normal flow.
+- **Check when guidance applies.** Read each rule's conditions, exceptions, recorded references, and review status before applying it to your code.
+- **Connect without installing a JDK.** With Node.js 22 or later and an MCP client, the launcher prepares a private Java 21 runtime on first launch.
+
+Describe the business scenario and provide the relevant code, then ask for a review:
+
 | Concern | Example request to your AI client |
 |---|---|
 | Overselling | “Review a design that deducts inventory directly in the database without reservations.” |
@@ -26,7 +33,7 @@ The server provides design guidance. It does not execute orders, payments, or re
 
 ## Quick start
 
-Version 0.2.1 requires **Node.js 22 or later and an AI client that supports local STDIO MCP servers**.
+Version 0.2.2 requires **Node.js 22 or later and an AI client that supports local STDIO MCP servers**.
 
 > **Automatic preparation of a private Java runtime is available from 0.2.0.** Update the package if you use an earlier version. To check unpublished source changes, follow the [local package validation guide](CONTRIBUTING.md#local-validation).
 
@@ -66,6 +73,7 @@ npm installation only installs the launcher. Downloads happen on first launch or
 |---|---|
 | `matchConfidence`, `queryCoverage` | Query-to-rule search match, not a factual accuracy score. |
 | `project-guidance` | Guidance maintained by this project, not independent external verification. |
+| `external-source` | Guidance with external references. Check their scope; this does not establish that the entire rule is verified. |
 | `needs-review` | Check applicability, evidence, and review records before relying on the rule. |
 | `verifiedBy`, `lastReviewedAt` | Actual review records; JSON contains `null` when no record exists. |
 | `partial: true` | Only part of a checklist was returned. Narrow the scenario and request more. |
@@ -88,7 +96,13 @@ Your client invokes the tools; you do not need to type a tool name in every mess
 
 The server runs locally over STDIO. Knowledge retrieval uses the YAML packaged in the JAR, without an external LLM, database, or HTTP server. Your connected AI client decides how tool results are used and which data is sent to its provider.
 
-The launcher prepares Temurin JRE 21 on Windows, macOS, and glibc-based Linux, for x64 and ARM64. It needs the OS `tar` command, included with Windows 10/11 and macOS. Alpine/musl and 32-bit systems are unsupported. Building from source requires JDK 21. Plugin-style distribution remains a [future improvement](CONTRIBUTING.md#next-improvements).
+**npm users do not need to install a JDK or JRE.** With Node.js 22 or later and an MCP client, the launcher automatically downloads, verifies, and uses a private Temurin JRE 21 on first launch.
+
+Supported platforms are Windows, macOS, and glibc-based Linux, for x64 and ARM64. Extraction needs the OS `tar` command, included with Windows 10/11 and macOS. Alpine/musl and 32-bit systems are unsupported.
+
+**For source developers:** JDK 21 is required only when building the source code yourself.
+
+[Plugin installation packaging](CONTRIBUTING.md#plugin-installation-package) is planned.
 
 ## Documentation
 

@@ -4,7 +4,7 @@
 
 사용법은 [README](README.ko.md), 설치 문제는 [설치 가이드](docs/INSTALLATION.ko.md)를 먼저 확인하세요. 이 문서는 코드·지식·문서를 고치거나 배포하는 사람을 위한 안내입니다.
 
-[개발 환경](#현재-개발-환경) · [지식 수정](#지식-고치기) · [검증](#로컬에서-검증하기) · [런타임 정책](#전용-java-런타임-정책) · [연동 계약](#서버-구조와-연동-계약) · [AI 평가](#실제-ai-평가) · [다음 개선](#다음-개선) · [릴리스](#게시-전-확인)
+[개발 환경](#현재-개발-환경) · [지식 수정](#지식-고치기) · [검증](#로컬에서-검증하기) · [런타임 정책](#전용-java-런타임-정책) · [연동 계약](#서버-구조와-연동-계약) · [답변 검증](#ai-답변-검증) · [다음 개선](#다음-개선) · [릴리스](#게시-전-확인)
 
 ## 사용자에게 유지할 약속
 
@@ -80,7 +80,7 @@ evidence:
     note: "적용 조건과 확인 범위"
 ```
 
-중복 필드·중복 ID·잘못된 참조·빈 필수 값·검토 기록 한쪽 누락·잘못된 날짜·미래 날짜를 거부합니다. 외부 HTTP(S) 근거에는 확인일이 필요합니다. 블로그·AI 답변·프로젝트 YAML 경로를 공식 근거처럼 기록하지 말고, PG 상태 코드·timeout·세율·보존 기간을 범용 고정값으로 넣지 않습니다.
+중복 필드·중복 ID·잘못된 참조·빈 필수 값·검토 기록 한쪽 누락·잘못된 날짜·미래 날짜를 거부합니다. 날짜 검증은 실행 컴퓨터의 시간대와 관계없이 한국 시간(`Asia/Seoul`)을 기준으로 합니다. 외부 HTTP(S) 근거에는 확인일이 필요합니다. 블로그·AI 답변·프로젝트 YAML 경로를 공식 근거처럼 기록하지 말고, PG 상태 코드·timeout·세율·보존 기간을 범용 고정값으로 넣지 않습니다.
 
 ## 로컬에서 검증하기
 
@@ -91,10 +91,10 @@ evidence:
 ```powershell
 $env:JAVA_HOME="C:\path\to\jdk-21"
 $env:Path="$env:JAVA_HOME\bin;$env:Path"
-.\gradlew.bat clean validateKnowledge bootJar "-Pversion=0.2.1" --no-daemon
+.\gradlew.bat clean validateKnowledge bootJar "-Pversion=0.2.2" --no-daemon
 npm.cmd --prefix npm test
-$env:MCP_EXPECTED_VERSION="0.2.1"
-node npm/test/mcp-smoke.js build/libs/context-engine-0.2.1.jar
+$env:MCP_EXPECTED_VERSION="0.2.2"
+node npm/test/mcp-smoke.js build/libs/context-engine-0.2.2.jar
 ```
 
 전용 JRE의 실제 다운로드·동시 실행·오프라인 재사용·손상 복구는 다음 명령으로 확인합니다. 이 테스트는 자체 임시 캐시를 사용하고 자식 프로세스의 PATH에서 Java를 제거합니다. 공식 JRE를 한 번 다운로드하므로 네트워크와 디스크 공간이 필요합니다.
@@ -110,14 +110,14 @@ Push-Location npm
 npm.cmd pack --ignore-scripts --json --pack-destination ../build > ../build/npm-pack.json
 Pop-Location
 New-Item -ItemType Directory -Force build/packed | Out-Null
-tar -xzf build/commerce-context-mcp-0.2.1.tgz -C build/packed
+tar -xzf build/commerce-context-mcp-0.2.2.tgz -C build/packed
 $env:MCP_LAUNCHER_ROOT=(Resolve-Path build/packed/package).Path
-node npm/test/mcp-smoke.js build/libs/context-engine-0.2.1.jar
+node npm/test/mcp-smoke.js build/libs/context-engine-0.2.2.jar
 Remove-Item Env:\MCP_LAUNCHER_ROOT
 Remove-Item Env:\MCP_EXPECTED_VERSION
 ```
 
-패키지 smoke는 빌드한 로컬 JAR를 임시 캐시에 넣고, 시스템 Java 없이 전용 JRE 준비·MCP 호출·한글 캐시 경로·EOF 후 종료를 확인합니다. 게시된 서버 JAR의 콜드 다운로드는 릴리스 workflow의 별도 검사입니다. `--ignore-scripts` 설치는 `npm.cmd install --ignore-scripts --no-audit --no-fund --prefix build/local-install ./build/commerce-context-mcp-0.2.1.tgz`로 확인할 수 있습니다.
+패키지 smoke는 빌드한 로컬 JAR를 임시 캐시에 넣고, 시스템 Java 없이 전용 JRE 준비·MCP 호출·한글 캐시 경로·EOF 후 종료를 확인합니다. 게시된 서버 JAR의 콜드 다운로드는 릴리스 workflow의 별도 검사입니다. `--ignore-scripts` 설치는 `npm.cmd install --ignore-scripts --no-audit --no-fund --prefix build/local-install ./build/commerce-context-mcp-0.2.2.tgz`로 확인할 수 있습니다.
 
 Linux/macOS에서는 JDK21을 설정한 뒤 `./gradlew`·`npm`을 사용합니다. 실제 OS 신호 테스트는 Linux/macOS에서 실행되며 Windows에서 생략한 결과와 구분합니다.
 
@@ -127,10 +127,10 @@ Linux/macOS에서는 JDK21을 설정한 뒤 `./gradlew`·`npm`을 사용합니�
 | 검색 | 기존 100질의, 새 표현·무관 질의, 순위와 결과 수. 기대 ID를 조용히 변경하지 않음 |
 | 검토·체크리스트 | 기존 review20/checklist10/trust15 사례, 조건·문항·부분 결과 보존 |
 | MCP | 4개 Tool·Resource3종·Prompt2종, 입력 오류 후 복구, 실제 JSON-RPC |
-| 실행기 | Java 없는 PATH·두 프로세스·오프라인 손상 복구·체크섬 보조 파일 유실·doctor 종료코드·EOF·자식 종료·npm pack 내용 |
+| 실행기 | Java 없는 PATH·두 프로세스·Windows 잠금 읽기 오류와 교체된 소유자 보호·오프라인 손상 복구·체크섬 보조 파일 유실·doctor 종료코드·EOF·자식 종료·npm pack 내용 |
 | 문서 | JSON 예시는 MCP smoke에서 실행. 규칙 70개 ID·로컬 링크·앵커와 작업본/게시본 구분 |
 
-`validateKnowledge`는 전체 Java 테스트에 연결돼 있습니다. 실제 JAR의 MCP smoke와 npm 검증도 따로 실행합니다. 정책 테스트는 실제 PG·은행·DB 경쟁/장애 검증이 아닙니다. 모델의 도구 선택·최종 답변·토큰 비교는 [실제 AI 평가](#실제-ai-평가)로 별도 수행합니다.
+`validateKnowledge`는 전체 Java 테스트에 연결돼 있습니다. 실제 JAR의 MCP smoke와 npm 검증도 따로 실행합니다. 정책 테스트는 실제 PG·은행·DB 경쟁/장애 검증이 아닙니다. 모델의 도구 선택과 최종 답변은 [AI 답변 검증](#ai-답변-검증)으로 별도 확인합니다.
 
 ## 업그레이드 안내
 
@@ -143,25 +143,25 @@ Linux/macOS에서는 JDK21을 설정한 뒤 `./gradlew`·`npm`을 사용합니�
 | `get_*_checklist` | `get_checklist` |
 | 응답 `confidence` | `matchConfidence`. 검색 일치도이며 사실성 점수가 아님 |
 
-0.2.0의 npm 실행은 Node22 이상만 준비하면 전용 JRE21을 자동으로 받습니다. npm 사용자는 `download`와 `doctor`로 준비 상태를 확인하며 JAVA_HOME·PATH의 Java 설정은 필요 없습니다. 소스를 빌드하는 개발자는 JAVA_HOME과 PATH를 JDK21로 설정합니다. Java17에서는 새 JAR를 직접 실행할 수 없습니다.
+0.2.0부터 npm 실행은 Node22 이상만 준비하면 전용 JRE21을 자동으로 받습니다. npm 사용자는 `download`와 `doctor`로 준비 상태를 확인하며 JAVA_HOME·PATH의 Java 설정은 필요 없습니다. 소스를 빌드하는 개발자는 JAVA_HOME과 PATH를 JDK21로 설정합니다. Java17에서는 새 JAR를 직접 실행할 수 없습니다.
 
 ## 게시 전 확인
 
-일반 `master` push/PR은 CI, GitHub Release 발행은 검증 후 게시의 조건입니다. [.github/workflows/validate.yml](.github/workflows/validate.yml)이 공통 검사이며 Ubuntu의 JDK21/Node22 빌드와 Ubuntu의 JDK21/Node24·Windows의 JDK21/Node22·Windows의 JDK21/Node24에서 같은 산출물을 확인합니다. 추가로 Windows ARM64·Ubuntu ARM64·macOS Intel/ARM64에서 전용 런타임을 검사합니다. 패키지 MCP smoke는 추출 도구만 PATH에 남기고 JAVA_HOME을 없는 경로로 바꿔 시스템 Java 없이 기동·종료를 확인합니다.
+일반 `master` push/PR은 CI를 실행하고, GitHub Release를 발행하면 검증 후 npm 승인 대기에 등록합니다. [.github/workflows/validate.yml](.github/workflows/validate.yml)이 공통 검사이며 Ubuntu의 JDK21/Node22 빌드와 Ubuntu의 JDK21/Node24·Windows의 JDK21/Node22·Windows의 JDK21/Node24에서 같은 산출물을 확인합니다. 추가로 Windows ARM64·Ubuntu ARM64·macOS Intel/ARM64에서 전용 런타임을 검사합니다. 패키지 MCP smoke는 추출 도구만 PATH에 남기고 JAVA_HOME을 없는 경로로 바꿔 시스템 Java 없이 기동·종료를 확인합니다.
 
 - Java·지식·npm 회귀와 실제 MCP가 통과했는지 확인합니다.
 - npm/tag/manifest/serverInfo 버전과 application major65을 검사합니다.
-- JAR의 YAML·금지된 웹 서버 의존성, tarball의 13개 파일·내용·integrity, bundle 해시를 확인합니다.
+- JAR의 YAML·금지된 웹 서버 의존성, tarball의 14개 파일·내용·integrity, bundle 해시를 확인합니다.
 - 한글 캐시 경로와 EOF 후 Java 종료, Linux 신호 검증을 지원 환경에서 확인합니다.
 - 공개 문서와 실제 코드·게시할 파일이 일치하는지 확인합니다.
 
-미사용 npm 버전·tag commit·인증 확인 → JAR/checksum 업로드 → 재다운로드·검증본 비교 → **검증한 tarball 자체**의 provenance 게시 순서입니다. 게시 버전은 registry에서 확인하고 사용 중인 번호를 재사용하지 않습니다. 같은 버전 번호라는 이유만으로 현재 작업본과 기존 게시본이 같다고 가정하지 않습니다.
+미사용 npm 버전·tag commit·인증 확인 → JAR/checksum 업로드 → 재다운로드·검증본 비교 → **검증한 tarball 자체**를 provenance와 함께 승인 대기에 등록 → npm에서 관리자가 2FA로 승인하는 순서입니다. 게시 버전은 registry에서 확인하고 사용 중인 번호를 재사용하지 않습니다. 같은 버전 번호라는 이유만으로 현재 작업본과 기존 게시본이 같다고 가정하지 않습니다.
 
 기존 자산은 덮어쓰지 않습니다. GitHub와 npm의 원자적 게시를 보장하지 않으므로 실패 후 재실행 전 남은 자산·npm 버전을 확인합니다. 자동 삭제·덮어쓰기·버전 증가를 하지 않습니다. `NPM_TOKEN` 권한·만료와 외부 Trusted Publisher 등록 상태도 별도로 확인합니다. 현재 workflow의 OIDC는 provenance용입니다.
 
 ### npm 승인 게시
 
-0.2.0은 stage-only 토큰으로 등록한 뒤 관리자가 승인해 공개했습니다. 저장소의 기존 workflow는 직접 `npm publish`를 호출하며 `E_STAGE_REQUIRED`를 자동 처리하지 않습니다. 승인 게시가 필요하면 검증한 동일 bundle을 통제된 CI에서 사용합니다.
+릴리스 workflow는 npm CLI 11.21.1의 `npm stage publish`를 사용해 검증한 동일 bundle을 provenance와 함께 승인 대기에 등록합니다. workflow 성공은 등록 완료를 뜻하며, npm 공개 완료는 관리자 승인 후 확인합니다.
 
 npm CLI 11.15 이상·Node22.14 이상이 필요합니다. CI의 검증 결과로 VERSION과 NPM_TAG를 설정하고 인증·provenance 환경을 유지한 상태에서 실행합니다.
 
@@ -196,6 +196,8 @@ Stage ID·버전·tag·산출물을 확인한 관리자가 npm의 **Staged Packa
 
 공개 Tool은 `search_knowledge`, `get_rule`, `get_checklist`, `review_commerce_design`입니다. Resource는 `commerce://catalog`, `commerce://domains/{domain}`, `commerce://rules/{ruleId}`, Prompt는 `review-commerce-api`와 `review-payment-webhook`입니다.
 
+두 검토 Prompt와 Tool 설명은 코드와 함께 사용자가 제공한 업무·실패 상황을 `scenario`에 전달하도록 안내합니다. 없는 계약·정책·결함을 추측하지 않으며, 검토 Prompt의 필드 안내는 실제 검토 응답과 일치해야 합니다. `matchedEvidence`는 검색 일치 단어이며 결함의 입증 자료가 아닙니다.
+
 - 검색·검토 결과는 기본 5개·최대 10개, 체크리스트는 최대 10개 규칙입니다.
 - 일반 검색은 NFKC·일부 조사/활용형·별칭을 정규화한 단어 기반 검색입니다. 최대 32개 고유 검색어와 필드별 일치 비율을 사용하고 동점은 domain·category·ID로 정렬합니다.
 - 코드 검토는 package/import를 제외하고 원문과 scenario를 독립 검색합니다. 긴 입력은 겹치는 16단어 구간을 최대 32개 추가 검색하며 더 큰 입력은 표본 검색을 표시합니다. 코드 실행·AST 분석은 아닙니다.
@@ -222,6 +224,7 @@ Java stdout은 별도 파이프로 받아 Node 스트림으로 전달합니다. 
 | EOF·종료 | 생성한 Java의 stdin을 닫고 최대2초 유예, 신호는 해당 자식에 전달 |
 
 - 잠금은 PID·호스트·토큰으로 확인하고 죽은 로컬 소유자만 회수합니다. 불명확·외부 호스트·활성 소유자는 자동 삭제하지 않습니다.
+- 소유권을 얻기 전 Windows 잠금 생성·확인 중 발생한 `EPERM`은 원래 대기 예산 안에서 최대 3회 재시도를 공유합니다. 읽기 실패를 잠금 부재로 간주하지 않고 소유자를 다시 확인합니다. 계속되는 권한 오류와 다른 오류 코드는 호출자에게 반환합니다.
 - 소유권을 잃으면 게시를 중단하고 남은 예산으로 재획득하거나 검증된 승자 캐시를 사용합니다. 중복 전송은 가능하며 공유 디스크의 엄격한 상호 배제를 보장하지 않습니다.
 - 임시 파일을 정리하고 신호 종료는 130/143, 일반 종료는 자식 코드를 유지합니다. 전원 중단·실행기 강제 종료에는 정리를 보장하지 않습니다.
 
@@ -235,73 +238,48 @@ Java stdout은 별도 파이프로 받아 Node 스트림으로 전달합니다. 
 - 캐시: 사용자 홈 `.commerce-context-mcp/runtimes/` 아래 버전·플랫폼별 저장. 고정 해시 확인 후 전체 archive 경로·링크를 사전 검사하고 임시 폴더에 해제합니다. 일반 파일로 향하는 내부 symlink만 허용합니다. 파일별 해시·실행 권한을 저장하고 매번 재검증합니다. 원본 압축 파일도 보관해 오프라인 손상 복구에 사용합니다.
 - 복구: 기존 PID/호스트/토큰 잠금을 재사용합니다. 최초 대기 예산600초를 소유권 변경 시에도 유지하며 전송은 시도당120초·최대3회, 해제는90초 이내입니다. 중단된 임시 파일·추출 폴더는 소유권 확인 후 정리합니다. 로그는 stderr이며 자식 Java는 절대 경로로 실행합니다.
 - 보안 업데이트: Temurin 보안/패치 릴리스를 확인하여 고정 버전과 6개 자산 해시·크기를 함께 변경하고, 단위 테스트·각 플랫폼의 실제 패키지 smoke 후 새 npm 버전으로 배포합니다. 구버전 캐시는 자동으로 사용하지 않으며 사용 중일 수 있으므로 자동 일괄 삭제하지 않습니다.
-- 로컬 측정(2026-10-19, Windows x64): JRE 다운로드49.0 MB, 압축 포함 캐시200.6 MB, 최초 준비2.6초·재검증0.4초. JAR는 별도이며 환경별 보장값은 아닙니다. Windows·Ubuntu x64에서 실제 실행과 복구를 확인하며, macOS·ARM64 실행은 릴리스 전 CI 통과로 확인합니다.
 
 `doctor`의 성공은 캐시 무결성 검사 결과입니다. `download`는 선택한 JRE 실행까지 확인하며, 전체 MCP smoke는 서버 연결·도구 호출·종료까지 확인합니다. 압축 원본의 고정 SHA-256을 기준으로 하므로 런타임 보조 `.sha256` 파일만 유실돼도 오프라인 재설치할 수 있습니다. 서버 JAR는 릴리스의 별도 `.sha256`이 필요합니다.
 
-## 실제 AI 평가
+## AI 답변 검증
 
-서버 회귀와 실제 AI의 작업 성공을 구분합니다. JSON 바이트 감소는 모델 토큰·비용 감소율이 아닙니다. 일반 실행이나 CI에서 유료 LLM 평가를 자동 호출하지 않습니다.
+서버 회귀 테스트와 클라이언트의 도구 선택·최종 답변 확인을 구분합니다. [ai-workflows.json](npm/test/fixtures/ai-workflows.json)의 합성 사례를 사용하고, 회사 코드·고객 정보·실제 키는 넣지 않습니다. 일반 실행이나 CI에서 유료 LLM을 자동 호출하지 않습니다.
 
-개발용 작업12개는 [ai-workflows.json](npm/test/fixtures/ai-workflows.json)에 있습니다. 회사 코드·고객정보·실제 키를 쓰지 말고 제공된 합성 artifact를 사용합니다.
+1. 각 사례를 새 대화에서 실행하고 실제 도구 호출·인자·결과와 최종 답변을 JSONL로 기록합니다.
+2. 모델·클라이언트·실행 번호와 실제 검토자·검토일을 기록하고, 모든 사례를 포함합니다.
+3. 사람이 검토하면 `humanChecks`, AI가 검토하면 `reviewType: "agent"`와 `agentChecks`를 사용합니다. AI 판정에는 최종 답변의 실제 인용과 근거를 남깁니다.
+4. 적용 조건·근거 보존, 잘못된 확정 판단, 부분 결과 설명과 오류 복구를 확인합니다. 미완료 실행이나 검토 누락을 통과로 기록하지 않습니다.
 
-1. 클라이언트·모델·버전·설정을 기록하고 각 task와 artifact를 새 대화에 전달합니다. 호출 순서는 강제하지 않습니다.
-2. 실제 도구 호출·인자·결과, 최종 답변, 관측 가능한 토큰·시간을 JSONL로 기록합니다. 미관측 토큰은 null이며 비공개 추론 과정은 수집하지 않습니다.
-3. 사람이 검토하면 `humanChecks`에 판정을 기록합니다. AI에 검토를 맡기면 `reviewType: "agent"`와 `agentChecks`를 사용합니다. 실제 `reviewedBy`/`reviewedAt`을 기록하고, AI 검토를 사람 검토로 표시하지 않습니다. 한 조합당12개를 모두 포함하며, 초기 비교는 각3회 반복을 권장하고 실제 횟수를 보고합니다.
-4. 조건·근거 보존, 잘못된 확정 판단, 부분 결과 설명, 오류 복구와 효율을 비교합니다. 개발에 쓴 표현과 최종 검증용 질문을 구분합니다.
+기록에는 `taskId`, `model`, `client`, `run`, `toolCalls`, `finalAnswer`, `reviewedBy`, `reviewedAt`을 포함합니다. `agentChecks`의 각 항목에는 `passed`, `quote`, `rationale`을 기록합니다.
 
-아래는 미완성 형식 예시입니다. 빈 결과·검토 정보로 실제 평가를 통과했다고 기록하지 않습니다. 실제 JSONL은 한 줄에 객체 하나씩 저장합니다.
-
-```json
-{
-  "taskId": "AI-01",
-  "model": "실제 모델과 버전",
-  "client": "실제 클라이언트",
-  "run": 1,
-  "toolCalls": [
-    {
-      "name": "search_knowledge",
-      "arguments": {"query": "결제 웹훅 서명", "responseFormat": "json"},
-      "result": {}
-    }
-  ],
-  "finalAnswer": "실제 최종 답변",
-  "inputTokens": null,
-  "outputTokens": null,
-  "elapsedMs": null,
-  "reviewedBy": null,
-  "reviewedAt": null,
-  "humanChecks": {}
-}
-```
-
-result에는 실제 MCP 결과나 파싱한 응답을 넣습니다. 채점기는 관련 규칙과 기록된 검토 결과를 확인하며 특정 호출 순서를 강제하지 않습니다. 실행 상태를 수집했다면 `executionCode`와 `turnCompleted`도 기록합니다. 실패하거나 완료되지 않은 실행은 검토 점수와 관계없이 실패합니다.
-
-AI 검토는 같은 평가 항목마다 `agentChecks`에 `{ "passed": true, "quote": "최종 답변의 실제 인용", "rationale": "판정 근거" }`를 기록합니다. 인용이 최종 답변에 없거나 근거가 비어 있으면 판정 대기입니다. `reviewType` 생략 시 기존 사람 검토 형식을 사용합니다. AI-12는 실제 오류 후 성공 호출이 있어야 하며, Codex 기록의 `status: "failed"`도 오류로 셉니다.
-
-저장소의 npm 폴더에서 실행합니다. 경로는 실제 기록으로 바꾸세요.
+저장소 루트에서 실제 검토 기록의 경로로 실행합니다.
 
 ```powershell
-cd npm
-npm.cmd run test:ai-eval -- "C:\path\reviewed-transcripts.jsonl"
+npm.cmd --prefix npm run test:ai-eval -- "C:\path\reviewed-transcripts.jsonl"
 ```
 
-종료코드0은 제공 기록 통과·사례 완비, 1은 실패·잘못된 입력, 2는 검토·사례 누락으로 판정 대기입니다. 결과의 `reviewType`으로 사람/AI 검토를 구분합니다. 합성 기록으로 채점기를 시험한 결과를 모델 성능으로 보고하지 않습니다. 채점기가 판정의 정확성이나 검토자의 신원을 증명하지는 않습니다.
-
-2026-10-20 Windows x64에서 Codex CLI 0.163.0·gpt-6.1-sol(high)로 12개 사례를 각 1회 실행하고, 실제 답변 인용을 남긴 AI 검토에서 모두 통과했습니다. AI-12는 잘못된 입력을 지시한 복구 시험입니다. 전문 중복 조회 안내를 수정한 뒤 AI-11·12를 추가 실행해 조회 수 19→11회·7→2회를 관측했습니다. 단일 모델·소수 실행 결과이며 다른 모델·클라이언트의 품질, 일반적인 토큰·시간 절감률이나 독립적인 사람 검증을 뜻하지 않습니다.
+종료코드 0은 제공 기록과 사례 검증 통과, 1은 실패·잘못된 입력, 2는 검토·사례 누락입니다. 채점기는 검토자의 신원이나 판정의 정확성을 증명하지 않습니다.
 
 ## 다음 개선
 
-목표는 사용자가 JDK를 직접 설치하지 않아도 쓰는 것입니다. **Java21 기준 빌드와 전용 JRE 자동 준비를 구현했습니다.** npm 사용자는 Node22 이상을 준비하면 됩니다. 플러그인 배포와 실제 AI 비교 평가는 후속 과제입니다.
+**JDK를 직접 설치하지 않는 npm 실행과 Java 21 기준 빌드는 구현했습니다.** 다음 배포 과제는 아래의 클라이언트 플러그인 설치 지원입니다.
 
-| 순서 | 사용자에게 달라질 점 | 완료 기준 |
-|---|---|---|
-| 1. 전용 런타임 (구현) | 최초 실행에 Java21 다운로드·검증·캐시, 이후 재사용 | Java 없는 환경의 기동, OS·CPU별 손상·중단·동시 실행 복구, PATH·관리자 권한 변경 없음 |
-| 2. 21 기준 통일 (구현) | 빌드·실행 요구사항을21로 명확히 안내 | 버전 검사·toolchain·artifact·CI·문서와 업그레이드 안내 일치, 기존 지식·MCP 계약 유지 |
-| 3. 연결·평가 | 클라이언트 연결 안내·선택적 플러그인 포장, 실제 AI 답변 비교 | 클라이언트별 설치·활성화 확인, 실제 작업 기록·별도 검증용 표현 평가 |
+### 플러그인 설치형 배포
 
-MCP가 검토하는 사용자 프로젝트까지 Java21로 바꿀 필요는 없습니다. 런타임 전환 자체를 지식 정확도·성능 개선으로 발표하지 않습니다.
+현재 제공하는 배포는 **npm 실행형**입니다. 후속 설치형 배포의 목표는 AI 클라이언트의 플러그인 추가 과정에서 MCP 실행 설정을 등록하고 활성화할 수 있게 하는 것입니다. **아직 플러그인 설치 패키지를 제공하지 않습니다.**
+
+| 항목 | 계획과 완료 기준 |
+|---|---|
+| 설치 경험 | 플러그인 추가 → 권한 확인 → 활성화 → MCP 도구 4개 연결 확인. 사용자가 MCP 설정 파일을 직접 편집하는 단계 줄이기 |
+| 패키지 구성 | 지원 클라이언트의 공식 플러그인 manifest·MCP 등록 설정·설치/업데이트/제거 안내. 검증한 npm 버전을 기존 런처로 실행 |
+| 실행 환경 | Node.js 22 이상은 사용자가 준비. JDK/JRE 직접 설치 없이 기존 전용 JRE 21 다운로드·검증·캐시 재사용 |
+| 호환성 | 공식 배포·등록 방식을 먼저 확인하고 지원 클라이언트 한 곳부터 구현. 다른 클라이언트의 지원 여부와 설정 차이는 별도 기록 |
+| 검증 | 새 클라이언트 프로필에서 설치·활성화·재시작·업데이트·제거 확인. 기존 MCP 설정 보존, stdout JSON-RPC·오류 복구·종료 확인 |
+
+Windows `.exe`/`.msi`나 macOS `.dmg` 같은 독립 OS 설치 프로그램, Node.js 내장 배포는 현재 계획에 포함하지 않습니다. 해당 형태가 필요하면 지원 OS·런타임 포함 범위·업데이트 방식을 별도로 정합니다.
+
+MCP가 검토하는 사용자 프로젝트까지 Java 21로 바꿀 필요는 없습니다.
 
 native MCP 메타데이터는 기존 도구 중복 없이 text 응답 호환성과 실제 이득을 확인한 뒤 검토합니다. 비공개 지식은 공개 저장소·배포 파일 밖으로 분리할 때 설계합니다. 영어 지원·국가별 필터·유료화·Private 전환은 이번 범위에 추가하지 않습니다.
 
-원격 CI·macOS/ARM64 실행, 실제 AI 평가와 게시된 GitHub JAR 다운로드·npm 게시/provenance는 Windows·Ubuntu 로컬 통과와 별도 확인 대상입니다. 커밋·push·게시·배포는 별도 요청 없이 진행하지 않습니다.
+로컬 검증, 원격 CI·플랫폼별 실행, AI 답변 검증, 공개 GitHub JAR 다운로드·npm 게시/provenance는 버전과 산출물별로 구분해 기록합니다. 커밋·push·게시·배포는 별도 요청 없이 진행하지 않습니다.

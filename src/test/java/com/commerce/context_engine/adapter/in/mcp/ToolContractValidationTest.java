@@ -41,6 +41,15 @@ class ToolContractValidationTest {
         assertThat(provider.getToolCallbacks()).hasSize(4);
     }
 
+    @Test
+    void reviewToolExplainsHowToSupplyTheUserScenario() throws Exception {
+        var definition = callback("review_commerce_design").getToolDefinition();
+        var properties = mapper.readTree(definition.inputSchema()).path("properties");
+        assertThat(definition.description()).contains("사용자가 제공한", "scenario", "추측하지");
+        assertThat(properties.path("scenario").path("description").asText())
+                .contains("업무·실패", "추측");
+    }
+
     private ToolCallback callback(String name) {
         return Arrays.stream(provider.getToolCallbacks()).filter(callback -> callback.getToolDefinition().name().equals(name)).findFirst().orElseThrow();
     }

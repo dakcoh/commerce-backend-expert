@@ -29,6 +29,47 @@ class SearchImprovementRegressionTest {
     }
 
     @Test
+    void coherentGuidance_outweighsTheSameTermsScatteredAcrossSeparateItems() {
+        var query = new QueryNormalizer().normalize("coupon quota issue");
+        var coherent = fixture("focused", "보상 정책", "처리 안내", List.of(), "coupon quota issue");
+        var scattered = new KnowledgeRule("scattered", "example", "example", "보상 정책", "처리 안내",
+                RuleSeverity.MEDIUM, null, "처리 안내", "",
+                Map.of("guidance", List.of("coupon discounts", "quota reservations", "issue retries")),
+                List.of(), List.of(), List.of(), List.of(), List.of(), null, null, RuleStatus.ACTIVE);
+        var scorer = new RelevanceScorer();
+        var focusedResult = scorer.score(coherent, query);
+        var scatteredResult = scorer.score(scattered, query);
+        assertThat(focusedResult.queryCoverage()).isEqualTo(scatteredResult.queryCoverage());
+        assertThat(focusedResult.score()).isGreaterThan(scatteredResult.score());
+    }
+
+    @Test
+    void couponIssuance_doesNotPickRefundsForUnrelatedTermsInTheirGuidance() {
+        for (String query : List.of("쿠폰 동시 발급", "flash coupon sold out 동시 발급")) {
+            var results = search.search(new SearchQuery(query, Set.of(), Set.of(), Set.of(),
+                    3, ResponseDetail.SUMMARY, false));
+            assertThat(results).as(query).extracting(result -> result.rule().id())
+                    .startsWith("coupon-issuance").doesNotContain("partial-refund");
+        }
+    }
+
+    @Test
+    void refundAndPaymentInventoryQueries_keepTheirCrossDomainRules() {
+        for (String query : List.of("쿠폰 할인 부분 환불", "같은 키 다른 금액 환불")) {
+            assertThat(search.search(SearchQuery.of(query))).as(query)
+                    .extracting(result -> result.rule().id()).startsWith("partial-refund");
+        }
+        assertThat(search.search(SearchQuery.of("결제 타임아웃 재고 복구")))
+                .extracting(result -> result.rule().id()).contains("stock-reservation", "network-cancellation");
+    }
+
+    @Test
+    void conjunctiveParticles_keepCouponAndPointTopicTermsSearchable() {
+        assertThat(new QueryNormalizer().normalize("쿠폰과 포인트와").terms())
+                .containsExactly("쿠폰", "포인트");
+    }
+
+    @Test
     void repeatedBoilerplate_doesNotConsumeTheDistinctTermBudget() {
         var normalized = new QueryNormalizer().normalize("boilerplate ".repeat(100) + "웹훅 서명");
         assertThat(normalized.terms()).contains("웹훅", "서명").hasSize(3);

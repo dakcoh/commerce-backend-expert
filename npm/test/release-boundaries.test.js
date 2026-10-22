@@ -22,6 +22,7 @@ function transport(steps) {
     setImmediate(() => {
       if (destroyed) return;
       const step = steps[Math.min(calls.length - 1, steps.length - 1)];
+      step.beforeResponse?.();
       const response = new PassThrough();
       response.statusCode = step.status || 200;
       response.headers = step.headers || {};
@@ -58,13 +59,30 @@ test("checksum HTTP errors, premature close and oversized bodies fail closed", a
   await assert.rejects(fetchText(URL, transport([{run: r => {r.write("partial"); r.destroy();}}])), /close|abort/i);
 });
 
-test("a deadline covers the body and redirects even when data keeps arriving", async () => {
-  const t = transport([{status: 302, headers: {location: "/asset"}}, {run: r => {
+test("a deadline covers the body and redirects even when data keeps arriving", async context => {
+  context.mock.timers.enable({apis: ["Date", "setTimeout", "setInterval"]});
+  const controller = new AbortController();
+  context.after(() => controller.abort());
+  let bodyReady;
+  const ready = new Promise(resolve => {bodyReady = resolve;});
+  const t = transport([{status: 302, headers: {location: "/asset"},
+    beforeResponse: () => context.mock.timers.tick(25)}, {run: r => {
     const timer = setInterval(() => r.write("x"), 3);
     r.once("close", () => clearInterval(timer));
+    bodyReady();
   }}]);
-  await assert.rejects(fetchText(URL, {...t, totalTimeoutMs: 40}), /timed out/);
+  let outcome;
+  const transfer = fetchText(URL, {...t, totalTimeoutMs: 40, signal: controller.signal})
+    .then(value => {outcome = {value};}, error => {outcome = {error};});
+  await ready;
   assert.equal(t.calls.length, 2);
+  context.mock.timers.tick(14);
+  await new Promise(setImmediate);
+  assert.equal(outcome, undefined, "Transfer must remain active before the original deadline");
+  context.mock.timers.tick(1);
+  await new Promise(setImmediate);
+  assert.match(outcome?.error?.message || "", /timed out/, "Redirects must not reset the deadline");
+  await transfer;
 });
 
 test("idle timeout and caller abort terminate an unfinished body", async () => {

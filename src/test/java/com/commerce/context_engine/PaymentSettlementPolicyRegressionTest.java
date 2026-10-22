@@ -55,6 +55,49 @@ class PaymentSettlementPolicyRegressionTest {
     }
 
     @Test
+    void businessKeys_allowStableDateSequenceAndUuidWithoutRecreatingThemOnRetry() {
+        for (String id : List.of("payment-idempotency", "partial-refund", "idempotency")) {
+            assertThat(rule(id)).as(id)
+                    .contains("업무키", "업무일자", "순번", "UUID", "고유 범위", "자정", "재발급")
+                    .contains("같은 키", "다른 요청");
+        }
+        assertThat(rule("payment-idempotency"))
+                .contains("내부 업무키", "외부 멱등키", "영속", "PG 계약");
+    }
+
+    @Test
+    void refundKeepsRequestIdentityAndAuthenticatedResultsInFullSearchAndChecklist() {
+        var full = tool.searchKnowledge("partial-refund", "payment", null, 1, "full", "json");
+        assertThat(full.fullRules()).singleElement().satisfies(rule -> {
+            assertThat(rule.id()).isEqualTo("partial-refund");
+            assertThat(String.join("\n", rule.sections().get("guidance")))
+                    .contains("요청 지문", "원 결제", "금액", "통화", "거부", "인증된 조회", "검증된 웹훅");
+        });
+        assertThat(checklist("payment")).contains("요청 지문", "다른 요청", "인증된 조회", "검증된 웹훅", "멱등");
+        for (String id : List.of("duplicate-payment-guard", "network-cancellation", "partial-refund")) {
+            assertThat(rule(id)).as(id).contains("보상", "멱등", "인증된 조회", "검증된 웹훅");
+        }
+    }
+
+    @Test
+    void documentedIdempotencyReferences_doNotClaimIndependentRuleVerification() {
+        for (String id : List.of("payment-idempotency", "partial-refund")) {
+            var rule = tool.getRule(id, "json").rule();
+            assertThat(rule.evidenceLevel()).isEqualTo("external-source");
+            assertThat(rule.status()).isEqualTo("needs-review");
+            assertThat(rule.verifiedBy()).isNull();
+            assertThat(rule.lastReviewedAt()).isNull();
+            assertThat(rule.evidence()).allSatisfy(evidence -> {
+                assertThat(evidence.type()).isEqualTo("official-documentation");
+                assertThat(evidence.accessedAt()).isNotNull();
+                assertThat(evidence.note()).isNotBlank();
+            });
+            assertThat(rule.evidence()).anySatisfy(evidence -> assertThat(evidence.source())
+                    .isEqualTo("https://aws.amazon.com/builders-library/making-retries-safe-with-idempotent-APIs/"));
+        }
+    }
+
+    @Test
     void pricing_doesNotAddTaxAgainToAnInclusivePrice() {
         assertThat(rule("commerce-pricing-money"))
                 .contains("세금 포함", "11,000원", "중복 가산", "정책", "잔차")
