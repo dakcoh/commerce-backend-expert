@@ -1,288 +1,78 @@
-# Contributing, development, and releases
+# Contributing
 
 English · [한국어](CONTRIBUTING.ko.md)
 
-For usage, start with the [README](README.md). For installation problems, see the [installation guide](npm/README.md). This document covers changes to code, knowledge, documentation, and releases.
+For usage, see the [README](README.md). The [skill Markdown](skills/commerce-backend-expert/SKILL.md) is the knowledge source. Do not reintroduce parallel Java-server or YAML knowledge maintenance.
 
-[Development environment](#development-environment) · [Knowledge changes](#editing-knowledge) · [Validation](#local-validation) · [Runtime policy](#private-java-runtime-policy) · [Server contract](#server-architecture-and-contract) · [Answer checks](#checking-ai-answers) · [Roadmap](#next-improvements) · [Releases](#release-checks)
+## Structure
 
-## Commitments to users
-
-- Provide general Korean ecommerce guidance and Java/Spring implementation choices.
-- Distinguish search candidates from confirmed defects, and search match from evidence quality.
-- Preserve applicability, exceptions, and review status in responses.
-- Never invent review dates, reviewers, or evidence.
-- Keep company-specific policies, contracts, customer data, and keys out of public knowledge and examples.
-
-English documentation does not make the catalog multilingual. Knowledge and most tested search expressions are Korean. Preserve executable Korean examples until a separately evaluated English catalog or query strategy exists.
-
-## Development environment
-
-| Item | Current requirement |
-|---|---|
-| Build JDK | Java 21 toolchain; application class-file major version 65 |
-| npm execution | Automatically prepared private Temurin JRE 21; no system Java |
-| Direct JAR execution | Java 21 or later |
-| Node.js | 22 or later; representative checks on 22 and 24 |
-| Server | STDIO, YAML inside the JAR; no external HTTP server, database, or LLM |
-
-npm users get an automatically prepared runtime. Developers building from source need JDK 21. Direct JAR execution uses the Java executable selected by the developer.
-
-Keep dependencies directed `adapter → application → core`. Do not introduce Spring, MCP, Jackson, or file I/O into core. Prefer the existing four tools over a tool per static rule. Do not add Tomcat, Spring Web, or Actuator to this STDIO server.
-
-## Editing knowledge
-
-The source of truth is the YAML under [src/main/resources/knowledge](src/main/resources/knowledge). Keep rule IDs stable. Explain changes, applicability, failure cases, and recovery.
-
-```yaml
-schema-version: 1
-domain: example
-governance:
-  owner: example-maintainers
-rules:
-  - id: example-rule
-    category: security
-    title: "Rule title"
-    summary: "Applicability and the main decision"
-    severity: high
-    applicability:
-      applies-when: ["Applicable condition"]
-      does-not-apply-when: ["Excluded condition"]
-      assumptions: ["Assumption"]
-      jurisdiction: KR
-    guidance: ["Guidance including failure and recovery"]
-    checklist: ["A question to verify"]
-    tags: [example]
+```text
+skills/commerce-backend-expert/
+  SKILL.md                    Shared decision and development workflow
+  references/<domain>/INDEX.md Domain routing
+  references/<domain>/<id>.md  Conditions, exceptions, guidance, evidence
+scripts/
+  validate-skills.js           Knowledge, document, repository checks
+  validate-skills.test.js      Boundary and regression tests
+tests/behavior-cases.md        Synthetic development inputs and criteria
+.github/workflows/ci.yml       Document and test CI
+plugin.json                   Shared bundle metadata
+package.json                  CommonJS scope for developer tools (private, no dependencies)
+.codex-plugin/                Codex entrypoint
+.claude-plugin/               Claude Code entrypoint
+.cursor-plugin/               Cursor entrypoint
+.cursor/rules/                Optional routing rule
+.openclaw/                    Extra-directory configuration example
+hooks/                        Optional development validation hooks
 ```
 
-This illustrates the schema; it is not a proposed production rule. High and Critical rules become `needs-review` when applicability, explicit evidence, or actual review records are insufficient. Setting `status: active` does not bypass that check.
+Start with one entry skill, six domain indexes, and 70 rules. Split independent skills when tasks have distinct inputs, workflows, and success criteria. Avoid duplicating shared guidance across domains.
 
-Only add review records after an actual review:
+## Edit knowledge
 
-```yaml
-review:
-  last-reviewed-at: 2026-07-21
-  verified-by: actual-reviewer
-  change-note: "Scope checked and reason for the change"
-```
+- Keep rule IDs and filenames stable and list them in their domain index. Check test catalog counts when adding or removing rules.
+- Review titles, applicability, exclusions, assumptions, ordered guidance, failures and recovery, checklists, and related rules together.
+- `##` headings delimit validated fields. Use `###` or deeper for body subheadings. Preserve evidence fields below each evidence `###` heading.
+- Record `status`, `severity`, `evidenceLevel`, `owner`, reviewer, review date, and change reason accurately. Do not replace `not-recorded` or clear `needs-review` without an actual review.
+- Record official sources actually checked, their scope, and dates. Exclude company material, customer data, and real keys. Do not assume one PG contract or business policy is universal.
 
-For official sources you actually checked, use the following structure. Replace dates and reviewer values with real records and omit inapplicable optional fields.
+Some evidence retains `src/main/resources/knowledge/*.yml` as **historical v0.2.2 provenance**. These are not current files or runtime dependencies. Consult the [v0.2.2 source](https://github.com/dakcoh/commerce-context-mcp/tree/v0.2.2/src/main/resources/knowledge) for history. Edit new knowledge only in Markdown.
 
-```yaml
-evidence:
-  - title: "Document checked"
-    url: "https://official.example/document"
-    type: official-documentation
-    source-version: "Version checked"
-    published-at: 2026-01-15
-    reviewed-at: 2026-07-21
-    accessed-at: 2026-07-21
-    note: "Applicability and scope checked"
-```
+## Validation
 
-Validation rejects duplicate fields or IDs, invalid references, empty required values, incomplete review records, invalid dates, and future dates. Date validation uses Korean time (`Asia/Seoul`) regardless of the host's time zone. External HTTP(S) evidence needs an access date. Blogs, AI answers, and project YAML paths are not official evidence. Do not encode a provider status code, timeout, tax rate, or retention period as a universal constant.
-
-## Local validation
-
-`npm test` uses the standard Node test runner to check basic behavior, cache locks, downloads, process shutdown, package contents, and JRE recovery. Keep scenario data in its test file; temporary directory cleanup and system-Java isolation are shared in `npm/test/support/fixtures.js`. Use `temporaryDirectory(prefix, t)` to register cleanup before fixture setup can fail. This helper is excluded from the npm package. To check one area, run a command such as `node --test npm/test/runtime.test.js` from the repository root.
-
-Run these commands from the repository root in PowerShell. Replace `JAVA_HOME` with your JDK 21 path. This JDK is for source builds, separate from the npm user's private runtime.
-
-```powershell
-$env:JAVA_HOME="C:\path\to\jdk-21"
-$env:Path="$env:JAVA_HOME\bin;$env:Path"
-.\gradlew.bat clean validateKnowledge bootJar "-Pversion=0.2.2" --no-daemon
-npm.cmd --prefix npm test
-$env:MCP_EXPECTED_VERSION="0.2.2"
-node npm/test/mcp-smoke.js build/libs/context-engine-0.2.2.jar
-```
-
-To check real JRE download, two-process preparation, offline reuse, and corruption repair:
-
-```powershell
-node npm/test/runtime-smoke.js
-```
-
-This test uses a private temporary cache and removes Java from child-process `PATH`. It downloads the official JRE, so it needs network access and disk space.
-
-Before publication, validate the **local package**. Running `npx commerce-context-mcp` against unpublished source changes executes the registry package instead.
-
-```powershell
-Push-Location npm
-npm.cmd pack --ignore-scripts --json --pack-destination ../build > ../build/npm-pack.json
-Pop-Location
-New-Item -ItemType Directory -Force build/packed | Out-Null
-tar -xzf build/commerce-context-mcp-0.2.2.tgz -C build/packed
-$env:MCP_LAUNCHER_ROOT=(Resolve-Path build/packed/package).Path
-node npm/test/mcp-smoke.js build/libs/context-engine-0.2.2.jar
-Remove-Item Env:\MCP_LAUNCHER_ROOT
-Remove-Item Env:\MCP_EXPECTED_VERSION
-```
-
-The package smoke test places the locally built JAR in a temporary cache, prepares the private JRE without system Java, invokes MCP, checks a Korean/Unicode cache path, and verifies shutdown after EOF. Cold download of the published JAR is a separate release-workflow check. To check installation without scripts, run `npm.cmd install --ignore-scripts --no-audit --no-fund --prefix build/local-install ./build/commerce-context-mcp-0.2.2.tgz`.
-
-On Linux/macOS, configure JDK 21 and use `./gradlew` and `npm`. Real OS signal tests run on Linux/macOS; distinguish these results from Windows skips.
-
-| Change | Checks |
-|---|---|
-| YAML and trust metadata | 70 rules, schema, applicability, evidence, review status, duplicate-field rejection |
-| Search | Existing 100 queries, new expressions, irrelevant queries, ranking, and counts; do not silently change expected IDs |
-| Review and checklists | Existing 20 review, 10 checklist, and 15 trust cases; preserve conditions, items, and partial-result reporting |
-| MCP | Four tools, three resource types, two prompts, recovery after invalid input, actual JSON-RPC |
-| Launcher | No-Java PATH, two processes, Windows lock-read errors and replacement-owner protection, offline repair, missing checksum sidecars, doctor exit codes, EOF, child exit, npm pack contents |
-| Documentation | Run JSON examples through MCP smoke; compare all 70 IDs, local links and anchors, and local versus published instructions |
-
-`validateKnowledge` depends on the complete Java test suite. Run actual-JAR MCP smoke and npm checks separately. Policy tests are not live payment-provider, bank, or database concurrency/failure tests. Check tool selection and final answers separately using [AI answer checks](#checking-ai-answers).
-
-## Upgrading
-
-If prompts or automation directly invoke the old domain-specific tools, use these replacements. The server's `npx` invocation stays the same.
-
-| Previous | Current |
-|---|---|
-| `search_*_knowledge`, `search_all_knowledge` | `search_knowledge` with an optional domain |
-| `get_*_guide`, `get_*_context` | Search, then `get_rule` |
-| `get_*_checklist` | `get_checklist` |
-| Response `confidence` | `matchConfidence`: search match, not factual accuracy |
-
-From 0.2.0, npm execution needs Node 22 or later and automatically obtains a private JRE 21. Users can run `download` and `doctor`; no Java configuration in `JAVA_HOME` or `PATH` is needed. Source builders configure JDK 21. Java 17 cannot directly execute the new JAR.
-
-## Release checks
-
-A normal push or PR to `master` runs CI. Publishing a GitHub Release triggers validation and npm staging for maintainer approval. The shared [.github/workflows/validate.yml](.github/workflows/validate.yml) builds with JDK 21/Node 22 on Ubuntu and checks the same artifacts with JDK 21/Node 24 on Ubuntu and JDK 21/Node 22 and 24 on Windows. Private runtimes are also checked on Windows ARM64, Ubuntu ARM64, and macOS Intel/ARM64. Package smoke tests leave only extraction tools on `PATH` and use a nonexistent `JAVA_HOME`.
-
-- Check Java, knowledge, npm, and actual MCP regression results.
-- Match npm, tag, manifest, and `serverInfo` versions; verify application major version 65.
-- Check JAR YAML and forbidden web-server dependencies, all 14 tarball files and their contents/integrity, and bundle hashes.
-- Check Unicode caches, Java exit after EOF, and Linux signals on supported platforms.
-- Match public documentation to actual code and packaged files.
-
-Publication order: check an unused npm version, tag commit, and authentication; upload the tested JAR/checksum; download and compare them; stage **the tested tarball itself** with provenance; approve it on npm with 2FA. Verify the registry afterward. Never reuse a published version or assume a working tree equals a registry package because their version strings match.
-
-Do not overwrite existing assets. GitHub and npm publication is not atomic: inspect remaining assets and registry state before retrying a failure. The workflow does not automatically delete assets, overwrite them, or increment versions. Check `NPM_TOKEN` permissions/expiry and any external Trusted Publisher registration separately. The current workflow's OIDC permission is for provenance.
-
-### Staged npm publication
-
-The release workflow uses `npm stage publish` with npm CLI 11.21.1. It submits the validated bundle for approval with provenance; a successful workflow means staging completed, not that npm publication is complete.
-
-Staging needs npm CLI 11.15+ and Node 22.14+. In the authenticated CI environment, verify the sealed bundle, then submit the same tarball, with `VERSION` and `NPM_TAG` set from validation:
+Contributor checks require Node.js 22 or later. No dependency installation or JDK is needed. Run from the repository root:
 
 ```bash
-node scripts/release-checks.js verify
-cd npm
-npm stage publish "../build/release/commerce-context-mcp-$VERSION.tgz" --ignore-scripts --provenance --access public --tag "$NPM_TAG"
+node scripts/validate-skills.js
+node --test scripts/validate-skills.test.js
 ```
 
-Record the stage ID. A maintainer reviews the version, tag, and artifact, then chooses **Staged Packages → Approve** on npm and completes 2FA. Staging alone is not public publication. After approval, verify the registry version/tag/integrity, install it afresh, and test without system Java. See [npm's staged publishing guide](https://docs.npmjs.com/staged-publishing/).
+The first command validates rules, indexes, links and anchors, review records, dates, and evidence, and checks that removed MCP runtime paths have not returned. The second checks missing or invalid metadata, path escapes, damaged indexes, and other failure cases. Neither invokes an LLM API or external service.
 
-`runtime-inventory.tsv` lists embedded libraries and hashes. It is not a standard SBOM or a vulnerability verdict. Report local validation, remote CI, and actual publication as separate results.
+For migration parity, optionally supply a separately preserved capture of full rule records. Keep that capture as evidence, not a second maintained knowledge source.
 
-## Reporting problems and describing changes
-
-Include the query or rule ID, relevant scenario, reproducible input, expected output, and actual output. For knowledge changes, record official sources actually checked, their dates, and applicability. Validate the [usage examples](docs/USAGE_SCENARIOS.md) through actual MCP calls; do not paste private company material.
-
-Keep each change focused on one purpose. Describe checks performed and remaining limits. Commit, push, publication, and deployment stay within the requested scope.
-
-## Server architecture and contract
-
-Flow: AI client → STDIO MCP → search/checklist/review → YAML. Knowledge is loaded into immutable objects on startup. Retrieval uses no external LLM, database, or HTTP server. The connected AI client handles final answers and data transmission.
-
-The current handlers only read in-memory knowledge. `McpSyncServerCustomizer.immediateExecution(true)` runs them sequentially on the STDIO input thread, avoiding the SDK 0.18 [concurrent response loss issue](https://github.com/modelcontextprotocol/java-sdk/pull/935). MCP smoke sends 64 concurrent tool calls in each of four rounds. Revisit this execution model before adding external I/O or changing transports.
-
-| Location | Responsibility |
-|---|---|
-| core/model and port | Knowledge models and interfaces |
-| application | Search, review candidates, and checklist composition |
-| adapter/in/mcp | Tools, resources, prompts, and input-schema validation |
-| adapter/out/yaml and render | YAML loading/validation and Markdown rendering |
-
-Public tools: `search_knowledge`, `get_rule`, `get_checklist`, `review_commerce_design`. Resources: `commerce://catalog`, `commerce://domains/{domain}`, `commerce://rules/{ruleId}`. Prompts: `review-commerce-api`, `review-payment-webhook`.
-
-Both review prompts and the tool description ask the client to pass the code with the user's business and failure context in `scenario`, without inventing contracts, policies, or defects. Prompt field guidance must match the actual review response. `matchedEvidence` contains matched search terms, not evidence establishing a defect.
-
-- Search/review default to five results, at most ten. Checklists select at most ten rules.
-- Search normalizes NFKC, selected Korean particles/inflections, and aliases. It uses at most 32 distinct terms and field match ratios; ties are ordered by domain, category, and ID.
-- Code review excludes package/import lines and searches the original input and scenario separately. Long input adds at most 32 overlapping 16-word windows, reporting sampled analysis for larger inputs. It does not execute code or parse an AST.
-- Checklists deduplicate only items with the same conditions and trust context. JSON and Markdown preserve items and order.
-- Search/rule/checklist accept `responseFormat` `json` or default `both`. JSON keeps `markdown` empty; search with JSON and `detail: "full"` supplies `fullRules`. Use `get_rule` to inspect conditions for summary candidates; rules already included in full results need no repeat lookup. Review does not accept this option.
-- Search/review domains accept CSV; checklist accepts one domain. Required values, types, enums, bounds, unknown filters, and empty CSV elements are validated. Enums normalize case and whitespace.
-- Empty or valid unrelated queries return no results after option validation. Tool failures use `isError`; resources use JSON-RPC errors. A subsequent valid request still works.
-- Tool callbacks return text JSON. Native `outputSchema`, `structuredContent`, and annotation support are future work.
-
-### Transfer, cache, and shutdown boundaries
-
-The launcher downloads the JAR matching its npm version over HTTPS and verifies SHA-256. A checksum detects corruption; it does not replace a publisher signature.
-
-Java stdout is read through a separate pipe and forwarded through Node streams. This prevents truncated Java output when inherited stdout is nonblocking and the client reads slowly. Stream backpressure controls forwarding. MCP smoke pauses reads during concurrent responses to check JSON and UTF-8 integrity.
-
-| Item | Current limit |
-|---|---|
-| Checksum | 15 seconds overall; 64 KiB |
-| JAR | 120 seconds per attempt; at most three attempts |
-| Request inactivity | 15 seconds; redirects share the overall deadline |
-| JAR lock wait/reacquisition | Shares the original 405-second budget; not a forced cutoff of an active transfer |
-| Private JRE preparation | Shares an initial 600-second budget; transfers 120 seconds per attempt, at most three; extraction 90 seconds |
-| doctor | No download; exit 0 only if both runtime and JAR caches verify, otherwise 1 |
-| EOF/shutdown | Close the owned Java child's stdin and allow up to two seconds; forward signals to that child |
-
-Locks check PID, hostname, and a token. Only dead local owners are reclaimed. Ambiguous, foreign-host, or active owners are not removed automatically. Losing ownership stops publication; a process can reacquire within the remaining budget or use the verified winner's cache. Duplicate transfers remain possible; shared disks do not have a strict mutual-exclusion guarantee.
-
-Before ownership is acquired, Windows `EPERM` errors during lock creation or inspection share at most three retries within the original wait budget. A failed read is not treated as a missing lock. Retries recheck the owner; persistent permission errors and other error codes are returned to the caller.
-
-Temporary files are cleaned up. Signal exits use 130/143; normal shutdown preserves the child code. Cleanup is not guaranteed after power loss or a forced launcher kill.
-
-## Private Java runtime policy
-
-Preparation runs on first launch or `download`, without npm installation scripts.
-
-- **Distribution:** Eclipse Temurin JRE **21.0.12.1+1**, from its [official release](https://github.com/adoptium/temurin21-binaries/releases/tag/jdk-21.0.12.1%2B1). `npm/lib/runtime-manifest.json` pins URLs, official SHA-256 values, and sizes for six OS/CPU combinations. There is no runtime lookup of latest or reuse of system Java.
-- **License:** Preserve [OpenJDK GPLv2 with Classpath/Assembly Exceptions](https://adoptium.net/about/) and the runtime's `legal/` notices. npm contains no runtime binaries; they come from the official supplier.
-- **Environment:** Windows/macOS/glibc Linux, x64/ARM64; reject musl and 32-bit systems. Use OS `tar`, addressed directly under System32 on Windows. Extraction uses a destination cwd and relative archive arguments. Windows runtime paths use a private ASCII junction. JARs in Unicode caches run from a private ASCII temporary copy, removed when the child exits; the original cache stays intact. Allow temporary space for one JAR. Verify junction targets. Administrator access, PowerShell, and 8.3 names are not required. If no ASCII alias can be created, use a private ASCII `COMMERCE_CONTEXT_CACHE_DIR`. JVM diagnostics go to stderr to preserve JSON-RPC stdout. System Java installation and settings are unchanged.
-- **Cache:** Under `~/.commerce-context-mcp/runtimes/`, by version/platform. Check the pinned hash and archive paths/links before extracting into a temporary directory. Only internal symlinks to regular files are allowed. Record file hashes and execution permissions and revalidate on every launch. Retain the archive for offline repair.
-- **Recovery:** Reuse PID/hostname/token locks. Keep the original 600-second budget across ownership changes, 120-second transfer attempts (at most three), and 90-second extraction. Clean abandoned temporary files/directories only after ownership checks. Log to stderr; execute Java by absolute path.
-- **Security updates:** Check Temurin security/patch releases, update the pinned version and all six archive hashes/sizes, run unit and actual-package tests on supported platforms, and publish a new npm version. Old caches are not reused for another version or automatically bulk-deleted while they might be in use.
-
-A successful `doctor` means cache integrity passed. `download` also checks the selected JRE executes; complete MCP smoke checks connection, tools, and shutdown. Runtime archives use pinned SHA-256, so a lost runtime checksum sidecar does not block offline repair. The server JAR still needs its release `.sha256`.
-
-## Checking AI answers
-
-Keep server regression tests separate from checks of the client's tool selection and final answer. Use synthetic cases in [ai-workflows.json](npm/test/fixtures/ai-workflows.json), without company code, customer data, or real keys. Normal execution and CI do not automatically call paid LLMs.
-
-1. Run each case in a new conversation and record actual tool calls, arguments, results, and the final answer as JSONL.
-2. Record the model, client, run number, actual reviewer, and review date. Include every case.
-3. Use `humanChecks` for a person's review. For an AI review, use `reviewType: "agent"` and `agentChecks`, with exact final-answer quotes and reasons.
-4. Check applicability, evidence preservation, unsupported assertions, partial results, and error recovery. Incomplete executions or missing reviews cannot pass.
-
-Include `taskId`, `model`, `client`, `run`, `toolCalls`, `finalAnswer`, `reviewedBy`, and `reviewedAt`. Each `agentChecks` item records `passed`, `quote`, and `rationale`.
-
-From the repository root, replace the path with the reviewed transcript file:
-
-```powershell
-npm.cmd --prefix npm run test:ai-eval -- "C:\path\reviewed-transcripts.jsonl"
+```bash
+node scripts/validate-skills.js /path/to/baseline.json
 ```
 
-Exit code 0 means the supplied records and required cases passed, 1 means failed or invalid input, and 2 means missing review or cases. The grader does not establish reviewer identity or judgment accuracy.
+Format checks and model decisions are separate. For [synthetic development cases](tests/behavior-cases.md), record actual document reads and hashes, final answers/diffs, executed tests and results, and unresolved conditions. A rule ID in an answer does not establish successful application.
 
-## Next improvements
+The migrated documents were evaluated on seven synthetic tasks covering implementation, refactoring, review, incident analysis, partial code, unrelated frontend work, and cross-domain design. Generated implementations passed seven scenarios, refactoring passed 14 differential cases, and 11 additional checks passed. These results do not establish live DB/PG behavior, browser execution, or automatic skill selection after installation. Validate this runtime removal separately through knowledge preservation, structure, documentation, and tests.
 
-**npm execution without a manually installed JDK and Java 21 source builds are implemented.** The next distribution task is client plugin installation support, described below.
+CI is configured for Node 22 and 24 on Ubuntu, Windows, and macOS. Record local passes separately from completed remote CI.
 
-### Plugin installation package
+## Optional development hooks
 
-The current distribution is **an npm launcher**. The planned installation package would register and enable MCP execution through an AI client's plugin installation flow. **No plugin installation package is available yet.**
+Default manifests do not register hooks. To validate knowledge edits, use the [Claude template](hooks/claude.json) or [Cursor template](hooks/cursor.json). Replace `${CLAUDE_PLUGIN_ROOT}` or `${CURSOR_PLUGIN_ROOT}` in the command with this repository's absolute path and merge the event into the client's project/user hook settings. Preserve existing settings.
 
-| Area | Plan and completion criteria |
-|---|---|
-| Installation experience | Add plugin → review permissions → enable → confirm all four MCP tools. Reduce manual editing of MCP configuration files |
-| Package contents | Official client plugin manifest, MCP registration settings, and install/update/removal guidance. Run a tested npm version through the existing launcher |
-| Runtime | Users prepare Node.js 22 or later. Reuse private JRE 21 downloading, verification, and caching without a manually installed JDK/JRE |
-| Compatibility | Check the client's official distribution and registration format first; implement for one client initially. Record other clients' support and configuration differences separately |
-| Verification | Install, enable, restart, update, and remove in a new client profile. Preserve existing MCP settings; check stdout JSON-RPC, error recovery, and shutdown |
+The checker only handles Markdown edits inside `skills/commerce-backend-expert/`. It skips external project files, changes no files or settings, and makes no network calls. Input is limited to 64 KiB; successful runs are silent. There is no automatic prompt injection or inspection of every code edit. Do not wire these client hooks into OpenClaw.
 
-Standalone OS installers such as Windows `.exe`/`.msi` or macOS `.dmg`, and distributions bundling Node.js, are outside the current plan. Those would need separate OS, runtime-bundling, and update requirements.
+Formats were checked against official documentation for [Codex](https://developers.openai.com/plugins/build/plugins), [Claude](https://code.claude.com/docs/en/plugins-reference), [Cursor](https://prod.cursor.com/docs/reference/plugins), [OpenClaw bundles](https://docs.openclaw.ai/plugins/bundles) and [skill paths](https://docs.openclaw.ai/tools/skills), and [Cursor hooks](https://prod.cursor.com/docs/hooks). Do not claim installation verification until discovery, activation, updates, removal, and relevant hooks are tested in fresh client profiles.
 
-User projects reviewed through MCP do not need to migrate to Java 21.
+## Migration and next work
 
-Evaluate native MCP metadata only after checking text-response compatibility and actual benefit without duplicating tools. Design private-knowledge loading separately from public repository/package contents. Multilingual knowledge/search, country filters, paid plans, and private-repository conversion are separate work; this documentation translation does not implement them.
+This branch removes six knowledge YAML files, the Java MCP and its tests, Gradle, the npm launcher/JRE preparation, and JAR/npm publication workflows. User and contributor guides are consolidated into four bilingual documents. Version v0.2.2 remains in the local `legacy/v0.2.2` branch and its tag; temporary source backups and build artifacts were deleted. Run or build the old MCP from that version; this branch is no longer compatible with it.
 
-Record local checks, remote CI/platform execution, AI answer checks, public GitHub JAR downloads, and npm publication/provenance separately by version and artifact. Commit, push, publication, and deployment require the corresponding requested scope.
+Next, verify plugin installation, activation, updates, and removal on one supported client and individually review the 19 `needs-review` rules. Do not add MCP registration or Java runtime downloads back into the skill package. User projects do not need to migrate to Java 21. Check packaging against the [official OpenAI guidance](https://developers.openai.com/plugins/build/plugins).
+
+Company processes, multilingual knowledge, paid plans, and private-repository conversion remain outside scope. Commit, push, publication, and installation require the corresponding requested scope.

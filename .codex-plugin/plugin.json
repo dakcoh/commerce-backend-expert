@@ -1,0 +1,15 @@
+{
+  "name": "commerce-backend-expert",
+  "version": "0.3.0-dev.0",
+  "description": "한국 이커머스 백엔드의 설계·구현·리팩터링·리뷰·장애 분석을 돕는 개발 스킬",
+  "author": {"name": "dakcoh"},
+  "repository": "https://github.com/dakcoh/commerce-context-mcp",
+  "license": "MIT",
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Commerce Backend Expert",
+    "shortDescription": "한국 이커머스 백엔드 개발 가이드",
+    "category": "Productivity",
+    "capabilities": ["Instructions"]
+  }
+}

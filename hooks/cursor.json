@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "hooks": {
+    "afterFileEdit": [
+      {
+        "command": "node \"${CURSOR_PLUGIN_ROOT}/hooks/validate-knowledge.js\"",
+        "timeout": 10
+      }
+    ]
+  }
+}

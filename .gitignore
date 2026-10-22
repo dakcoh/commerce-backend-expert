@@ -1,48 +1,17 @@
-HELP.md
-.gradle
-build/
-!gradle/wrapper/gradle-wrapper.jar
-!**/src/main/**/build/
-!**/src/test/**/build/
-
-### STS ###
-.apt_generated
-.classpath
-.factorypath
-.project
-.settings
-.springBeans
-.sts4-cache
-bin/
-!npm/bin/
-!npm/bin/index.js
-!**/src/main/**/bin/
-!**/src/test/**/bin/
-
-### IntelliJ IDEA ###
-.idea
-*.iws
-*.iml
-*.ipr
-out/
-!**/src/main/**/out/
-!**/src/test/**/out/
-
-### NetBeans ###
-/nbproject/private/
-/nbbuild/
-/dist/
-/nbdist/
-/.nb-gradle/
-
-### VS Code ###
+# Local editor settings
+.idea/
 .vscode/
+.DS_Store
+Thumbs.db
 
-### Runtime logs ###
-logs/
+# Local dependencies and verification output
+node_modules/
+output/
 
-### Local package manager cache ###
-.npm-cache/
-
-### Local MCP client settings ###
-.claude/settings.json
+# Local client settings and credentials
+.claude/settings*.json
+.cursor/hooks.json
+.openclaw/openclaw.json
+.env
+.env.*
+!.env.example
