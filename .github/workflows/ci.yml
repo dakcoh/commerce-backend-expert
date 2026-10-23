@@ -30,7 +30,9 @@ jobs:
         with:
           node-version: ${{ matrix.node }}
           package-manager-cache: false
+      - name: Install validation dependency
+        run: npm ci --ignore-scripts --no-audit --no-fund
       - name: Validate knowledge and repository
-        run: node scripts/validate-skills.js
+        run: npm run check
       - name: Check boundaries and regressions
-        run: node --test scripts/*.test.js
+        run: npm test

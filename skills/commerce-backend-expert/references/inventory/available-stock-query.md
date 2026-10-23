@@ -27,10 +27,6 @@
 - 예약형 예시의 total_quantity는 확정 차감 기준 수량이고 reserved_quantity는 미확정 예약 수량이다.
 - 안전재고·할당·검수 대기와 실물 출고를 반영하는 시점은 모델별로 정의한다.
 
-## 판단 근거
-
-판매 가능 수량은 선택한 재고 모델의 수량 정의를 따르며, 예약형의 total_quantity - reserved_quantity와 DB 조건부 즉시 차감형을 구분한다
-
 ## 구현 가이드
 
 - 예약형 예시의 가용 재고: total_quantity - reserved_quantity; 안전재고 등을 별도 관리하면 제외 항목을 추가하고 중복 차감하지 않는다

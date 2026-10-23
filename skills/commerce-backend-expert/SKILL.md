@@ -1,6 +1,10 @@
 ---
 name: commerce-backend-expert
 description: 한국 이커머스 백엔드의 설계·구현·리팩터링·리뷰·장애 분석. 주문·재고·결제·환불·쿠폰·정산·회원·배송의 정합성과 Java/Spring 구현에 사용한다. 일반 코딩·화면 스타일·마케팅·MCP 설치 문의에는 적용하지 않는다.
+license: MIT
+metadata:
+  author: dakcoh
+  tags: ecommerce, korean-commerce, backend, java, spring, payments, inventory, settlement
 ---
 
 # 이커머스 백엔드 개발

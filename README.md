@@ -10,9 +10,27 @@ The skill guides an AI through actual code and business conditions, then selects
 
 Document-only skill usage requires no Java or Node.js installation, MCP server, or separate API key. The plugin's session hooks require Node.js 22 or later. AI-client access and project build/test requirements remain those of their respective environments.
 
+## What does it help catch?
+
+Suppose an order was paid 20,009 KRW and a 6,669 KRW refund for the first unit of X is still unresolved. A new request refunds both units of X for 13,339 KRW. The combined 20,008 KRW stays below the order total but refunds the same unit again.
+
+The skill guides checks of line/unit reservations, unresolved transactions, request fingerprints, and restoration timing alongside the order limit. See the [synthetic input](benchmarks/fixtures/refund.js) and [evaluation method and records](benchmarks/README.md). This example does not establish live DB/PG behavior or quality gains against no skill.
+
 ## Use the skill
 
-**v0.3.0 is a Markdown skill/plugin release.** It does not update the old npm MCP package; do not install it with `npm install` or register an MCP server. See [client checks](CONTRIBUTING.md#client-checks) for session-hook coverage.
+### Install skills only
+
+The [general skill](skills/commerce-backend-expert/SKILL.md) includes 70 detailed rules. The [payment/refund review skill](skills/commerce-review/SKILL.md) provides a self-contained review workflow and can be installed alone. When both are available, the review can also select relevant detailed rules.
+
+```bash
+npx skills add dakcoh/commerce-backend-expert --skill commerce-backend-expert
+```
+
+Choose `--skill commerce-review` for the review workflow alone. The installer asks which AI client to target. The tested `skills@1.7.4` installer requires Node.js 22.20 or later. This method does not install session hooks or the `commerce on/off/status` controls.
+
+For manual use, copy the entire selected `skills/<skill-name>/` folder, including its license and references. Reading the Markdown directly requires no Java, Node.js, or separate API key.
+
+### Install the plugin with session hooks
 
 Codex CLI:
 
@@ -28,25 +46,25 @@ claude plugin marketplace add dakcoh/commerce-backend-expert
 claude plugin install commerce-backend-expert@commerce-context-mcp
 ```
 
-The repository is now named `commerce-backend-expert`. The `@commerce-context-mcp` suffix is the marketplace identifier used by v0.3.0; it stays unchanged to preserve existing installations and updates.
+Hooks require Node.js 22 or later. Start a new conversation; Codex also requires reviewing and trusting definitions through `/hooks`. Execution after trust and actual resume/compaction remain unverified. See [client layouts](#client-layouts) and [client checks](CONTRIBUTING.md#client-checks).
 
-Use a new conversation after installation. Codex hooks require reviewing and trusting their definitions through `/hooks`; execution after trust and actual resume/compaction remain unverified. Prepare Node.js 22 or later when using hooks. For Cursor and OpenClaw, follow [client layouts](#client-layouts) below. You can also download the repository and provide the documents directly.
+`@commerce-context-mcp` is the marketplace identifier preserved for existing installations and updates. The current plugin runs no MCP server and uses a different installation path from the historical npm MCP package.
 
-1. Make the [general skill](skills/commerce-backend-expert/SKILL.md) or [payment/refund review skill](skills/commerce-review/SKILL.md) available to your AI. They share knowledge, so copy the entire `skills/` directory when moving them.
-2. Provide the relevant project and business conditions, and specify the requested task.
-3. Review the rules read, code locations, changes, executed tests, and unresolved conditions.
+### Make a request
 
-Reference the entry SKILL.md path and ask, for example:
+Provide the relevant project, business conditions, and requested task. When supplying documents directly, specify the SKILL.md path.
 
-> Read this skill and review my payment webhook. Trace callers, upstream validation, and persistence. Distinguish applicable guidance, confirmed defects, and remaining checks.
+> Use commerce-review to review this refund code. Trace callers, upstream validation, and persistence. Separate confirmed defects from further checks. Do not edit the code.
 
 | Task | Example request |
 |---|---|
 | Design | “Design recovery for direct database stock deduction and a lost payment approval response.” |
 | Implementation | “Use a date/sequence business key to prevent duplicates; check midnight retries and request-content conflicts.” |
 | Refactoring | “Simplify stock deduction while preserving returns, exceptions, transactions, and side-effect order.” |
-| Payment/refund review | “Use commerce-review to distinguish actual defects from additional checks in this refund code. Do not edit the code.” |
 | Incident analysis | “An approval response was lost. Explain what to inspect using the original transaction and state history.” |
+
+Check the rules read, code locations, changes, tests actually run, and unresolved conditions in the result.
+
 
 ## Read only relevant guidance
 
@@ -94,7 +112,7 @@ The [Claude](hooks/claude.json) and [Cursor](hooks/cursor.json) edit hooks are *
 
 Check each rule's conditions, exceptions, evidence scope, and review state. `active` means in use, not certified accurate. Nineteen rules are `needs-review`. `not-recorded` under `verifiedBy` or `lastReviewedAt` means there is no recorded review.
 
-The migrated documents were evaluated on seven synthetic development tasks. This does not establish live DB/PG behavior, automatic skill selection after installation, or correctness across all tasks. No token or response-time improvement is claimed. See [validation and its limits](CONTRIBUTING.md#validation).
+The [public behavior evaluation](benchmarks/README.md) uses fixed synthetic inputs and the actual skill text. It does not establish live DB/PG behavior, automatic skill selection after installation, or correctness across all tasks. No token or response-time improvement is claimed. See [validation and its limits](CONTRIBUTING.md#validation).
 
 ## Existing MCP users
 

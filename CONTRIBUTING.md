@@ -8,19 +8,19 @@ This guide is for contributors editing rules, validation tools, or client config
 
 ## Validation
 
-**Requires:** Node.js 22 or later. No dependency installation or JDK is needed.
+**Requires:** Node.js 22 or later. Run `npm ci --ignore-scripts` once to install the YAML parser used only by developer checks. No JDK is needed; document skills and session hooks do not use this dependency.
 
 After editing, run both commands from the repository root:
 
 ```bash
-node scripts/validate-skills.js
-node --test scripts/*.test.js
+npm run check
+npm test
 ```
 
 | Command | What it checks |
 |---|---|
-| `validate-skills.js` | Required bodies, metadata, reviews, evidence and dates; indexes, links and anchors; client configuration; retired MCP paths |
-| `node --test …` | Boundaries and regressions: deleted guidance, invalid metadata, path escapes, damaged indexes, and hook behavior |
+| `npm run check` | Required bodies, metadata, reviews, evidence and dates; indexes, links and anchors; client configuration; retired MCP paths |
+| `npm test` | Boundaries and regressions: deleted guidance, invalid metadata, path escapes, damaged indexes, and hook behavior |
 
 Neither command calls an LLM API or external service. Passing format checks does not establish guidance accuracy or live DB/PG behavior.
 
@@ -29,7 +29,7 @@ Neither command calls an LLM API or external service. Passing format checks does
 <details>
 <summary>Additional validation: AI behavior and migration parity</summary>
 
-**AI behavior:** Use the inputs and criteria in [synthetic development cases](tests/behavior-cases.md). Record actual document reads and hashes, final answers/diffs, executed tests and results, and unresolved conditions. A rule ID in an answer does not establish successful application.
+**AI behavior:** See the [public runner and results](benchmarks/README.md), and the inputs and criteria in [synthetic development cases](benchmarks/scenarios.md). Record actual document reads and hashes, final answers/diffs, executed tests and results, and unresolved conditions. A rule ID in an answer does not establish successful application.
 
 **Migration parity:** If a separately preserved capture of full rule records is available, pass it as an optional argument.
 
@@ -43,22 +43,23 @@ This compares all rule fields. Ordinary format checks detect structural loss, no
 
 ## Where to edit
 
-The Markdown in `skills/commerce-backend-expert/` is the knowledge source. Maintain the general skill, six domain indexes, and 70 rules together; the review skill references those same rules.
+The Markdown in `skills/commerce-backend-expert/` is the knowledge source. Maintain the general skill, six domain indexes, and 70 rules together. The review skill works independently and selects detailed rules only when the general skill is also available.
 
 | What you want to change | Location |
 |---|---|
 | Shared decision and development workflow | [SKILL.md](skills/commerce-backend-expert/SKILL.md) |
 | Payment/refund review workflow | [commerce-review](skills/commerce-review/SKILL.md) |
 | Individual rules and domain navigation | `skills/commerce-backend-expert/references/<domain>/<id>.md` and `INDEX.md` in the same folder |
-| Document checks and regression tests | [Validator](scripts/validate-skills.js), [tests](scripts/validate-skills.test.js) |
-| AI behavior inputs and evaluation criteria | [tests/behavior-cases.md](tests/behavior-cases.md) |
+| Document checks and behavior tests | [Validator](scripts/validate-skills.js), [tests/](tests/README.md) |
+| AI behavior inputs and evaluation criteria | [benchmarks/scenarios.md](benchmarks/scenarios.md) |
+| Model evaluation inputs, runner, and public records | [benchmarks/](benchmarks/README.md) |
 | Plugin metadata and client entrypoints | [plugin.json](plugin.json), `.<client>-plugin/plugin.json` |
 | Optional routing and external skill paths | [.cursor/rules/](.cursor/rules/), [.openclaw/](.openclaw/) |
 | Automatic checks after knowledge edits | [hooks/](hooks/) — see [setup](#optional-development-hooks) below |
 | Session guidance and on/off state | [hooks/session.js](hooks/session.js), [registration](hooks/session.json) |
 | Local installation, refresh, and removal checks | [scripts/smoke-plugin.js](scripts/smoke-plugin.js) |
 | CI environment | [.github/workflows/ci.yml](.github/workflows/ci.yml) |
-| Developer-script CommonJS scope | [package.json](package.json) — private, no dependencies |
+| Developer-script CommonJS scope and YAML parser | [package.json](package.json) — private, developer-check dependency only |
 
 Avoid duplicating shared guidance across domains. Split skills when independent tasks have distinct inputs, workflows, and success criteria. Do not reintroduce parallel Java-server or YAML knowledge maintenance.
 
@@ -74,6 +75,8 @@ Avoid duplicating shared guidance across domains. Split skills when independent 
 
 These are the required bodies for each document format. Retain common fields such as titles, applicability, checklists, and evidence as well. The headings below match the Korean knowledge files.
 
+SKILL.md frontmatter is parsed as YAML. `name` and `description` must be strings; `license`, `compatibility`, `allowed-tools`, and a string-valued `metadata` map are supported. Use a comma-separated string for `metadata.tags`. Keep each skill's LICENSE synchronized with the root license for standalone distribution.
+
 | Document format | Required body headings |
 |---|---|
 | `commerce` rules | `업무 맥락`, `반드시 지켜야 할 원칙`, `권장 흐름`, `기술 구현 참고`, `실패 시나리오` |
@@ -82,7 +85,8 @@ These are the required bodies for each document format. Retain common fields suc
 | Checklist-only documents with `category: checklist` | Use `검토 체크리스트`; the ordinary guidance sections above are not required |
 
 - Missing or empty required bodies fail validation. Deleting the entire refund guide also fails repository checks and the edit hook.
-- `##` headings delimit validated fields. Use `###` or deeper for body subheadings.
+- `##` headings delimit validated fields. List sections such as `구현 가이드`, `전제`, and checklists accept list items with two-space continuations, not subheadings. Use `###` or deeper only in free-text sections such as `업무 맥락` or an independent `판단 근거`.
+- Include `판단 근거` only when it adds reasoning beyond the summary/context. When omitted, the parser restores its comparison field from context or summary, so repeated text is unnecessary.
 - Within `출처`, preserve the evidence-field structure below each `###` heading.
 - Retain `적용 조건`, `전제`, and `적용하지 않는 조건`. Assumptions must not be empty. When there are no exclusions, leave only that section's body empty so intentional emptiness differs from a deleted section.
 
@@ -119,13 +123,15 @@ The checker handles Markdown edits inside `skills/`, validating both skills and 
 
 | Environment | Verified scope | Unverified or limited |
 |---|---|---|
-| Codex CLI 0.153.2 | Local installation/enabled state, equality of all 87 packaged files and cache, same-version reinstall, fixture-version upgrade, removal and cache removal. `SessionStart` and `UserPromptSubmit` discovered after omitting root `$schema` | Both hooks are correctly `untrusted`. Execution after user review/trust and actual resume/compaction remain unverified |
+| Codex CLI 0.153.2 | Local installation/enabled state, equality of all 89 current packaged files and cache, same-version reinstall, fixture-version upgrade, removal and cache removal. `SessionStart` and `UserPromptSubmit` discovered after omitting root `$schema` | Both hooks are correctly `untrusted`. Execution after user review/trust and actual resume/compaction remain unverified |
 | Codex app-server with a read-only file tool | Actual skill/rule reads for natural refund/webhook requests without explicit skill invocation; no commerce reads for CSS | Three synthetic cases, one run each. Does not establish native CLI-tool behavior, live DB/PG behavior, or quality gains against no plugin |
 | Claude Code 2.1.114 | Manifest validation and discovery of both skills. Successful live `SessionStart` from current sources without a prompt. Separate `commerce off` state write | The off-trial copy also contained a diagnostic default hook file. Inference stopped due to insufficient credits. Model application and actual resume/compaction unverified |
 | Cursor and OpenClaw | Repository configuration/path checks | Client execution unverified |
 | Optional hooks | Local checker and regression tests | Execution through client-registered hooks unverified |
+| Individual skill installation | Local installs of each skill and both together using `skills@1.7.4` on Node 24, with resolved references. Review-only installation needs no sibling folder | No model or session-hook execution |
+| Explicit skill application | Public [answers, hashes, and reads](benchmarks/README.md) for five current-skill cases: refund, valid webhook, synchronous webhook, watchdog, CSS | One run each; answers reviewed in the same Codex session. Separate from automatic discovery, a no-skill control, or live-system checks |
 
-Codex checks used a separate `CODEX_HOME` and work directory without changing normal user settings. The runtime fixture contained only manifests, license, module-scope configuration, routing rule, skills, and session hooks. Version-refresh checks changed fixture copies. Release sources also contain bilingual docs, marketplaces, and developer checks. These results do not establish hook execution across all clients.
+Plugin installation checks used a separate `CODEX_HOME` and work directory without changing normal user settings. The runtime fixture contained only manifests, license, module-scope configuration, routing rule, skills, and session hooks. Version-refresh checks changed fixture copies. Explicit skill evaluations use existing CLI authentication with process-local evaluation instructions and configuration. Release sources also contain bilingual docs, marketplaces, and developer checks. These results do not establish hook execution across all clients.
 
 Repeat the local installation check without credentials or model calls. Evidence is written under ignored `output/plugin-smoke-*` directories.
 
@@ -164,7 +170,7 @@ Official documentation used for format checks:
 <details>
 <summary>Previous synthetic evaluation and the v0.2.2 migration</summary>
 
-**Previous synthetic evaluation:** Seven tasks covered implementation, refactoring, review, incident analysis, partial code, unrelated frontend work, and cross-domain design. Generated implementations passed seven scenarios, refactoring passed 14 differential cases, and 11 additional checks passed. This did not establish live DB/PG behavior, browser execution, or automatic selection after installation.
+**Previous local evaluation:** The migration recorded seven tasks, including implementation and refactoring, but their execution artifacts are not public. They are not counted as reproducible current passes. See the [behavior evaluation](benchmarks/README.md) for current public inputs, runner, and records.
 
 **MCP migration:** This branch removes six knowledge YAML files, the Java MCP and its tests, Gradle, the npm launcher/JRE preparation, and JAR/npm publication workflows. Version v0.2.2 remains in its [tag](https://github.com/dakcoh/commerce-backend-expert/tree/v0.2.2). Temporary source backups and build artifacts were removed. Run or build the old MCP from that version; this branch is incompatible with old MCP settings.
 

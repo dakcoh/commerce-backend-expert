@@ -1,4 +1,13 @@
 {
+  "name": "commerce-backend-expert",
   "private": true,
-  "type": "commonjs"
+  "type": "commonjs",
+  "scripts": {
+    "check": "node scripts/validate-skills.js",
+    "test": "node --test tests/*.test.js",
+    "benchmark": "node scripts/evaluate-behavior.js"
+  },
+  "devDependencies": {
+    "yaml": "2.9.1"
+  }
 }

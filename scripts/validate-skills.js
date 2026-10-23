@@ -1,6 +1,7 @@
 const fs = require("node:fs");
 const path = require("node:path");
 const assert = require("node:assert/strict");
+const {parseDocument} = require("yaml");
 
 const skillRoot = path.resolve(__dirname, "../skills/commerce-backend-expert");
 const repositoryRoot = path.resolve(__dirname, "..");
@@ -81,6 +82,8 @@ function parseRule(text) {
   for (const key of ["verifiedBy", "lastReviewedAt", "changeNote"]) rule[key] = fields[key] === "not-recorded" ? null : fields[key];
   rule.applicability = {jurisdiction: fields.jurisdiction};
   for (const [key, name] of Object.entries(textNames)) rule[key] = sections.get(name) || "";
+  // Keep parsed migration records stable when a repeated rationale is omitted.
+  rule.rationale ||= rule.content || rule.summary;
   for (const [key, name] of Object.entries(listNames)) {
     const values = items(sections.get(name));
     if (["appliesWhen", "doesNotApplyWhen", "assumptions"].includes(key)) rule.applicability[key] = values;
@@ -172,10 +175,32 @@ function validateLinks(file, root) {
   return links;
 }
 
+function validateFrontmatter(text, expectedName) {
+  const match = /^---\r?\n([\s\S]*?)\r?\n---(?:\r?\n|$)/.exec(text);
+  assert.ok(match, "Skill YAML frontmatter is required");
+  const document = parseDocument(match[1], {schema: "core", uniqueKeys: true});
+  assert.equal(document.errors.length, 0, "Invalid skill YAML: " + document.errors.map(error => error.message).join("; "));
+  const fields = document.toJS({maxAliasCount: 10});
+  assert.ok(fields && typeof fields === "object" && !Array.isArray(fields), "Skill frontmatter must be a mapping");
+  const allowed = ["name", "description", "license", "compatibility", "metadata", "allowed-tools"];
+  for (const key of Object.keys(fields)) assert.ok(allowed.includes(key), `Unknown skill field: ${key}`);
+  for (const [key, maximum] of [["name", 64], ["description", 1024], ["license", Infinity], ["compatibility", 500], ["allowed-tools", Infinity]]) {
+    if (!["name", "description"].includes(key) && !(key in fields)) continue;
+    assert.ok(typeof fields[key] === "string" && fields[key].trim() && fields[key].length <= maximum, `Invalid skill ${key}: expected a nonempty string within ${maximum} characters`);
+  }
+  assert.match(fields.name, /^[a-z0-9]+(?:-[a-z0-9]+)*$/);
+  assert.equal(fields.name, expectedName, "Skill name must match its directory");
+  if ("metadata" in fields) {
+    assert.ok(fields.metadata && typeof fields.metadata === "object" && !Array.isArray(fields.metadata), "Skill metadata must be a string mapping");
+    assert.ok(Object.values(fields.metadata).every(value => typeof value === "string"), "Skill metadata values must be strings");
+  }
+  return fields;
+}
+
 function validateSkill(root = skillRoot) {
   root = path.resolve(root);
   const entry = path.join(root, "SKILL.md"), text = fs.readFileSync(entry, "utf8");
-  assert.match(text, /^---\r?\nname: commerce-backend-expert\r?\ndescription: .+\r?\n---/);
+  validateFrontmatter(text, "commerce-backend-expert");
   const rules = [], files = [entry]; let indexes = 0;
   for (const domain of domains) {
     const dir = path.join(root, "references", domain), index = path.join(dir, "INDEX.md");
@@ -208,9 +233,12 @@ function validateRepository(root = repositoryRoot) {
   }
   const result = validateSkill(path.join(root, "skills/commerce-backend-expert"));
   const review = path.join(root, "skills/commerce-review/SKILL.md");
-  assert.match(fs.readFileSync(review, "utf8"), /^---\r?\nname: commerce-review\r?\ndescription: .+\r?\n---/);
-  const reviewLinks = validateLinks(review, path.join(root, "skills"));
-  const documents = ["README.md", "README.ko.md", "CONTRIBUTING.md", "CONTRIBUTING.ko.md", "tests/behavior-cases.md", ".cursor/rules/commerce-backend.mdc"];
+  validateFrontmatter(fs.readFileSync(review, "utf8"), "commerce-review");
+  const reviewLinks = validateLinks(review, path.dirname(review));
+  for (const name of ["commerce-backend-expert", "commerce-review"]) {
+    assert.equal(fs.readFileSync(path.join(root, "skills", name, "LICENSE"), "utf8"), fs.readFileSync(path.join(root, "LICENSE"), "utf8"), `${name}: bundle the repository license`);
+  }
+  const documents = ["README.md", "README.ko.md", "CONTRIBUTING.md", "CONTRIBUTING.ko.md", "tests/README.md", "benchmarks/scenarios.md", "benchmarks/README.md", ".cursor/rules/commerce-backend.mdc"];
   const documentationLinks = documents.reduce((sum, relative) => sum + validateLinks(path.join(root, relative), root), 0);
   const manifest = JSON.parse(fs.readFileSync(path.join(root, "plugin.json"), "utf8"));
   // The portable schema marker hides bundled hooks in Codex CLI 0.153.2.
@@ -271,4 +299,4 @@ if (require.main === module) {
     console.log(JSON.stringify({rules: result.rules.length, indexes: result.indexes, files: result.files, localLinks: result.links, reviewLinks: result.reviewLinks, skills: result.skills, documentationLinks: result.documentationLinks, clientManifests: result.clientManifests, baselineParity: Boolean(process.argv[2])}));
   } catch (error) { console.error(error.message); process.exitCode = 1; }
 }
-module.exports = {parseRule, validateRules, validateLinks, validateSkill, validateRepository, compareBaseline};
+module.exports = {parseRule, validateRules, validateLinks, validateFrontmatter, validateSkill, validateRepository, compareBaseline};
