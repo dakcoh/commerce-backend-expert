@@ -33,4 +33,4 @@ jobs:
       - name: Validate knowledge and repository
         run: node scripts/validate-skills.js
       - name: Check boundaries and regressions
-        run: node --test scripts/validate-skills.test.js
+        run: node --test scripts/*.test.js

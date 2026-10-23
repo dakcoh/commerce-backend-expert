@@ -35,9 +35,19 @@ function copySkill(destination) {
 function repositoryFixture(t) {
   const destination = path.join(temporaryDirectory(t), "repository");
   copySkill(path.join(destination, "skills/commerce-backend-expert"));
-  for (const relative of ["README.md", "README.ko.md", "CONTRIBUTING.md", "CONTRIBUTING.ko.md", "LICENSE", "tests/behavior-cases.md", "package.json", "plugin.json", ".codex-plugin/plugin.json", ".claude-plugin/plugin.json", ".cursor-plugin/plugin.json", ".cursor/rules/commerce-backend.mdc", ".openclaw/skills.example.json", "hooks/claude.json", "hooks/cursor.json"]) {
+  fs.mkdirSync(path.join(destination, "skills/commerce-review"));
+  fs.copyFileSync(path.resolve(root, "../commerce-review/SKILL.md"), path.join(destination, "skills/commerce-review/SKILL.md"));
+  for (const relative of ["README.md", "README.ko.md", "CONTRIBUTING.md", "CONTRIBUTING.ko.md", "LICENSE", "tests/behavior-cases.md", "scripts/validate-skills.js", "scripts/validate-skills.test.js", ".github/workflows/ci.yml", "package.json", "plugin.json", ".codex-plugin/plugin.json", ".claude-plugin/plugin.json", ".cursor-plugin/plugin.json", ".cursor/rules/commerce-backend.mdc", ".openclaw/skills.example.json", "hooks/claude.json", "hooks/cursor.json"]) {
     fs.mkdirSync(path.dirname(path.join(destination, relative)), {recursive: true});
     fs.copyFileSync(path.join(root, "../..", relative), path.join(destination, relative));
+  }
+  for (const name of ["session.json", "session.js"]) fs.copyFileSync(path.resolve(root, "../../hooks", name), path.join(destination, "hooks", name));
+  fs.mkdirSync(path.join(destination, "tests/review-fixtures"));
+  fs.copyFileSync(path.resolve(root, "../../tests/review-fixtures/refund.js"), path.join(destination, "tests/review-fixtures/refund.js"));
+  fs.copyFileSync(path.resolve(root, "../../scripts/smoke-plugin.js"), path.join(destination, "scripts/smoke-plugin.js"));
+  for (const relative of [".agents/plugins/marketplace.json", ".claude-plugin/marketplace.json"]) {
+    fs.mkdirSync(path.dirname(path.join(destination, relative)), {recursive: true});
+    fs.copyFileSync(path.resolve(root, "../..", relative), path.join(destination, relative));
   }
   return destination;
 }
@@ -69,6 +79,58 @@ test("required applicability, duplicate IDs, evidence and related references can
   ]) {
     const rules = copyRules(); mutate(rules); assert.throws(() => validateRules(rules));
   }
+});
+
+test("applicability headings cannot disappear and assumptions cannot be emptied", () => {
+  for (const [domain, id, heading] of [
+    ["payment", "partial-refund", "전제"],
+    ["coupon", "coupon-issuance-compensation", "적용하지 않는 조건"],
+  ]) {
+    const source = fs.readFileSync(path.join(root, "references", domain, id + ".md"), "utf8").replaceAll("\r\n", "\n");
+    const start = source.indexOf("## " + heading + "\n"), end = source.indexOf("\n## ", start + 4);
+    assert.ok(start >= 0 && end > start);
+    assert.throws(() => parseRule(source.slice(0, start) + source.slice(end + 1)), new RegExp(`${id}: missing ${heading}`));
+  }
+  const rules = copyRules(); payment(rules).applicability.assumptions = [];
+  assert.throws(() => validateRules(rules), /payment-idempotency: missing assumptions/);
+  const unchanged = copyRules();
+  assert.ok(unchanged.some(rule => !rule.applicability.doesNotApplyWhen.length));
+  validateRules(unchanged);
+});
+
+test("each document format rejects deleted or empty core guidance", () => {
+  const formats = {
+    "partial-refund": ["guidance", "avoid-patterns"],
+    "commerce-order-lifecycle": ["invariants", "workflow", "technical-guidance", "failure-scenarios"],
+    "spring-commerce-transaction-boundary": ["spring-guidance", "avoid-patterns"],
+  };
+  for (const [id, sections] of Object.entries(formats)) {
+    for (const section of sections) for (const value of [undefined, []]) {
+      const rules = copyRules(), rule = rules.find(item => item.id === id);
+      if (value === undefined) delete rule.sections[section];
+      else rule.sections[section] = value;
+      assert.throws(() => validateRules(rules), new RegExp(`${id}: missing ${section}`));
+    }
+    if (id === "partial-refund") continue;
+    const rules = copyRules(); rules.find(item => item.id === id).content = "";
+    assert.throws(() => validateRules(rules), new RegExp(`${id}: missing content`));
+  }
+  const checklists = copyRules().filter(rule => rule.category === "checklist");
+  assert.equal(checklists.length, 4);
+  assert.ok(checklists.every(rule => !rule.content && !Object.keys(rule.sections).length));
+  validateRules(checklists);
+});
+
+test("repository validation and edit hook catch a removed refund guide", t => {
+  const isolated = repositoryFixture(t);
+  const file = path.join(isolated, "skills/commerce-backend-expert/references/payment/partial-refund.md");
+  const source = fs.readFileSync(file, "utf8");
+  const changed = source.replace(/## 구현 가이드\r?\n[\s\S]*?(?=## )/, "");
+  assert.notEqual(changed, source);
+  fs.writeFileSync(file, changed);
+  assert.throws(() => validateRepository(isolated), /partial-refund: missing guidance/);
+  assert.throws(() => validateEdit({file_path: file}, isolated), /partial-refund: missing guidance/);
+  assert.equal(fs.readFileSync(file, "utf8"), changed);
 });
 
 test("review metadata does not turn unreviewed high-risk guidance into an active rule", () => {
@@ -153,7 +215,7 @@ test("repository rejects retired runtime paths and broken user documentation", t
   assert.throws(() => validateRepository(isolated), /ENOENT/);
 });
 
-test("clients share one skill and cannot silently re-enable hooks or YAML knowledge", t => {
+test("clients share canonical skills and cannot silently enable developer hooks or YAML knowledge", t => {
   const isolated = repositoryFixture(t), file = path.join(isolated, ".cursor-plugin/plugin.json");
   const original = fs.readFileSync(file, "utf8"), manifest = JSON.parse(original);
   manifest.skills = "./copied-skills/"; fs.writeFileSync(file, JSON.stringify(manifest));
@@ -165,11 +227,41 @@ test("clients share one skill and cannot silently re-enable hooks or YAML knowle
   assert.throws(() => validateRepository(isolated), /only Markdown knowledge/);
 });
 
+test("review links stay inside the skill bundle and lifecycle manifests exclude edit validation", t => {
+  const isolated = repositoryFixture(t), review = path.join(isolated, "skills/commerce-review/SKILL.md");
+  assert.equal(validateRepository(isolated).skills, 2);
+  fs.appendFileSync(review, "\n[outside](../../LICENSE)\n");
+  assert.throws(() => validateRepository(isolated), /escapes skill/);
+  fs.writeFileSync(review, fs.readFileSync(path.resolve(root, "../commerce-review/SKILL.md")));
+  const file = path.join(isolated, ".codex-plugin/plugin.json"), manifest = JSON.parse(fs.readFileSync(file, "utf8"));
+  manifest.hooks = "./hooks/claude.json"; fs.writeFileSync(file, JSON.stringify(manifest));
+  assert.throws(() => validateRepository(isolated), /session hooks only/);
+});
+
+test("the portable schema marker cannot silently hide hooks in Codex CLI 0.153.2", t => {
+  const isolated = repositoryFixture(t), file = path.join(isolated, "plugin.json");
+  const manifest = JSON.parse(fs.readFileSync(file, "utf8"));
+  manifest.$schema = "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json";
+  fs.writeFileSync(file, JSON.stringify(manifest));
+  assert.throws(() => validateRepository(isolated), /hook discovery requires omitting the portable schema marker/);
+});
+
+test("public marketplaces install the canonical plugin from the repository root", t => {
+  const isolated = repositoryFixture(t);
+  for (const relative of [".agents/plugins/marketplace.json", ".claude-plugin/marketplace.json"]) {
+    const file = path.join(isolated, relative), original = fs.readFileSync(file, "utf8"), catalog = JSON.parse(original);
+    catalog.plugins[0].source = "./missing"; fs.writeFileSync(file, JSON.stringify(catalog));
+    assert.throws(() => validateRepository(isolated), /Marketplace must install the repository root/);
+    fs.writeFileSync(file, original);
+  }
+});
+
 test("optional edit hook validates its own knowledge and ignores other project files", () => {
   assert.deepEqual(validateEdit(null), {checked: false});
   assert.deepEqual(validateEdit({file_path: "relative.md"}), {checked: false});
   assert.deepEqual(validateEdit({file_path: path.resolve(root, "../../customer-service.java")}), {checked: false});
   assert.deepEqual(validateEdit({tool_input: {file_path: path.join(root, "references/payment/partial-refund.md")}}), {checked: true, rules: 70});
+  assert.deepEqual(validateEdit({file_path: path.resolve(root, "../commerce-review/SKILL.md")}), {checked: true, rules: 70});
 });
 
 test("optional hook reports invalid knowledge without editing it", t => {

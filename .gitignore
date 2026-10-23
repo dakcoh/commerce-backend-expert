@@ -7,6 +7,12 @@ Thumbs.db
 # Local dependencies and verification output
 node_modules/
 output/
+.npm-cache/
+
+# Generated files from legacy MCP checkouts
+/.gradle/
+/build/
+/logs/
 
 # Local client settings and credentials
 .claude/settings*.json

@@ -20,6 +20,8 @@ PG 키, JWT secret, 외부 API endpoint, feature flag는 환경별 설정으로 
 
 - spring-commerce 도메인의 configuration 기능을 설계하거나 구현한다.
 
+## 적용하지 않는 조건
+
 ## 전제
 
 - 실제 사업 정책과 외부 사업자 계약을 함께 확인한다.

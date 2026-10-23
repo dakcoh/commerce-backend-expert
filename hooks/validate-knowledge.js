@@ -6,7 +6,7 @@ function validateEdit(event, root = path.resolve(__dirname, "..")) {
   const file = event?.tool_input?.file_path ?? event?.file_path;
   if (typeof file !== "string" || !path.isAbsolute(file)) return {checked: false};
   root = path.resolve(root);
-  const target = path.resolve(file), skill = path.join(root, "skills", "commerce-backend-expert");
+  const target = path.resolve(file), skill = path.join(root, "skills");
   if (!target.startsWith(skill + path.sep) || !target.endsWith(".md")) return {checked: false};
   if (fs.existsSync(target) && !fs.realpathSync(target).startsWith(fs.realpathSync(skill) + path.sep)) throw Error("Knowledge edit escapes skill directory");
   const result = validateRepository(root);

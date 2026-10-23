@@ -20,6 +20,8 @@ orderId, money, quantity, email 같은 값을 String과 long으로 흩뿌리지 
 
 - spring-commerce 도메인의 java-core 기능을 설계하거나 구현한다.
 
+## 적용하지 않는 조건
+
 ## 전제
 
 - 실제 사업 정책과 외부 사업자 계약을 함께 확인한다.

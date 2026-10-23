@@ -14,6 +14,10 @@ const sectionNames = {
 const textNames = {summary: "요약", rationale: "판단 근거", content: "업무 맥락"};
 const listNames = {appliesWhen: "적용 조건", doesNotApplyWhen: "적용하지 않는 조건", assumptions: "전제", checklist: "검토 체크리스트", tags: "태그", aliases: "검색 표현", relatedRuleIds: "관련 규칙"};
 const evidenceKeys = ["source", "type", "sourceVersion", "publishedAt", "reviewedAt", "accessedAt", "note"];
+const requiredSections = {
+  commerce: ["invariants", "workflow", "technical-guidance", "failure-scenarios"],
+  "spring-commerce": ["spring-guidance", "avoid-patterns"],
+};
 
 function withoutFences(text) {
   let marker = "", length = 0;
@@ -69,6 +73,9 @@ function parseRule(text) {
   const header = sections.get("") || "", title = /^# (.+)\n\n/.exec(header);
   assert.ok(title, "Rule title is required");
   const fields = pairs(header.slice(title[0].length), metadata);
+  for (const heading of ["적용 조건", "적용하지 않는 조건", "전제"]) {
+    assert.ok(sections.has(heading), `${fields.id}: missing ${heading}`);
+  }
   const rule = {id: fields.id, domain: fields.domain, category: fields.category, title: title[1],
     severity: fields.severity, status: fields.status, evidenceLevel: fields.evidenceLevel, owner: fields.owner};
   for (const key of ["verifiedBy", "lastReviewedAt", "changeNote"]) rule[key] = fields[key] === "not-recorded" ? null : fields[key];
@@ -118,7 +125,14 @@ function validateRules(rules, today = new Intl.DateTimeFormat("sv-SE", {timeZone
     assert.ok(["info", "low", "medium", "high", "critical"].includes(rule.severity));
     assert.ok(["active", "needs-review", "deprecated"].includes(rule.status));
     assert.ok(rule.applicability.appliesWhen.length && rule.applicability.jurisdiction.trim(), `${rule.id}: missing applicability`);
+    assert.ok(rule.applicability.assumptions.length, `${rule.id}: missing assumptions`);
     assert.ok(rule.tags.length && rule.checklist.length, `${rule.id}: missing tags/checklist`);
+    if (rule.category !== "checklist") {
+      for (const section of requiredSections[rule.domain] || ["guidance", "avoid-patterns"]) {
+        assert.ok(rule.sections[section]?.length, `${rule.id}: missing ${section}`);
+      }
+      if (requiredSections[rule.domain]) assert.ok(rule.content.trim(), `${rule.id}: missing content`);
+    }
     assert.ok(rule.evidence.length, `${rule.id}: missing evidence`);
     validateDate(rule.lastReviewedAt, today);
     if (rule.verifiedBy || rule.lastReviewedAt || rule.changeNote) assert.ok(rule.verifiedBy?.trim() && rule.lastReviewedAt && rule.changeNote?.trim(), `${rule.id}: incomplete review`);
@@ -193,19 +207,45 @@ function validateRepository(root = repositoryRoot) {
     assert.ok(!fs.existsSync(path.join(root, legacy)), `Removed runtime path returned: ${legacy}`);
   }
   const result = validateSkill(path.join(root, "skills/commerce-backend-expert"));
+  const review = path.join(root, "skills/commerce-review/SKILL.md");
+  assert.match(fs.readFileSync(review, "utf8"), /^---\r?\nname: commerce-review\r?\ndescription: .+\r?\n---/);
+  const reviewLinks = validateLinks(review, path.join(root, "skills"));
   const documents = ["README.md", "README.ko.md", "CONTRIBUTING.md", "CONTRIBUTING.ko.md", "tests/behavior-cases.md", ".cursor/rules/commerce-backend.mdc"];
   const documentationLinks = documents.reduce((sum, relative) => sum + validateLinks(path.join(root, relative), root), 0);
   const manifest = JSON.parse(fs.readFileSync(path.join(root, "plugin.json"), "utf8"));
+  // The portable schema marker hides bundled hooks in Codex CLI 0.153.2.
+  assert.ok(!manifest.$schema, "Codex CLI 0.153.2 hook discovery requires omitting the portable schema marker");
   assert.equal(manifest.name, "commerce-backend-expert");
   assert.match(manifest.version, /^\d+\.\d+\.\d+(?:-[a-z0-9.-]+)?$/);
   assert.ok(manifest.description?.trim());
+  assert.equal(manifest.extensions?.["com.openai"]?.hooks, "./hooks/session.json");
   for (const client of ["codex", "claude", "cursor"]) {
     const adapter = JSON.parse(fs.readFileSync(path.join(root, `.${client}-plugin/plugin.json`), "utf8"));
     for (const key of ["name", "version", "description"]) assert.equal(adapter[key], manifest[key], `${client}: inconsistent ${key}`);
     assert.equal(adapter.skills, "./skills/", `${client}: must use canonical skills`);
-    assert.ok(!adapter.hooks && !adapter.mcpServers, `${client}: hooks and MCP must not run by default`);
+    assert.ok(!adapter.mcpServers, `${client}: MCP must not run by default`);
+    if (client === "cursor") assert.ok(!adapter.hooks, "cursor: hooks must not run by default");
+    else assert.equal(adapter.hooks, "./hooks/session.json", `${client}: must use session hooks only`);
+    if (client === "codex") assert.deepEqual(adapter.interface, manifest.extensions["com.openai"].interface);
+  }
+  for (const [relative, source] of [[".agents/plugins/marketplace.json", {source: "local", path: "./"}], [".claude-plugin/marketplace.json", "./"]]) {
+    const catalog = JSON.parse(fs.readFileSync(path.join(root, relative), "utf8"));
+    assert.equal(catalog.name, "commerce-context-mcp");
+    assert.equal(catalog.plugins.length, 1);
+    assert.equal(catalog.plugins[0].name, manifest.name, "Marketplace must reference the canonical plugin");
+    assert.deepEqual(catalog.plugins[0].source, source, "Marketplace must install the repository root");
   }
   assert.ok(!fs.existsSync(path.join(root, "hooks/hooks.json")), "Optional hooks must not be auto-discovered");
+  const session = JSON.parse(fs.readFileSync(path.join(root, "hooks/session.json"), "utf8"));
+  assert.deepEqual(Object.keys(session.hooks), ["SessionStart", "UserPromptSubmit"]);
+  const sessionCommand = 'node -e "require(require(\'path\').join(process.env.PLUGIN_ROOT || process.env.CLAUDE_PLUGIN_ROOT, \'hooks/session.js\')).main()"';
+  for (const [event, groups] of Object.entries(session.hooks)) {
+    assert.equal(groups.length, 1); assert.equal(groups[0].hooks.length, 1);
+    assert.deepEqual(groups[0].hooks[0], {type: "command", command: sessionCommand, timeout: 5});
+    if (event === "SessionStart") assert.equal(groups[0].matcher, "startup|resume|clear|compact|fork");
+    else assert.ok(!groups[0].matcher);
+  }
+  assert.ok(fs.statSync(path.join(root, "hooks/session.js")).isFile());
   const openclaw = JSON.parse(fs.readFileSync(path.join(root, ".openclaw/skills.example.json"), "utf8"));
   assert.equal(openclaw.skills.load.extraDirs.length, 1);
   assert.ok(openclaw.skills.load.extraDirs[0].endsWith("/context-mcp/skills"));
@@ -217,7 +257,7 @@ function validateRepository(root = repositoryRoot) {
     const command = client === "claude" ? handlers[0].hooks[0].command : handlers[0].command;
     assert.ok(command.includes("/hooks/validate-knowledge.js"));
   }
-  return {...result, documentationLinks, clientManifests: 3};
+  return {...result, documentationLinks, reviewLinks, skills: 2, clientManifests: 3};
 }
 
 if (require.main === module) {
@@ -227,7 +267,7 @@ if (require.main === module) {
       const baseline = JSON.parse(fs.readFileSync(process.argv[2], "utf8"));
       compareBaseline(result.rules, baseline);
     }
-    console.log(JSON.stringify({rules: result.rules.length, indexes: result.indexes, files: result.files, localLinks: result.links, documentationLinks: result.documentationLinks, clientManifests: result.clientManifests, baselineParity: Boolean(process.argv[2])}));
+    console.log(JSON.stringify({rules: result.rules.length, indexes: result.indexes, files: result.files, localLinks: result.links, reviewLinks: result.reviewLinks, skills: result.skills, documentationLinks: result.documentationLinks, clientManifests: result.clientManifests, baselineParity: Boolean(process.argv[2])}));
   } catch (error) { console.error(error.message); process.exitCode = 1; }
 }
 module.exports = {parseRule, validateRules, validateLinks, validateSkill, validateRepository, compareBaseline};
