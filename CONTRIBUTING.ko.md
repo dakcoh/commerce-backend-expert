@@ -8,7 +8,7 @@
 
 ## 검증
 
-**준비:** Node.js 22 이상. 처음에는 `npm ci --ignore-scripts`로 개발 검사 전용 YAML 파서를 설치합니다. JDK는 필요하지 않으며, 문서 스킬·세션 훅에는 이 의존성을 사용하지 않습니다.
+**개발 기준:** Node.js 24.22.1 LTS를 사용하며 [.nvmrc](.nvmrc)에 버전을 기록합니다. 처음에는 `npm ci --ignore-scripts`로 개발 검사 전용 YAML 파서를 설치합니다. JDK는 필요하지 않으며, 문서 스킬·세션 훅에는 이 의존성을 사용하지 않습니다.
 
 수정 후 저장소 루트에서 두 명령을 실행합니다.
 
@@ -24,7 +24,7 @@ npm test
 
 두 명령은 LLM API나 외부 서비스를 호출하지 않습니다. 형식 검사 통과가 지침의 정확성이나 실제 DB·PG 동작을 보장하지는 않습니다.
 
-[CI](.github/workflows/ci.yml)는 Ubuntu·Windows·macOS에서 Node 22·24로 같은 검사를 실행하도록 구성되어 있습니다. 로컬 통과와 원격 CI 완료를 구분해 기록합니다.
+[CI](.github/workflows/ci.yml)는 Ubuntu·Windows·macOS에서 Node.js 24.22.1과 보안 패치가 적용된 Node.js 22.23.4로 같은 검사를 실행해 호환성을 확인하도록 구성되어 있습니다. 로컬 통과와 원격 CI 완료를 구분해 기록합니다.
 
 <details>
 <summary>추가 검증: AI 행동과 이관 동등성</summary>
@@ -99,7 +99,7 @@ SKILL.md frontmatter는 실제 YAML로 검사합니다. `name`·`description`은
 
 ## 세션 훅
 
-Codex·Claude manifest는 [session.json](hooks/session.json)의 `SessionStart`·`UserPromptSubmit`을 등록합니다. Node.js 22 이상이 필요하며 문서 스킬만 사용하는 경로는 별도로 유지합니다. Codex는 훅 정의를 사용자가 검토·신뢰해야 실행합니다. 설치만으로 신뢰를 설정하지 않습니다.
+Codex·Claude manifest는 [session.json](hooks/session.json)의 `SessionStart`·`UserPromptSubmit`을 등록합니다. 훅에는 Node.js 24.22.1 LTS를 사용하며 문서 스킬만 사용하는 경로는 별도로 유지합니다. Codex는 훅 정의를 사용자가 검토·신뢰해야 실행합니다. 설치만으로 신뢰를 설정하지 않습니다.
 
 Codex CLI 0.153.2에서는 루트 manifest에 Agent Plugins `$schema`가 있으면 번들 훅 목록이 비어 있는 현상을 재현했습니다. 같은 패키지에서 이 필드만 제외하면 두 세션 훅이 발견됩니다. 호환성을 위해 현재 루트 manifest에서 `$schema`를 생략하며, OpenAI 설정과 클라이언트별 진입 설정은 유지합니다. 버전별 실측 없이 이 필드를 다시 추가하지 않습니다.
 
@@ -112,7 +112,7 @@ Codex CLI 0.153.2에서는 루트 manifest에 Agent Plugins `$schema`가 있으�
 스킬 지식을 편집할 때 자동 검사를 원하는 경우에만 설정합니다. 위 세션 훅과 별개이며, 기본 manifest에는 편집 검사를 등록하지 않습니다.
 
 1. [Claude 템플릿](hooks/claude.json) 또는 [Cursor 템플릿](hooks/cursor.json)을 선택합니다.
-2. 명령의 `${CLAUDE_PLUGIN_ROOT}` 또는 `${CURSOR_PLUGIN_ROOT}`를 이 저장소의 절대경로로 바꿉니다. Node.js 22 이상이 필요합니다.
+2. 명령의 `${CLAUDE_PLUGIN_ROOT}` 또는 `${CURSOR_PLUGIN_ROOT}`를 이 저장소의 절대경로로 바꿉니다. Node.js 24.22.1 LTS를 사용합니다.
 3. 해당 클라이언트의 프로젝트·사용자 훅 설정에 이벤트를 병합합니다. 기존 설정 전체를 덮어쓰지 않습니다.
 
 검사 범위는 `skills/` 안의 Markdown 편집입니다. 두 스킬과 공유 규칙을 함께 검사합니다. 외부 프로젝트 파일은 건너뛰며 파일·설정 변경, 네트워크 호출, 자동 프롬프트 주입을 하지 않습니다. 입력은 64KiB로 제한하고 정상 실행은 아무것도 출력하지 않습니다. OpenClaw에는 이 두 클라이언트의 훅을 연결하지 않습니다.

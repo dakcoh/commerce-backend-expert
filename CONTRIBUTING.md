@@ -8,7 +8,7 @@ This guide is for contributors editing rules, validation tools, or client config
 
 ## Validation
 
-**Requires:** Node.js 22 or later. Run `npm ci --ignore-scripts` once to install the YAML parser used only by developer checks. No JDK is needed; document skills and session hooks do not use this dependency.
+**Development version:** Node.js 24.22.1 LTS, recorded in [.nvmrc](.nvmrc). Run `npm ci --ignore-scripts` once to install the YAML parser used only by developer checks. No JDK is needed; document skills and session hooks do not use this dependency.
 
 After editing, run both commands from the repository root:
 
@@ -24,7 +24,7 @@ npm test
 
 Neither command calls an LLM API or external service. Passing format checks does not establish guidance accuracy or live DB/PG behavior.
 
-[CI](.github/workflows/ci.yml) is configured to run the same checks on Ubuntu, Windows, and macOS with Node 22 and 24. Record local passes separately from completed remote CI.
+[CI](.github/workflows/ci.yml) is configured to run the same checks on Ubuntu, Windows, and macOS with Node.js 24.22.1 and the security-patched Node.js 22.23.4 for compatibility. Record local passes separately from completed remote CI.
 
 <details>
 <summary>Additional validation: AI behavior and migration parity</summary>
@@ -99,7 +99,7 @@ SKILL.md frontmatter is parsed as YAML. `name` and `description` must be strings
 
 ## Session hooks
 
-Codex and Claude manifests register `SessionStart` and `UserPromptSubmit` through [session.json](hooks/session.json). Node.js 22 or later is required; document-only skill usage remains available separately. Codex requires user review/trust of hook definitions. Installation does not grant trust.
+Codex and Claude manifests register `SessionStart` and `UserPromptSubmit` through [session.json](hooks/session.json). Use Node.js 24.22.1 LTS for hooks; document-only skill usage remains available separately. Codex requires user review/trust of hook definitions. Installation does not grant trust.
 
 Codex CLI 0.153.2 reports no bundled hooks when the root manifest declares the Agent Plugins `$schema`. Removing only that field from the same package makes both session hooks discoverable. The root manifest currently omits `$schema` for compatibility while retaining OpenAI settings and client entrypoints. Retest the affected client versions before restoring it.
 
@@ -112,7 +112,7 @@ Direct execution/protocol tests cover valid input, isolated state, resume/compac
 Configure edit hooks only if you want automatic checks while editing skill knowledge. They are separate from the session hooks above and are not registered in default manifests.
 
 1. Choose the [Claude template](hooks/claude.json) or [Cursor template](hooks/cursor.json).
-2. Replace `${CLAUDE_PLUGIN_ROOT}` or `${CURSOR_PLUGIN_ROOT}` in the command with this repository's absolute path. Node.js 22 or later is required.
+2. Replace `${CLAUDE_PLUGIN_ROOT}` or `${CURSOR_PLUGIN_ROOT}` in the command with this repository's absolute path. Use Node.js 24.22.1 LTS.
 3. Merge the event into the client's project/user hook settings. Preserve existing settings.
 
 The checker handles Markdown edits inside `skills/`, validating both skills and shared rules together. It skips external project files and makes no file/settings changes, network calls, or automatic prompt injections. Input is limited to 64 KiB; successful runs are silent. Do not wire these client hooks into OpenClaw.

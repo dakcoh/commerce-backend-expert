@@ -8,7 +8,7 @@ English · [한국어](README.ko.md)
 
 The skill guides an AI through actual code and business conditions, then selects relevant guidance for the requested development task. It includes 70 rules covering orders, inventory, payments, coupons, settlement, and Java/Spring.
 
-Document-only skill usage requires no Java or Node.js installation, MCP server, or separate API key. The plugin's session hooks require Node.js 22 or later. AI-client access and project build/test requirements remain those of their respective environments.
+Document-only skill usage requires no Java or Node.js installation, MCP server, or separate API key. For the plugin's session hooks, use Node.js 24.22.1 LTS; compatibility is also tested on Node.js 22.23.4. AI-client access and project build/test requirements remain those of their respective environments.
 
 ## What does it help catch?
 
@@ -46,7 +46,7 @@ claude plugin marketplace add dakcoh/commerce-backend-expert
 claude plugin install commerce-backend-expert@commerce-context-mcp
 ```
 
-Hooks require Node.js 22 or later. Start a new conversation; Codex also requires reviewing and trusting definitions through `/hooks`. Execution after trust and actual resume/compaction remain unverified. See [client layouts](#client-layouts) and [client checks](CONTRIBUTING.md#client-checks).
+Use Node.js 24.22.1 LTS for hooks. Start a new conversation; Codex also requires reviewing and trusting definitions through `/hooks`. Execution after trust and actual resume/compaction remain unverified. See [client layouts](#client-layouts) and [client checks](CONTRIBUTING.md#client-checks).
 
 `@commerce-context-mcp` is the marketplace identifier preserved for existing installations and updates. The current plugin runs no MCP server and uses a different installation path from the historical npm MCP package.
 
