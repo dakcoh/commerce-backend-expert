@@ -8,19 +8,19 @@
 
 ## 검증
 
-**준비:** Node.js 22 이상. 의존성 설치와 JDK는 필요하지 않습니다.
+**준비:** Node.js 22 이상. 처음에는 `npm ci --ignore-scripts`로 개발 검사 전용 YAML 파서를 설치합니다. JDK는 필요하지 않으며, 문서 스킬·세션 훅에는 이 의존성을 사용하지 않습니다.
 
 수정 후 저장소 루트에서 두 명령을 실행합니다.
 
 ```bash
-node scripts/validate-skills.js
-node --test scripts/*.test.js
+npm run check
+npm test
 ```
 
 | 명령 | 확인하는 내용 |
 |---|---|
-| `validate-skills.js` | 필수 본문·메타데이터·검토 기록·근거·날짜, 색인·링크·앵커, 클라이언트 설정, 제거한 MCP 경로의 재등장 |
-| `node --test …` | 가이드 삭제·잘못된 메타데이터·경로 이탈·색인 손상·훅 동작 등의 경계·회귀 사례 |
+| `npm run check` | 필수 본문·메타데이터·검토 기록·근거·날짜, 색인·링크·앵커, 클라이언트 설정, 제거한 MCP 경로의 재등장 |
+| `npm test` | 가이드 삭제·잘못된 메타데이터·경로 이탈·색인 손상·훅 동작 등의 경계·회귀 사례 |
 
 두 명령은 LLM API나 외부 서비스를 호출하지 않습니다. 형식 검사 통과가 지침의 정확성이나 실제 DB·PG 동작을 보장하지는 않습니다.
 
@@ -29,7 +29,7 @@ node --test scripts/*.test.js
 <details>
 <summary>추가 검증: AI 행동과 이관 동등성</summary>
 
-**AI 행동 평가:** [합성 개발 사례](tests/behavior-cases.md)의 입력과 판정 기준을 사용합니다. 실제 읽은 문서와 해시, 최종 답변·diff, 실행한 테스트·결과, 미확인 조건을 기록합니다. 답변에 규칙 ID가 있다는 이유만으로 문서 적용을 합격 처리하지 않습니다.
+**AI 행동 평가:** [공개 실행 방법과 결과](benchmarks/README.md), [합성 개발 사례](benchmarks/scenarios.md)의 입력과 판정 기준을 사용합니다. 실제 읽은 문서와 해시, 최종 답변·diff, 실행한 테스트·결과, 미확인 조건을 기록합니다. 답변에 규칙 ID가 있다는 이유만으로 문서 적용을 합격 처리하지 않습니다.
 
 **이관 동등성:** 별도로 보관한 전체 규칙 JSON이 있을 때만 선택 인자로 전달합니다.
 
@@ -43,22 +43,23 @@ node scripts/validate-skills.js /path/to/baseline.json
 
 ## 수정 위치
 
-지식 원본은 `skills/commerce-backend-expert/`의 Markdown입니다. 대표 스킬·파트 색인 6개·규칙 70개를 관리하고, 리뷰 스킬은 같은 규칙을 참조합니다.
+지식 원본은 `skills/commerce-backend-expert/`의 Markdown입니다. 대표 스킬·파트 색인 6개·규칙 70개를 관리합니다. 리뷰 스킬은 독립적으로 동작하고, 대표 스킬이 함께 제공될 때만 상세 규칙을 선택합니다.
 
 | 바꾸려는 내용 | 수정 위치 |
 |---|---|
 | 공통 판단·개발 절차 | [SKILL.md](skills/commerce-backend-expert/SKILL.md) |
 | 결제·환불 리뷰 절차 | [commerce-review](skills/commerce-review/SKILL.md) |
 | 개별 규칙과 파트별 탐색 | `skills/commerce-backend-expert/references/<파트>/<ID>.md`와 같은 폴더의 `INDEX.md` |
-| 문서 검사와 회귀 테스트 | [검사기](scripts/validate-skills.js), [테스트](scripts/validate-skills.test.js) |
-| AI 행동 평가의 입력·판정 기준 | [tests/behavior-cases.md](tests/behavior-cases.md) |
+| 문서 검사와 동작별 회귀 테스트 | [검사기](scripts/validate-skills.js), [tests/](tests/README.md) |
+| AI 행동 평가의 입력·판정 기준 | [benchmarks/scenarios.md](benchmarks/scenarios.md) |
+| 실제 모델 적용의 입력·실행·공개 기록 | [benchmarks/](benchmarks/README.md) |
 | 플러그인 메타데이터·클라이언트 진입 설정 | [plugin.json](plugin.json), `.<client>-plugin/plugin.json` |
 | 선택적 라우팅·외부 스킬 경로 | [.cursor/rules/](.cursor/rules/), [.openclaw/](.openclaw/) |
 | 지식 편집 후 자동 검사 | [hooks/](hooks/) — 아래의 [설정 절차](#선택적-개발-훅) 참고 |
 | 사용자 세션의 지침·켜기·끄기 | [hooks/session.js](hooks/session.js), [등록 설정](hooks/session.json) |
 | 로컬 설치·갱신·제거 시험 | [scripts/smoke-plugin.js](scripts/smoke-plugin.js) |
 | CI 실행 환경 | [.github/workflows/ci.yml](.github/workflows/ci.yml) |
-| 개발 스크립트의 CommonJS 범위 | [package.json](package.json) — 비공개·의존성 없음 |
+| 개발 스크립트의 CommonJS 범위·YAML 파서 | [package.json](package.json) — 비공개·개발 검사 의존성만 포함 |
 
 공통 지침을 파트마다 복제하지 않습니다. 입력·절차·성공 기준이 다른 독립 업무가 확인될 때 스킬을 나눕니다. Java 서버나 YAML 지식을 다시 병행 관리하지 않습니다.
 
@@ -74,6 +75,8 @@ node scripts/validate-skills.js /path/to/baseline.json
 
 아래는 문서 형식별 필수 본문입니다. 제목·적용 조건·체크리스트·근거 등 공통 필드도 유지해야 합니다.
 
+SKILL.md frontmatter는 실제 YAML로 검사합니다. `name`·`description`은 문자열이며 `license`·`compatibility`·`allowed-tools`와 문자열 맵인 `metadata`를 허용합니다. `metadata.tags`는 쉼표로 구분한 문자열로 기록합니다. 스킬을 단독 배포할 때의 고지를 위해 각 스킬의 LICENSE를 루트 라이선스와 함께 유지합니다.
+
 | 문서 형식 | 필수 본문 제목 |
 |---|---|
 | `commerce` 규칙 | `업무 맥락`, `반드시 지켜야 할 원칙`, `권장 흐름`, `기술 구현 참고`, `실패 시나리오` |
@@ -82,7 +85,8 @@ node scripts/validate-skills.js /path/to/baseline.json
 | `category: checklist` 전용 문서 | `검토 체크리스트`로 구성하며 위의 일반 가이드는 요구하지 않음 |
 
 - 필수 본문이 없거나 비어 있으면 검사에 실패합니다. 환불 가이드 전체 삭제도 저장소 검사와 편집 훅에서 차단합니다.
-- `##` 제목은 검증기가 필드를 구분하는 기준입니다. 본문 소제목에는 `###` 이하를 사용합니다.
+- `##` 제목은 검증기가 필드를 구분하는 기준입니다. `구현 가이드`·`전제`·체크리스트 등 목록 절에는 항목과 두 칸 들여쓰기를 사용하며 소제목을 넣지 않습니다. `업무 맥락`·독립적인 `판단 근거` 등 자유 텍스트 절에서만 `###` 이하 소제목을 사용할 수 있습니다.
+- `판단 근거`는 요약·업무 맥락과 다른 설명이 있을 때만 둡니다. 생략하면 검사기는 업무 맥락 또는 요약으로 비교 필드를 복원하므로 같은 문장을 복제하지 않습니다.
 - `출처` 안에서는 각 `###` 제목 아래의 근거 필드 구조를 유지합니다.
 - `적용 조건`·`전제`·`적용하지 않는 조건` 절을 모두 유지합니다. 전제는 비워두지 않습니다. 예외가 없으면 `적용하지 않는 조건`의 본문만 비워 두어, 의도적인 빈 값과 절 삭제를 구분합니다.
 
@@ -119,13 +123,15 @@ Codex CLI 0.153.2에서는 루트 manifest에 Agent Plugins `$schema`가 있으�
 
 | 환경 | 확인한 범위 | 미확인·제한 |
 |---|---|---|
-| Codex CLI 0.153.2 | 로컬 설치·활성 상태, 패키지 87개 파일의 캐시 일치, 같은 버전 재설치·시험용 버전 간 갱신, 제거·캐시 삭제. 루트 `$schema` 제외 후 `SessionStart`·`UserPromptSubmit` 발견 | 두 훅은 예상대로 `untrusted`. 사용자 검토·신뢰 후 실제 실행과 재개·압축 동작은 미확인 |
+| Codex CLI 0.153.2 | 로컬 설치·활성 상태, 현 패키지 89개 파일의 캐시 일치, 같은 버전 재설치·시험용 버전 간 갱신, 제거·캐시 삭제. 루트 `$schema` 제외 후 `SessionStart`·`UserPromptSubmit` 발견 | 두 훅은 예상대로 `untrusted`. 사용자 검토·신뢰 후 실제 실행과 재개·압축 동작은 미확인 |
 | Codex app-server + 읽기 전용 파일 도구 | 스킬을 명시하지 않은 환불·웹훅 리뷰에서 실제 스킬·규칙 조회, CSS 요청에서 커머스 문서 미조회 | 합성 사례 3개·각 1회. 기본 CLI 도구 환경·실제 DB/PG 검증이나 미사용 대비 품질 향상 증거는 아님 |
 | Claude Code 2.1.114 | manifest 검사, 스킬 2개 발견. 현 소스에서 프롬프트 없이 실제 `SessionStart` 성공 응답 확인. 별도 시험에서 `commerce off` 상태 기록 | off 시험 복사본에는 진단용 기본 훅 파일도 존재. 추론은 크레딧 부족으로 중단. 모델의 문서 적용과 실제 재개·압축 동작 미검증 |
 | Cursor·OpenClaw | 저장소의 설정 형식·경로 검사 | 실제 클라이언트 실행 미검증 |
 | 선택적 훅 | 로컬 검사기·회귀 테스트 | 클라이언트에 등록한 훅 실행 미검증 |
+| 개별 스킬 설치 | `skills@1.7.4`·Node 24에서 대표·리뷰 각각 및 동시 로컬 설치 후 참조 확인. 리뷰 단독 설치는 형제 폴더를 요구하지 않음 | 설치 검사는 모델·세션 훅을 실행하지 않음 |
+| 명시적 스킬 적용 평가 | 현재 스킬 본문을 제공한 환불·정상 웹훅·동기 웹훅·watchdog·CSS 5개 사례의 답변·해시·조회를 [공개](benchmarks/README.md) | 각 1회·같은 Codex 세션의 답변 검토. 자동 발견·미사용 대조군·운영 검증과 별개 |
 
-Codex 시험은 별도의 `CODEX_HOME`과 작업 폴더에서 수행했으며 평소 사용자 설정은 변경하지 않았습니다. 런타임 시험용 패키지는 manifest·라이선스·모듈 범위 설정·라우팅 규칙·스킬·세션 훅만 포함했습니다. 버전 갱신 검사는 시험용 복사본에서 수행했습니다. 배포 소스에는 한영 문서·마켓플레이스·개발 검사 도구도 포함합니다. 위 결과를 모든 클라이언트의 훅 실행 검증으로 확대하지 않습니다.
+플러그인 설치 시험은 별도의 `CODEX_HOME`과 작업 폴더에서 수행했으며 평소 사용자 설정은 변경하지 않았습니다. 런타임 시험용 패키지는 manifest·라이선스·모듈 범위 설정·라우팅 규칙·스킬·세션 훅만 포함했습니다. 버전 갱신 검사는 시험용 복사본에서 수행했습니다. 명시적 스킬 평가는 기존 인증을 CLI를 통해 사용하며 프로세스 안에서 평가용 지침·설정을 지정합니다. 배포 소스에는 한영 문서·마켓플레이스·개발 검사 도구도 포함합니다. 위 결과를 모든 클라이언트의 훅 실행 검증으로 확대하지 않습니다.
 
 로컬 설치 시험은 모델·인증 정보 없이 재현할 수 있습니다. 결과는 무시되는 `output/plugin-smoke-*`에 남습니다.
 
@@ -164,7 +170,7 @@ Codex 설치 명령은 모델의 자동 선택을 검증하지 않습니다. Cla
 <details>
 <summary>기존 합성 평가와 v0.2.2 전환 배경</summary>
 
-**기존 합성 평가:** 구현·리팩터링·리뷰·장애 분석·일부 코드·일반 화면·복합 설계의 업무 7개를 평가했습니다. 구현 시나리오 7개, 리팩터링 차등 사례 14개, 별도 확인 11개를 통과했습니다. 실제 DB·PG·브라우저·설치 후 자동 선택을 검증한 기록은 아닙니다.
+**이전 로컬 평가:** 이관 당시 구현·리팩터링 등 7개 업무를 확인한 기록이 있으나 실행 자료가 공개돼 있지 않아 현재 재현 가능한 합격 수치로 집계하지 않습니다. 현재 공개 입력·실행 도구·결과는 [행동 평가](benchmarks/README.md)에서 확인합니다.
 
 **MCP 전환:** 이 브랜치에서는 YAML 6개, Java MCP와 테스트, Gradle, npm 런처·JRE 준비, JAR/npm 게시 워크플로를 제거했습니다. 기존 v0.2.2는 [태그](https://github.com/dakcoh/commerce-backend-expert/tree/v0.2.2)에 보존했습니다. 임시 소스 백업·빌드 산출물은 정리했으며, 기존 MCP 실행·빌드는 해당 버전에서 확인합니다. 현재 브랜치는 예전 MCP 설정과 호환되지 않습니다.
 

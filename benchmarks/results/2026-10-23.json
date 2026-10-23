@@ -1,0 +1,268 @@
+{
+  "recordedAt": "2026-10-23",
+  "cases": [
+    {
+      "id": "refund-overlap",
+      "prompt": "refund.js의 부분 환불 코드를 리뷰해줘. 기존 X 첫째 환불의 PG 응답이 유실되어 UNKNOWN이며 새 업무키로 X 전체 환불을 요청하는 상황이야. 출고 전이며 혜택은 유지돼. 코드를 수정하지 말고 실제 문제와 근거, 추가 확인 사항을 구분해줘.",
+      "skill": "commerce-review",
+      "skillSha256": "7315c3b75100dae6aa5068df9a74842da86ce787f0032d8f8296c6fd23d2c680",
+      "cli": "codex-cli 0.153.2",
+      "effort": "medium",
+      "explicitSkill": true,
+      "skillDelivery": "exact SKILL.md in developerInstructions",
+      "pluginDisableOverrideCount": 16,
+      "blockedReads": 2,
+      "reads": [
+        {
+          "path": "workspace/refund.js",
+          "sha256": "e0c05ba4f7907abb66272e1cc5c279b41d735821fdc3c6c570eb7bf3b7af93f7"
+        }
+      ],
+      "messages": [
+        "## 확인된 문제\n\n### 1. 미확정 환불 대상인 X-1을 다시 환불 요청할 수 있음\n**근거:** `refund.js:3~7`은 `SUCCEEDED` 금액만 합산하며, 기존 환불이 점유한 `units`는 확인하지 않습니다.\n\n주어진 입력에서는:\n- 기존 `refund-1`: X-1, **6,669원**, `UNKNOWN`\n- 새 `refund-2`: X-1과 X-2, **13,339원**\n- 성공 금액 합계가 0원이므로 새 요청이 `REQUESTED`로 추가됩니다.\n\n기존 PG 환불이 실제 성공했다면, 새 요청까지 실행될 때 **X-1의 6,669원이 중복 환불**됩니다. 합계는 **20,008원**으로 결제액 20,009원 이하이므로, **UNKNOWN 금액까지 합산하도록 바꾸는 것만으로는 막지 못합니다.** 주문 전체 한도와 개별 대상 점유를 함께 검증해야 합니다.\n\n**최소 수정 방향:** `REQUESTED`·처리 중·`UNKNOWN`·성공 환불의 금액과 대상을 점유로 관리하고, 겹치는 요청은 차단해야 합니다. 기존 시도는 원 거래 조회·통지·대사로 확정하고, 실패가 확정된 경우에만 점유를 해제해야 합니다.\n\n**검증:** 현재 입력에서 새 요청이 거절되는지, 기존 환불 성공 시 X-2만 6,670원 환불 가능한지, 실패 확정 시 X 전체 13,339원이 가능한지 확인합니다.\n\n### 2. 동일 업무키의 요청 내용 불일치를 검사하지 않음\n**근거:** `refund.js:2~3`은 키만 같으면 기존 결과를 반환합니다.\n\n같은 키로 대상이나 금액을 바꾸어도 충돌 오류 없이 이전 환불을 반환합니다. 다만 **이번 새 업무키 시나리오의 직접 원인은 아닙니다.**\n\n**최소 수정 방향·검증:** 동일 키의 대상·금액 등 요청 지문을 비교하여, 동일 요청은 재사용하고 다른 요청은 충돌로 거절하는 테스트가 필요합니다.\n\n## 추가 확인 사항\n\n- **금액 검증:** 함수에는 양수·정수 금액, 유효한 단위, 요청 내 중복 단위, `unitPaid` 합계와 요청 금액의 일치 검사가 없습니다. 상위 호출자가 보장하는지 확인해야 합니다. 이번 요청의 **13,339원 자체는 스냅샷과 일치**하며, 혜택 유지 조건에서 재계산 오류는 확인되지 않습니다.\n- **PG·저장소:** 파일은 단일 인메모리 서비스이며 실제 PG 호출이 없습니다. 따라서 확인된 것은 **중복 대상 요청의 수락**이며, 실제 이중 지급 발생까지 입증한 것은 아닙니다. 운영에서는 원자적 점유, 키의 고유 범위, UNKNOWN 복구 경로를 확인해야 합니다.\n- **재고:** 복원 코드는 없습니다. 출고 전 확보 수량은 확정된 취소·환불에 연결해 한 번만 해제하는지, UNKNOWN을 실패로 간주해 먼저 해제하지 않는지 확인해야 합니다.\n\n코드는 수정하지 않았으며, 테스트 실행 없이 제공 파일을 정적으로 검토했습니다."
+      ],
+      "unexpectedTools": [],
+      "startedAt": "2026-10-23T02:25:04.318Z",
+      "model": "gpt-6-astra",
+      "provider": "openai",
+      "otherInstructionSourceCount": 0,
+      "tokenUsage": {
+        "total": {
+          "totalTokens": 31397,
+          "inputTokens": 30481,
+          "cachedInputTokens": 19712,
+          "cacheWriteInputTokens": 0,
+          "outputTokens": 916,
+          "reasoningOutputTokens": 37
+        },
+        "last": {
+          "totalTokens": 11114,
+          "inputTokens": 10372,
+          "cachedInputTokens": 9984,
+          "cacheWriteInputTokens": 0,
+          "outputTokens": 742,
+          "reasoningOutputTokens": 0
+        },
+        "modelContextWindow": 258400
+      },
+      "status": "completed",
+      "error": null,
+      "elapsedMs": 42482,
+      "answerReview": {
+        "reviewer": "Codex, same implementation session; not an independent grader",
+        "verdict": "criteria-met",
+        "reason": "미확정 X-1의 중복 대상과 주문 전체 한도의 한계를 짚고 요청 지문을 별도 문제로 구분했다. 실제 PG 피해·DB 동시성 실행을 주장하지 않았다."
+      }
+    },
+    {
+      "id": "webhook-async",
+      "prompt": "제공하는 구조만 기준으로 결제 웹훅을 검토해줘. PG 계약은 HTTP 202를 성공으로 인정해. 상위 경로가 서명·상점·주문·금액을 검증하고 이벤트 종류/외부 거래 ID의 UNIQUE를 가진 영속 inbox를 커밋한 뒤 응답해. 워커는 상태 가드와 멱등 처리를 수행해. 확인된 결함과 추가 확인 조건을 구분해줘.",
+      "skill": "commerce-review",
+      "skillSha256": "7315c3b75100dae6aa5068df9a74842da86ce787f0032d8f8296c6fd23d2c680",
+      "cli": "codex-cli 0.153.2",
+      "effort": "medium",
+      "explicitSkill": true,
+      "skillDelivery": "exact SKILL.md in developerInstructions",
+      "pluginDisableOverrideCount": 16,
+      "blockedReads": 0,
+      "reads": [],
+      "messages": [
+        "## 확인된 결함\n**제공된 구조만으로 확인되는 결함은 없습니다.**\n\n- **HTTP 202:** PG 계약에서 성공으로 인정하므로 정상 응답입니다.\n- **검증:** 상위 경로에서 서명·상점·주문·금액을 검증하므로 하위 처리에 검증이 없다는 이유만으로 결함으로 볼 수 없습니다.\n- **수신 내구성:** 영속 inbox 커밋 후 응답하므로, 응답 전에 이벤트가 유실되는 구조가 아닙니다.\n- **중복 처리:** 이벤트 종류·외부 거래 ID의 UNIQUE와 워커의 상태 가드·멱등 처리가 있으므로 중복 방어 누락으로 판단하지 않습니다.\n\n## 추가 확인 조건\n다음은 결함 판정이 아니라 구현·계약 확인 사항입니다.\n\n1. **중복 키의 범위:** 외부 거래 ID가 PG·상점 전체에서 고유한지, 같은 거래·이벤트 종류로 여러 정상 부분 환불 등이 발생할 수 있는지 확인해야 합니다. 그렇지 않으면 정상 이벤트가 중복으로 제외될 수 있습니다.\n2. **커밋 실패·재전송:** inbox 커밋 실패 시 성공 응답을 하지 않는지, 커밋 후 응답 유실로 재전송된 이벤트에는 계약상 성공 응답을 반환하는지 확인해야 합니다.\n3. **워커 복구·원자성:** 처리 중 장애 시 재시도 가능한지, 업무 반영과 처리 완료 기록 사이의 장애에도 효과가 중복되지 않는지 확인해야 합니다.\n4. **역순·미확정 상태:** 늦게 도착한 이벤트가 확정 상태를 되돌리지 않는지, 필요한 이벤트를 단순 폐기하지 않고 조회·대사로 해소하는지 확인해야 합니다.\n\n실제 코드·SQL·테스트는 제공되지 않아, 위 평가는 설명된 구조에 한정합니다."
+      ],
+      "unexpectedTools": [],
+      "startedAt": "2026-10-23T02:28:47.675Z",
+      "model": "gpt-6-astra",
+      "provider": "openai",
+      "otherInstructionSourceCount": 0,
+      "tokenUsage": {
+        "total": {
+          "totalTokens": 10933,
+          "inputTokens": 10477,
+          "cachedInputTokens": 0,
+          "cacheWriteInputTokens": 0,
+          "outputTokens": 456,
+          "reasoningOutputTokens": 32
+        },
+        "last": {
+          "totalTokens": 10933,
+          "inputTokens": 10477,
+          "cachedInputTokens": 0,
+          "cacheWriteInputTokens": 0,
+          "outputTokens": 456,
+          "reasoningOutputTokens": 32
+        },
+        "modelContextWindow": 258400
+      },
+      "status": "completed",
+      "error": null,
+      "elapsedMs": 25163,
+      "answerReview": {
+        "reviewer": "Codex, same implementation session; not an independent grader",
+        "verdict": "criteria-met",
+        "reason": "제공된 202 계약·상위 검증·영속 inbox를 결함으로 만들지 않았다."
+      }
+    },
+    {
+      "id": "webhook-sync",
+      "prompt": "결제 웹훅 설계를 리뷰해줘. PG 계약은 10초 안의 200을 성공 응답으로 인정해. 상위에서 진위·상점·주문·금액을 검증해. 단일 DB 트랜잭션에서 거래 업무키 UNIQUE와 조건부 상태 변경을 커밋한 뒤 200을 응답하며 중복 수신은 같은 결과를 반환해. 역순 이벤트는 현재 거래 조회와 상태 가드로 대사하고 과거 상태로 덮지 않아. 외부 호출·긴 후처리가 없고 검증을 포함한 최악 응답은 100ms로 부하 시험했어. 큐와 별도 워커는 없어. 제공 사실에 근거한 결함과 추가 확인을 구분하고 구현은 변경하지 마.",
+      "skill": "commerce-review",
+      "skillSha256": "7315c3b75100dae6aa5068df9a74842da86ce787f0032d8f8296c6fd23d2c680",
+      "cli": "codex-cli 0.153.2",
+      "effort": "medium",
+      "explicitSkill": true,
+      "skillDelivery": "exact SKILL.md in developerInstructions",
+      "pluginDisableOverrideCount": 16,
+      "blockedReads": 0,
+      "reads": [],
+      "messages": [
+        "## 확인된 결함\n\n**제공된 사실만으로 확인되는 결함은 없습니다.** 큐나 별도 워커가 없다는 점도 결함이 아닙니다.\n\n- PG 성공 조건인 **10초 이내 200**에 대해, 검증을 포함한 부하 시험 최악 응답은 **100ms**입니다.\n- 상위에서 진위·상점·주문·금액을 검증합니다.\n- 단일 DB 트랜잭션에서 업무키 UNIQUE와 조건부 상태 변경을 **커밋한 후 응답**하므로, 응답 전 내구성 확보 구조입니다.\n- 중복 수신은 같은 결과를 반환하고, 역순 이벤트도 대사와 상태 가드로 과거 상태를 덮지 않습니다.\n- 외부 호출이나 긴 후처리가 없는 짧은 동기 처리이므로, 큐 도입을 필수로 볼 근거가 없습니다.\n\n## 추가 확인 사항\n\n다음은 누락으로 단정할 수 없는 검증 항목입니다.\n\n1. **업무키 범위:** PG·상점·거래·이벤트 처리 단위에 맞는 UNIQUE인지, 같은 키에 다른 내용이 들어오면 정상 중복과 구분하는지 확인합니다.\n2. **동시 수신:** UNIQUE 충돌·조건부 변경 실패 시에도 이미 커밋된 결과를 반환하는지, 실제 DB에서 중복·역순 동시 실행을 검증합니다.\n3. **실패 경계:** 커밋 실패 시 성공 200을 보내지 않는지, 커밋 후 응답 유실로 재전송돼도 효과가 중복되지 않는지 확인합니다.\n4. **대사 경로:** “현재 거래 조회”가 어느 데이터에 대한 조회인지와 대사 실패 시 재시도 경로를 확인합니다. PG 조회라면 “외부 호출 없음”과의 경계를 명확히 해야 합니다.\n\n코드·계약 원문 검토나 테스트 실행 없이, 제공된 설계 사실을 기준으로 판단했습니다. 구현은 변경하지 않았습니다."
+      ],
+      "unexpectedTools": [],
+      "startedAt": "2026-10-23T02:29:12.859Z",
+      "model": "gpt-6-astra",
+      "provider": "openai",
+      "otherInstructionSourceCount": 0,
+      "tokenUsage": {
+        "total": {
+          "totalTokens": 10445,
+          "inputTokens": 9993,
+          "cachedInputTokens": 0,
+          "cacheWriteInputTokens": 0,
+          "outputTokens": 452,
+          "reasoningOutputTokens": 0
+        },
+        "last": {
+          "totalTokens": 10445,
+          "inputTokens": 9993,
+          "cachedInputTokens": 0,
+          "cacheWriteInputTokens": 0,
+          "outputTokens": 452,
+          "reasoningOutputTokens": 0
+        },
+        "modelContextWindow": 258400
+      },
+      "status": "completed",
+      "error": null,
+      "elapsedMs": 18613,
+      "answerReview": {
+        "reviewer": "Codex, same implementation session; not an independent grader",
+        "verdict": "criteria-met",
+        "reason": "짧은 동기 DB 처리에 큐·워커 도입을 요구하지 않았고 커밋·재전송 경계를 추가 확인으로 구분했다."
+      }
+    },
+    {
+      "id": "lock-watchdog",
+      "prompt": "재고 작업을 보호하는 Redisson 락 사용을 검토해줘. 고정 leaseTime을 주지 않는 tryLock 대기 방식이고 watchdog timeout·갱신·인스턴스 중단 후 만료를 검증했어. 획득 실패 시 작업하지 않고 인터럽트는 상위로 전파해. 획득 성공 시 finally에서 소유권과 만료 경합에 맞게 해제하며, 저장소는 version 조건으로 늦은 쓰기를 거부해. DB 제약도 유지해. 코드와 운영 환경은 제공하지 않았어. 제공된 계약에서 확인된 결함과 더 확인할 조건을 나눠줘.",
+      "skill": "commerce-backend-expert",
+      "skillSha256": "5abf9c9f62e66c2e174cbded2d900bb82212e102cd58b3c298be767fbc91c334",
+      "cli": "codex-cli 0.153.2",
+      "effort": "medium",
+      "explicitSkill": true,
+      "skillDelivery": "exact SKILL.md in developerInstructions",
+      "pluginDisableOverrideCount": 16,
+      "blockedReads": 0,
+      "reads": [
+        {
+          "path": "skills/commerce-backend-expert/references/inventory/INDEX.md",
+          "sha256": "67a3a3193dc63160f945ccab7dcf21353296dad510e89db36f5437804ccb8835"
+        },
+        {
+          "path": "skills/commerce-backend-expert/references/inventory/concurrency-distributed.md",
+          "sha256": "603c4554e5637d1860cccbe904e0a55ddc455f626c96d80ca50f92d607d1b2bf"
+        },
+        {
+          "path": "skills/commerce-backend-expert/references/inventory/concurrency-optimistic.md",
+          "sha256": "76b86183e4077e662606ffaa822b86e7ec6d51a06997c28a11646faa7f984bf1"
+        }
+      ],
+      "messages": [
+        "## 확인된 결함\n\n**제공된 계약에서는 확인된 결함이 없습니다.** 다만 코드·운영 환경이 없어 구현의 일치 여부까지 검증한 결론은 아닙니다.\n\n- 고정 `leaseTime`이 없어도 watchdog이 만료를 갱신하므로 **영구 점유라고 판단하거나 고정 lease를 강제할 근거는 없습니다.**\n- 획득 실패 시 미실행, 인터럽트 전파, 획득 성공 후 `finally`에서 소유권·만료 경합에 맞는 해제는 적절한 계약입니다.\n- 늦은 쓰기를 DB version 조건으로 거부하고 DB 제약도 유지하므로, **별도 fencing token이 없다는 이유만으로 결함은 아닙니다.**\n\n## 추가 확인할 조건\n\n아래는 누락 확정이 아니라 실제 구현·환경에서 확인할 항목입니다.\n\n| 조건 | 확인 방법 |\n|---|---|\n| 갱신 실패와 장시간 정지 | 네트워크 단절·긴 GC 정지로 락 만료 → 다른 인스턴스 획득 → 기존 작업 재개 시, 늦은 쓰기가 거부되는지 검증 |\n| Redis 장애·failover 정책 | 락 획득 오류 시 보호 작업을 실행하지 않는지, 폴백이 있다면 같은 DB 불변식을 지키는지 확인 |\n| version 검증의 적용 범위 | 모든 재고 변경 경로의 조건부 갱신·버전 증가와 갱신 실패 처리를 확인. 충돌을 성공으로 응답하지 않는지 검증 |\n| 락·트랜잭션 경계 | 동일 재고가 동일 락 키로 보호되는지, DB 커밋과 해제 순서가 의도에 맞는지 확인 |\n| DB 밖의 부수 효과 | 이벤트·외부 호출이 있다면 version 충돌로 DB 변경이 거부돼도 부수 효과만 남지 않는지 확인 |\n| 재시도·중복 요청 | 재시도가 있다면 새 트랜잭션·재조회·상한을 확인하고, 동일 업무 요청의 중복 차감 방지도 별도로 검증 |\n\n**근거:** `concurrency-distributed`, `concurrency-optimistic`. 두 규칙 모두 `needs-review`이며 검토자·검토일은 `not-recorded`입니다. 참고 지침으로 사용했으며, 사용자께서 설명한 검증 외에 테스트나 운영 검증을 직접 수행하지는 않았습니다."
+      ],
+      "unexpectedTools": [],
+      "startedAt": "2026-10-23T02:29:31.551Z",
+      "model": "gpt-6-astra",
+      "provider": "openai",
+      "otherInstructionSourceCount": 0,
+      "tokenUsage": {
+        "total": {
+          "totalTokens": 33967,
+          "inputTokens": 33261,
+          "cachedInputTokens": 20480,
+          "cacheWriteInputTokens": 0,
+          "outputTokens": 706,
+          "reasoningOutputTokens": 0
+        },
+        "last": {
+          "totalTokens": 12950,
+          "inputTokens": 12401,
+          "cachedInputTokens": 10496,
+          "cacheWriteInputTokens": 0,
+          "outputTokens": 549,
+          "reasoningOutputTokens": 0
+        },
+        "modelContextWindow": 258400
+      },
+      "status": "completed",
+      "error": null,
+      "elapsedMs": 30798,
+      "answerReview": {
+        "reviewer": "Codex, same implementation session; not an independent grader",
+        "verdict": "criteria-met",
+        "reason": "watchdog을 영구 락으로 판단하지 않았고 실제로 읽은 규칙의 needs-review 상태를 밝혔다."
+      }
+    },
+    {
+      "id": "frontend-scope",
+      "prompt": "index.html의 button padding을 12px, .buttons gap을 8px로 바꾼 HTML을 보여줘. 나머지는 그대로 두고 파일은 저장하지 마.",
+      "skill": "commerce-backend-expert",
+      "skillSha256": "5abf9c9f62e66c2e174cbded2d900bb82212e102cd58b3c298be767fbc91c334",
+      "cli": "codex-cli 0.153.2",
+      "effort": "medium",
+      "explicitSkill": true,
+      "skillDelivery": "exact SKILL.md in developerInstructions",
+      "pluginDisableOverrideCount": 16,
+      "blockedReads": 0,
+      "reads": [
+        {
+          "path": "workspace/index.html",
+          "sha256": "4916a72c74a2ad23fbe4b23093cdc62a385ab2515931ca6734f1ddbed97a73cb"
+        }
+      ],
+      "messages": [
+        "```html\n<!doctype html>\n<html lang=\"ko\">\n<head><meta charset=\"utf-8\"><title>버튼</title><style>button { padding: 12px; color: navy; } .buttons { display: flex; gap: 8px; }</style></head>\n<body><div class=\"buttons\"><button id=\"buy\">구매</button><button id=\"cancel\">취소</button></div><script>document.querySelector('#buy').addEventListener('click', () => console.log('buy'));</script></body>\n</html>\n```"
+      ],
+      "unexpectedTools": [],
+      "startedAt": "2026-10-23T02:30:02.429Z",
+      "model": "gpt-6-astra",
+      "provider": "openai",
+      "otherInstructionSourceCount": 0,
+      "tokenUsage": {
+        "total": {
+          "totalTokens": 20417,
+          "inputTokens": 20247,
+          "cachedInputTokens": 9856,
+          "cacheWriteInputTokens": 0,
+          "outputTokens": 170,
+          "reasoningOutputTokens": 0
+        },
+        "last": {
+          "totalTokens": 10339,
+          "inputTokens": 10215,
+          "cachedInputTokens": 9856,
+          "cacheWriteInputTokens": 0,
+          "outputTokens": 124,
+          "reasoningOutputTokens": 0
+        },
+        "modelContextWindow": 258400
+      },
+      "status": "completed",
+      "error": null,
+      "elapsedMs": 9109,
+      "answerReview": {
+        "reviewer": "Codex, same implementation session; not an independent grader",
+        "verdict": "criteria-met",
+        "reason": "padding과 gap 두 값만 바뀌었고 커머스 상세 문서 조회가 없었다."
+      }
+    }
+  ]
+}

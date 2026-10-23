@@ -2,18 +2,14 @@ const test = require("node:test");
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
-const os = require("node:os");
 const {spawn, spawnSync} = require("node:child_process");
 const {handleEvent} = require("../hooks/session");
+const {validateEdit} = require("../hooks/validate-knowledge");
+const {validateRepository} = require("../scripts/validate-skills");
+const {skillRoot: root, repositoryFixture, temporaryDirectory} = require("./helpers");
 
 function fixture(t) {
-  const parent = fs.realpathSync(os.tmpdir());
-  const dataRoot = fs.mkdtempSync(path.join(parent, "commerce-session-test-"));
-  t.after(() => {
-    assert.equal(path.dirname(dataRoot), parent);
-    assert.ok(path.basename(dataRoot).startsWith("commerce-session-test-"));
-    assert.ok(!fs.lstatSync(dataRoot).isSymbolicLink()); fs.rmSync(dataRoot, {recursive: true, force: true});
-  });
+  const dataRoot = temporaryDirectory(t);
   const cwd = path.resolve(dataRoot, "project");
   const start = {hook_event_name: "SessionStart", session_id: "session-a", cwd, source: "startup"};
   const run = event => handleEvent({...start, ...event}, {dataRoot});
@@ -99,4 +95,42 @@ test("CLI produces one hook output, stays quiet for unrelated prompts and fails 
     const invalid = run(payload); assert.ifError(invalid.error); assert.equal(invalid.status, 0);
     assert.equal(invalid.stdout, ""); assert.match(invalid.stderr, /hook skipped/); assert.doesNotMatch(invalid.stderr, /PRIVATE_PAYLOAD/);
   }
+});
+
+test("repository validation and edit hook catch a removed refund guide", t => {
+  const isolated = repositoryFixture(t);
+  const file = path.join(isolated, "skills/commerce-backend-expert/references/payment/partial-refund.md");
+  const source = fs.readFileSync(file, "utf8");
+  const changed = source.replace(/## 구현 가이드\r?\n[\s\S]*?(?=## )/, "");
+  assert.notEqual(changed, source);
+  fs.writeFileSync(file, changed);
+  assert.throws(() => validateRepository(isolated), /partial-refund: missing guidance/);
+  assert.throws(() => validateEdit({file_path: file}, isolated), /partial-refund: missing guidance/);
+  assert.equal(fs.readFileSync(file, "utf8"), changed);
+});
+
+test("optional edit hook validates its own knowledge and ignores other project files", () => {
+  assert.deepEqual(validateEdit(null), {checked: false});
+  assert.deepEqual(validateEdit({file_path: "relative.md"}), {checked: false});
+  assert.deepEqual(validateEdit({file_path: path.resolve(root, "../../customer-service.java")}), {checked: false});
+  assert.deepEqual(validateEdit({tool_input: {file_path: path.join(root, "references/payment/partial-refund.md")}}), {checked: true, rules: 70});
+  assert.deepEqual(validateEdit({file_path: path.resolve(root, "../commerce-review/SKILL.md")}), {checked: true, rules: 70});
+});
+
+test("optional hook reports invalid knowledge without editing it", t => {
+  const isolated = repositoryFixture(t), file = path.join(isolated, "skills/commerce-backend-expert/references/payment/partial-refund.md");
+  const changed = fs.readFileSync(file, "utf8").replace("severity: high", "severity: invalid"); fs.writeFileSync(file, changed);
+  assert.throws(() => validateEdit({file_path: file}, isolated));
+  assert.equal(fs.readFileSync(file, "utf8"), changed);
+});
+
+test("hook CLI stays quiet, bounds input and does not echo malformed payloads", () => {
+  const script = path.resolve(__dirname, "../hooks/validate-knowledge.js");
+  const run = input => spawnSync(process.execPath, [script], {input, encoding: "utf8", windowsHide: true, timeout: 10000});
+  const skipped = run("{}"); assert.ifError(skipped.error); assert.equal(skipped.status, 0); assert.equal(skipped.stdout, "");
+  const ownEdit = run(JSON.stringify({file_path: path.join(root, "SKILL.md")}));
+  assert.ifError(ownEdit.error); assert.equal(ownEdit.status, 0, ownEdit.stderr); assert.equal(ownEdit.stdout, "");
+  const invalid = run("PRIVATE_PAYLOAD"); assert.ifError(invalid.error); assert.equal(invalid.status, 1);
+  assert.match(invalid.stderr, /Invalid hook JSON/); assert.doesNotMatch(invalid.stderr, /PRIVATE_PAYLOAD/);
+  const large = run("x".repeat(65537)); assert.ifError(large.error); assert.equal(large.status, 1); assert.match(large.stderr, /exceeds 64 KiB/);
 });
