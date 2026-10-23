@@ -3,8 +3,8 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 const {spawnSync} = require("node:child_process");
-const {validateFrontmatter, validateLinks, validateSkill} = require("../scripts/validate-skills");
-const {skillRoot: root, repositoryRoot, temporaryDirectory, copySkill} = require("./helpers");
+const {validateFrontmatter, validateLinks, validateSkill, validateRepository} = require("../scripts/validate-skills");
+const {skillRoot: root, repositoryRoot, temporaryDirectory, copySkill, repositoryFixture} = require("./helpers");
 
 test("packaged Markdown validates in isolation with no Java or npm on PATH", t => {
   const dir = temporaryDirectory(t), isolated = path.join(dir, "skill");
@@ -42,9 +42,23 @@ test("each skill is usable when an installer copies only its selected directory"
     fs.cpSync(path.resolve(root, "..", name), destination, {recursive: true});
     validateFrontmatter(fs.readFileSync(path.join(destination, "SKILL.md"), "utf8"), name);
     validateLinks(path.join(destination, "SKILL.md"), destination);
-    assert.equal(fs.readFileSync(path.join(destination, "LICENSE"), "utf8"), fs.readFileSync(path.resolve(root, "../../LICENSE"), "utf8"));
+    assert.equal(fs.readFileSync(path.join(destination, "LICENSE"), "utf8").replaceAll("\r\n", "\n"), fs.readFileSync(path.resolve(root, "../../LICENSE"), "utf8").replaceAll("\r\n", "\n"));
     if (name === "commerce-backend-expert") assert.equal(validateSkill(destination).rules.length, 70);
   }
+});
+
+test("license validation accepts mixed line endings and rejects changed content", t => {
+  const isolated = repositoryFixture(t), license = path.join(isolated, "LICENSE");
+  const source = fs.readFileSync(license, "utf8").replaceAll("\r\n", "\n");
+  for (const [rootEnding, skillEnding] of [["\r\n", "\n"], ["\n", "\r\n"]]) {
+    fs.writeFileSync(license, source.replaceAll("\n", rootEnding));
+    for (const name of ["commerce-backend-expert", "commerce-review"]) {
+      fs.writeFileSync(path.join(isolated, "skills", name, "LICENSE"), source.replaceAll("\n", skillEnding));
+    }
+    assert.equal(validateRepository(isolated).skills, 2);
+  }
+  fs.writeFileSync(path.join(isolated, "skills/commerce-review/LICENSE"), source + "altered\n");
+  assert.throws(() => validateRepository(isolated), /commerce-review: bundle the repository license/);
 });
 
 test("skill YAML accepts standard optional metadata and folded descriptions", () => {
