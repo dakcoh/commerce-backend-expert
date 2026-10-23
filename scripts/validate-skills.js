@@ -218,10 +218,11 @@ function validateRepository(root = repositoryRoot) {
   assert.equal(manifest.name, "commerce-backend-expert");
   assert.match(manifest.version, /^\d+\.\d+\.\d+(?:-[a-z0-9.-]+)?$/);
   assert.ok(manifest.description?.trim());
+  assert.equal(manifest.repository, "https://github.com/dakcoh/commerce-backend-expert", "Use the current repository URL");
   assert.equal(manifest.extensions?.["com.openai"]?.hooks, "./hooks/session.json");
   for (const client of ["codex", "claude", "cursor"]) {
     const adapter = JSON.parse(fs.readFileSync(path.join(root, `.${client}-plugin/plugin.json`), "utf8"));
-    for (const key of ["name", "version", "description"]) assert.equal(adapter[key], manifest[key], `${client}: inconsistent ${key}`);
+    for (const key of ["name", "version", "description", "repository"]) assert.equal(adapter[key], manifest[key], `${client}: inconsistent ${key}`);
     assert.equal(adapter.skills, "./skills/", `${client}: must use canonical skills`);
     assert.ok(!adapter.mcpServers, `${client}: MCP must not run by default`);
     if (client === "cursor") assert.ok(!adapter.hooks, "cursor: hooks must not run by default");
@@ -230,7 +231,7 @@ function validateRepository(root = repositoryRoot) {
   }
   for (const [relative, source] of [[".agents/plugins/marketplace.json", {source: "local", path: "./"}], [".claude-plugin/marketplace.json", "./"]]) {
     const catalog = JSON.parse(fs.readFileSync(path.join(root, relative), "utf8"));
-    assert.equal(catalog.name, "commerce-context-mcp");
+    assert.equal(catalog.name, "commerce-context-mcp", "Keep the marketplace ID stable for existing v0.3.0 installations");
     assert.equal(catalog.plugins.length, 1);
     assert.equal(catalog.plugins[0].name, manifest.name, "Marketplace must reference the canonical plugin");
     assert.deepEqual(catalog.plugins[0].source, source, "Marketplace must install the repository root");
@@ -248,7 +249,7 @@ function validateRepository(root = repositoryRoot) {
   assert.ok(fs.statSync(path.join(root, "hooks/session.js")).isFile());
   const openclaw = JSON.parse(fs.readFileSync(path.join(root, ".openclaw/skills.example.json"), "utf8"));
   assert.equal(openclaw.skills.load.extraDirs.length, 1);
-  assert.ok(openclaw.skills.load.extraDirs[0].endsWith("/context-mcp/skills"));
+  assert.ok(openclaw.skills.load.extraDirs[0].endsWith("/commerce-backend-expert/skills"));
   for (const client of ["claude", "cursor"]) {
     const hooks = JSON.parse(fs.readFileSync(path.join(root, `hooks/${client}.json`), "utf8"));
     const event = client === "claude" ? "PostToolUse" : "afterFileEdit";

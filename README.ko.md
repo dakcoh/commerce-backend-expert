@@ -2,9 +2,9 @@
 
 [English](README.md) · 한국어
 
-[![CI](https://github.com/dakcoh/commerce-context-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/dakcoh/commerce-context-mcp/actions/workflows/ci.yml) · [MIT](LICENSE)
+[![CI](https://github.com/dakcoh/commerce-backend-expert/actions/workflows/ci.yml/badge.svg)](https://github.com/dakcoh/commerce-backend-expert/actions/workflows/ci.yml) · [MIT](LICENSE)
 
-**한국 이커머스 백엔드의 설계·구현·리팩터링·코드 리뷰·장애 분석을 돕는 Markdown 스킬입니다.**
+**한국 이커머스 백엔드의 설계·구현·리팩터링·코드 리뷰·장애 분석을 돕는 Markdown 스킬·훅 플러그인입니다.**
 
 AI가 실제 코드와 업무 조건을 먼저 확인하고, 필요한 파트의 지침만 읽어 요청한 개발 작업에 적용하도록 안내합니다. 주문·재고·결제·쿠폰·정산·Java/Spring의 규칙 70개를 제공합니다.
 
@@ -17,16 +17,18 @@ AI가 실제 코드와 업무 조건을 먼저 확인하고, 필요한 파트의
 Codex CLI:
 
 ```bash
-codex plugin marketplace add https://github.com/dakcoh/commerce-context-mcp.git
+codex plugin marketplace add https://github.com/dakcoh/commerce-backend-expert.git
 codex plugin add commerce-backend-expert@commerce-context-mcp
 ```
 
 Claude Code:
 
 ```bash
-claude plugin marketplace add dakcoh/commerce-context-mcp
+claude plugin marketplace add dakcoh/commerce-backend-expert
 claude plugin install commerce-backend-expert@commerce-context-mcp
 ```
+
+저장소명은 `commerce-backend-expert`로 변경했습니다. 명령의 `@commerce-context-mcp`는 v0.3.0에서 사용한 마켓플레이스 식별자이며, 기존 설치와 업데이트의 호환성을 위해 유지합니다.
 
 새 대화에서 사용합니다. Codex 훅은 `/hooks`에서 정의를 검토·신뢰해야 실행되며, 현재 신뢰 후 실행·재개·압축은 미검증입니다. 훅을 사용할 때 Node.js 22 이상을 준비하세요. Cursor·OpenClaw는 아래 [클라이언트별 구성](#클라이언트별-구성)을 따릅니다. 저장소를 내려받아 문서를 직접 제공할 수도 있습니다.
 
@@ -98,6 +100,6 @@ Codex CLI 0.153.2에서 두 훅의 발견을 확인했습니다. 설치와 별�
 
 이 브랜치는 **Markdown을 유일한 지식 원본으로 사용하는 구조**로 전환했습니다. 기존 YAML·Java MCP·Gradle·npm 런처와 JRE 다운로드 경로는 제거했습니다. 예전 MCP 설정으로 이 브랜치를 실행할 수 없습니다.
 
-기존 공개 v0.2.2의 소스와 사용법은 [v0.2.2 태그](https://github.com/dakcoh/commerce-context-mcp/tree/v0.2.2)에 보존합니다. 이미 게시한 npm/JAR와 태그는 유지합니다. 전환하려면 기존 MCP 등록을 해제하고 위 플러그인을 설치하세요. [v0.3.0 릴리스](https://github.com/dakcoh/commerce-context-mcp/releases/tag/v0.3.0)에서 소스 압축 파일과 변경·검증 범위를 확인할 수 있습니다.
+기존 공개 v0.2.2의 소스와 사용법은 [v0.2.2 태그](https://github.com/dakcoh/commerce-backend-expert/tree/v0.2.2)에 보존합니다. 이미 게시한 npm/JAR와 태그는 유지합니다. 전환하려면 기존 MCP 등록을 해제하고 위 플러그인을 설치하세요. [v0.3.0 릴리스](https://github.com/dakcoh/commerce-backend-expert/releases/tag/v0.3.0)에서 소스 압축 파일과 변경·검증 범위를 확인할 수 있습니다.
 
 문서·지식을 고치거나 검사하려면 [기여 가이드](CONTRIBUTING.ko.md)를 확인하세요.

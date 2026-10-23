@@ -166,9 +166,9 @@ Official documentation used for format checks:
 
 **Previous synthetic evaluation:** Seven tasks covered implementation, refactoring, review, incident analysis, partial code, unrelated frontend work, and cross-domain design. Generated implementations passed seven scenarios, refactoring passed 14 differential cases, and 11 additional checks passed. This did not establish live DB/PG behavior, browser execution, or automatic selection after installation.
 
-**MCP migration:** This branch removes six knowledge YAML files, the Java MCP and its tests, Gradle, the npm launcher/JRE preparation, and JAR/npm publication workflows. Version v0.2.2 remains in its [tag](https://github.com/dakcoh/commerce-context-mcp/tree/v0.2.2) and the local `legacy/v0.2.2` branch. Temporary source backups and build artifacts were removed. Run or build the old MCP from that version; this branch is incompatible with old MCP settings.
+**MCP migration:** This branch removes six knowledge YAML files, the Java MCP and its tests, Gradle, the npm launcher/JRE preparation, and JAR/npm publication workflows. Version v0.2.2 remains in its [tag](https://github.com/dakcoh/commerce-backend-expert/tree/v0.2.2). Temporary source backups and build artifacts were removed. Run or build the old MCP from that version; this branch is incompatible with old MCP settings.
 
-**Historical source paths:** References to `src/main/resources/knowledge/*.yml` in some rules are v0.2.2 provenance, not current files or runtime dependencies. Consult the [historical knowledge source](https://github.com/dakcoh/commerce-context-mcp/tree/v0.2.2/src/main/resources/knowledge) when needed.
+**Historical source paths:** References to `src/main/resources/knowledge/*.yml` in some rules are v0.2.2 provenance, not current files or runtime dependencies. Consult the [historical knowledge source](https://github.com/dakcoh/commerce-backend-expert/tree/v0.2.2/src/main/resources/knowledge) when needed.
 
 </details>
 

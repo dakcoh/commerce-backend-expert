@@ -166,9 +166,9 @@ Codex 설치 명령은 모델의 자동 선택을 검증하지 않습니다. Cla
 
 **기존 합성 평가:** 구현·리팩터링·리뷰·장애 분석·일부 코드·일반 화면·복합 설계의 업무 7개를 평가했습니다. 구현 시나리오 7개, 리팩터링 차등 사례 14개, 별도 확인 11개를 통과했습니다. 실제 DB·PG·브라우저·설치 후 자동 선택을 검증한 기록은 아닙니다.
 
-**MCP 전환:** 이 브랜치에서는 YAML 6개, Java MCP와 테스트, Gradle, npm 런처·JRE 준비, JAR/npm 게시 워크플로를 제거했습니다. 기존 v0.2.2는 [태그](https://github.com/dakcoh/commerce-context-mcp/tree/v0.2.2)와 로컬 `legacy/v0.2.2` 브랜치에 보존했습니다. 임시 소스 백업·빌드 산출물은 정리했으며, 기존 MCP 실행·빌드는 해당 버전에서 확인합니다. 현재 브랜치는 예전 MCP 설정과 호환되지 않습니다.
+**MCP 전환:** 이 브랜치에서는 YAML 6개, Java MCP와 테스트, Gradle, npm 런처·JRE 준비, JAR/npm 게시 워크플로를 제거했습니다. 기존 v0.2.2는 [태그](https://github.com/dakcoh/commerce-backend-expert/tree/v0.2.2)에 보존했습니다. 임시 소스 백업·빌드 산출물은 정리했으며, 기존 MCP 실행·빌드는 해당 버전에서 확인합니다. 현재 브랜치는 예전 MCP 설정과 호환되지 않습니다.
 
-**과거 출처 경로:** 일부 규칙의 `src/main/resources/knowledge/*.yml`은 v0.2.2 당시의 출처 기록입니다. 현재 파일이나 런타임 의존성이 아닙니다. 필요한 경우 [당시 지식 소스](https://github.com/dakcoh/commerce-context-mcp/tree/v0.2.2/src/main/resources/knowledge)를 확인합니다.
+**과거 출처 경로:** 일부 규칙의 `src/main/resources/knowledge/*.yml`은 v0.2.2 당시의 출처 기록입니다. 현재 파일이나 런타임 의존성이 아닙니다. 필요한 경우 [당시 지식 소스](https://github.com/dakcoh/commerce-backend-expert/tree/v0.2.2/src/main/resources/knowledge)를 확인합니다.
 
 </details>
 
