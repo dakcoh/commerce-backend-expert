@@ -2,9 +2,9 @@
 
 English · [한국어](README.ko.md)
 
-[![CI](https://github.com/dakcoh/commerce-context-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/dakcoh/commerce-context-mcp/actions/workflows/ci.yml) · [MIT](LICENSE)
+[![CI](https://github.com/dakcoh/commerce-backend-expert/actions/workflows/ci.yml/badge.svg)](https://github.com/dakcoh/commerce-backend-expert/actions/workflows/ci.yml) · [MIT](LICENSE)
 
-**A Markdown skill for designing, implementing, refactoring, reviewing, and investigating Korean ecommerce backends.**
+**A Markdown skill and hook plugin for designing, implementing, refactoring, reviewing, and investigating Korean ecommerce backends.**
 
 The skill guides an AI through actual code and business conditions, then selects relevant guidance for the requested development task. It includes 70 rules covering orders, inventory, payments, coupons, settlement, and Java/Spring.
 
@@ -17,16 +17,18 @@ Document-only skill usage requires no Java or Node.js installation, MCP server, 
 Codex CLI:
 
 ```bash
-codex plugin marketplace add https://github.com/dakcoh/commerce-context-mcp.git
+codex plugin marketplace add https://github.com/dakcoh/commerce-backend-expert.git
 codex plugin add commerce-backend-expert@commerce-context-mcp
 ```
 
 Claude Code:
 
 ```bash
-claude plugin marketplace add dakcoh/commerce-context-mcp
+claude plugin marketplace add dakcoh/commerce-backend-expert
 claude plugin install commerce-backend-expert@commerce-context-mcp
 ```
+
+The repository is now named `commerce-backend-expert`. The `@commerce-context-mcp` suffix is the marketplace identifier used by v0.3.0; it stays unchanged to preserve existing installations and updates.
 
 Use a new conversation after installation. Codex hooks require reviewing and trusting their definitions through `/hooks`; execution after trust and actual resume/compaction remain unverified. Prepare Node.js 22 or later when using hooks. For Cursor and OpenClaw, follow [client layouts](#client-layouts) below. You can also download the repository and provide the documents directly.
 
@@ -98,6 +100,6 @@ The migrated documents were evaluated on seven synthetic development tasks. This
 
 This branch now uses **Markdown as the sole knowledge source**. The old YAML, Java MCP, Gradle build, npm launcher, and JRE download path have been removed. Existing MCP settings cannot run this branch.
 
-The public v0.2.2 source and instructions remain in the [v0.2.2 tag](https://github.com/dakcoh/commerce-context-mcp/tree/v0.2.2). Published npm/JAR artifacts and tags remain unchanged. To migrate, remove the old MCP registration and install the plugin above. The [v0.3.0 release](https://github.com/dakcoh/commerce-context-mcp/releases/tag/v0.3.0) provides a source archive and describes the changes and validation scope.
+The public v0.2.2 source and instructions remain in the [v0.2.2 tag](https://github.com/dakcoh/commerce-backend-expert/tree/v0.2.2). Published npm/JAR artifacts and tags remain unchanged. To migrate, remove the old MCP registration and install the plugin above. The [v0.3.0 release](https://github.com/dakcoh/commerce-backend-expert/releases/tag/v0.3.0) provides a source archive and describes the changes and validation scope.
 
 For knowledge changes and developer checks, see [Contributing](CONTRIBUTING.md).

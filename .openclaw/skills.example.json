@@ -1,7 +1,7 @@
 {
   "skills": {
     "load": {
-      "extraDirs": ["/absolute/path/to/context-mcp/skills"]
+      "extraDirs": ["/absolute/path/to/commerce-backend-expert/skills"]
     }
   }
 }

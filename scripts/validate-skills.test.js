@@ -256,6 +256,17 @@ test("public marketplaces install the canonical plugin from the repository root"
   }
 });
 
+test("client repository URLs follow the canonical renamed repository", t => {
+  const isolated = repositoryFixture(t);
+  for (const client of ["codex", "claude", "cursor"]) {
+    const file = path.join(isolated, `.${client}-plugin/plugin.json`), original = fs.readFileSync(file, "utf8");
+    const manifest = JSON.parse(original); manifest.repository = "https://github.com/dakcoh/commerce-context-mcp";
+    fs.writeFileSync(file, JSON.stringify(manifest));
+    assert.throws(() => validateRepository(isolated), new RegExp(`${client}: inconsistent repository`));
+    fs.writeFileSync(file, original);
+  }
+});
+
 test("optional edit hook validates its own knowledge and ignores other project files", () => {
   assert.deepEqual(validateEdit(null), {checked: false});
   assert.deepEqual(validateEdit({file_path: "relative.md"}), {checked: false});
