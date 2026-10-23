@@ -1,115 +1,103 @@
-# Commerce Context MCP
+# Commerce Backend Expert
 
 [English](README.md) · 한국어
 
-[![npm version](https://img.shields.io/npm/v/commerce-context-mcp)](https://www.npmjs.com/package/commerce-context-mcp)
-[![CI](https://github.com/dakcoh/commerce-context-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/dakcoh/commerce-context-mcp/actions/workflows/ci.yml)
-[![license](https://img.shields.io/npm/l/commerce-context-mcp)](LICENSE)
+[![CI](https://github.com/dakcoh/commerce-context-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/dakcoh/commerce-context-mcp/actions/workflows/ci.yml) · [MIT](LICENSE)
 
-**AI 코딩 도구가 한국 이커머스의 설계 기준을 찾아보고 코드 검토에 활용하도록 돕는 MCP 서버입니다.**
+**한국 이커머스 백엔드의 설계·구현·리팩터링·코드 리뷰·장애 분석을 돕는 Markdown 스킬입니다.**
 
-재고·결제·쿠폰·정산·주문·배송·회원·Java/Spring의 70개 규칙을 제공합니다. 자연어로 질문하면 연결한 AI가 관련 지침을 조회하고, 적용 조건과 예외를 확인하는 데 사용할 수 있습니다.
+AI가 실제 코드와 업무 조건을 먼저 확인하고, 필요한 파트의 지침만 읽어 요청한 개발 작업에 적용하도록 안내합니다. 주문·재고·결제·쿠폰·정산·Java/Spring의 규칙 70개를 제공합니다.
 
-문서는 영어와 한국어로 제공하지만 지식 카탈로그는 현재 한국어입니다. 서버는 질의를 번역하지 않습니다. 영어로 질문할 때는 연결한 AI가 관련 한국어 검색어로 도구를 조회하고 원하는 언어로 설명하도록 요청하세요. 영어 질의의 검색 품질은 현재 회귀 검증으로 입증하지 않았습니다.
+문서 스킬만 사용하면 Java·Node.js 설치, MCP 서버 실행이나 별도 API 키가 필요하지 않습니다. 플러그인의 세션 훅을 실행할 때는 Node.js 22 이상이 필요합니다. AI 클라이언트의 이용 조건과 사용자 프로젝트의 빌드·테스트 요구사항은 각각 해당 환경을 따릅니다.
 
-## 어떤 일을 도와주나요?
+## 사용하기
 
-- **공통 기준으로 검토합니다.** 한국 이커머스의 70개 규칙을 조회해 설계·구현·코드 리뷰에 같은 확인 항목을 활용할 수 있습니다.
-- **실패 이후의 흐름을 살펴봅니다.** 중복 요청, 결제 결과 미확정, 부분 환불처럼 정상 처리만으로 설명하기 어려운 상황의 확인 항목을 제공합니다.
-- **적용 조건을 확인할 수 있습니다.** 규칙별 조건·예외·등록된 근거와 검토 상태를 보고, 내 코드에 적용할지 판단할 수 있습니다.
-- **JDK 설치 없이 연결합니다.** Node.js 22 이상과 MCP 클라이언트를 준비하면 전용 Java 21 런타임은 첫 실행에 자동으로 준비합니다.
+**v0.3.0은 Markdown 스킬/플러그인 릴리스입니다.** 기존 npm MCP 패키지의 업데이트가 아니며 `npm install`이나 MCP 서버 등록으로 설치하지 않습니다. 클라이언트별 세션 훅의 실행 범위는 [검증 현황](CONTRIBUTING.ko.md#클라이언트-확인)을 참고하세요.
 
-업무 상황과 관련 코드를 함께 제시하고, 아래처럼 검토를 요청하세요.
-
-| 고민 | 요청 예시 |
-|---|---|
-| 재고 초과 판매 | “예약 없이 DB에서 재고를 차감하는 설계를 검토해줘.” |
-| 결제 결과 미확정 | “PG 응답이 유실됐을 때 조회·재시도 흐름을 확인해줘.” |
-| 중복 웹훅 | “서명 검증과 중복 이벤트 처리가 빠진 곳을 찾아줘.” |
-| 부분 환불 | “쿠폰·포인트 배부와 반올림을 보존하는지 검토해줘.” |
-| 정산 차이 | “확정 명세와 실제 지급액을 대사할 기준을 정리해줘.” |
-
-이 서버는 설계 지침을 제공하며 주문·결제·환불을 실행하지 않습니다. 특정 회사의 업무 정책을 공통 정답으로 가정하지 않습니다.
-
-## 시작하기
-
-0.2.2의 요구사항은 **Node.js 22 이상 + 로컬 STDIO MCP를 지원하는 AI 클라이언트**입니다.
-
-> **0.2.0부터 전용 Java 런타임을 자동 준비합니다.** 이전 버전 사용자는 실행 패키지를 갱신하세요. 소스에서 확인하려면 [로컬 패키지 검증](CONTRIBUTING.ko.md#로컬에서-검증하기) 절차를 사용합니다.
-
-사용자는 JDK를 별도로 설치할 필요가 없습니다. npm 설치에는 Java가 필요하지 않으며, 첫 실행에 전용 Java 21 런타임을 다운로드·검증하고 캐시합니다. 시스템 Java·JAVA_HOME·PATH는 변경하지 않습니다.
-
-다음 명령으로 런타임과 서버를 미리 준비하고 확인합니다.
+Codex CLI:
 
 ```bash
-node -v
-npx -y commerce-context-mcp download
-npx -y commerce-context-mcp doctor
+codex plugin marketplace add https://github.com/dakcoh/commerce-context-mcp.git
+codex plugin add commerce-backend-expert@commerce-context-mcp
 ```
 
-사용 중인 클라이언트에 등록합니다.
-
-**Codex CLI**
+Claude Code:
 
 ```bash
-codex mcp add commerce-context -- npx -y commerce-context-mcp
+claude plugin marketplace add dakcoh/commerce-context-mcp
+claude plugin install commerce-backend-expert@commerce-context-mcp
 ```
 
-**Claude Code**
+새 대화에서 사용합니다. Codex 훅은 `/hooks`에서 정의를 검토·신뢰해야 실행되며, 현재 신뢰 후 실행·재개·압축은 미검증입니다. 훅을 사용할 때 Node.js 22 이상을 준비하세요. Cursor·OpenClaw는 아래 [클라이언트별 구성](#클라이언트별-구성)을 따릅니다. 저장소를 내려받아 문서를 직접 제공할 수도 있습니다.
 
-```bash
-claude mcp add --transport stdio commerce-context -- npx -y commerce-context-mcp
-```
+1. [대표 스킬](skills/commerce-backend-expert/SKILL.md) 또는 [결제·환불 리뷰 스킬](skills/commerce-review/SKILL.md)을 AI가 읽을 수 있게 제공합니다. 두 스킬은 지식을 공유하므로 옮길 때는 `skills/` 전체를 복사합니다.
+2. 관련 프로젝트와 업무 조건을 제공하고 요청한 작업을 명확히 적습니다.
+3. AI가 읽은 규칙·코드 위치·변경 내용·실행한 테스트와 미확인 조건을 확인합니다.
 
-JSON 설정을 사용하는 클라이언트와 연결 오류는 [설치 가이드](docs/INSTALLATION.ko.md)를 확인하세요. 등록 후 연결 상태를 확인하고 새 대화에서 질문합니다.
+예를 들어 대표 SKILL.md 경로를 명시하고 다음처럼 요청합니다.
 
-> “commerce-context의 규칙을 참고해서 이 결제 웹훅 코드를 검토해줘. 적용 조건과 추가 확인할 사항도 알려줘.”
+> 이 스킬을 읽고 내 프로젝트의 결제 웹훅을 검토해줘. 호출자·상위 검증·저장소까지 확인하고, 적용되는 규칙과 실제 결함·추가 확인 사항을 구분해줘.
 
-npm 설치 자체는 런타임을 내려받지 않습니다. 첫 실행이나 `download`에서 전용 Java 런타임과 서버 JAR를 내려받고 검증합니다. 첫 연결의 다운로드 대기를 줄이려면 위 `download` 명령으로 미리 준비하세요. 이후에는 검증된 캐시를 재사용합니다. 서버에 별도의 LLM API 키는 필요하지 않으며, 연결한 AI 클라이언트의 이용 조건은 해당 서비스에 따릅니다.
-
-## 결과는 이렇게 읽으세요
-
-| 표시 | 의미와 다음 행동 |
+| 작업 | 요청 예시 |
 |---|---|
-| `matchConfidence`, `queryCoverage` | 질문과 규칙의 검색 일치도. 사실성 점수는 아닙니다. |
-| `project-guidance` | 프로젝트가 관리하는 지침. 독립적인 외부 검증 자료는 아닙니다. |
-| `external-source` | 외부 근거가 첨부된 지침. 근거의 적용 범위를 확인해야 하며 규칙 전체의 검증 완료를 뜻하지 않습니다. |
-| `needs-review` | 적용 조건·근거·검토 기록을 더 확인하세요. |
-| `verifiedBy`, `lastReviewedAt` | 실제 검토 기록. 없으면 JSON에서 `null`입니다. |
-| `partial: true` | 체크리스트 일부만 반환했습니다. 시나리오를 나눠 추가 확인하세요. |
-| `analysisTruncated: true` | 큰 입력의 일부 구간을 검색했습니다. 관심 코드로 좁혀 다시 요청하세요. |
+| 설계 | “예약 없이 DB에서 즉시 차감하는 재고와 결제 응답 유실 후 복구 경계를 설계해줘.” |
+| 구현 | “날짜·순번 업무키로 중복 요청을 막고, 자정 이후 재시도와 요청 내용 충돌을 검증해줘.” |
+| 리팩터링 | “재고 차감 코드를 정리하되 반환·예외·트랜잭션·부수 효과 순서를 유지해줘.” |
+| 결제·환불 리뷰 | “commerce-review를 사용해 이 환불 코드를 검토하고, 실제 결함과 추가 확인 조건을 구분해줘. 코드는 수정하지 마.” |
+| 장애 분석 | “승인 응답이 유실됐어. 원 거래와 상태 이력을 기준으로 확인할 순서를 정리해줘.” |
 
-`active`는 카탈로그에서 사용 중이라는 뜻입니다. 검색 후보 없음이나 검토 후보 반환만으로 결함 유무를 확정하지 마세요. PG 계약·법률·세무·보안 판단에는 현재 적용되는 공식 자료와 실제 코드·운영 환경 확인이 필요합니다.
+## 필요한 파트만 읽습니다
 
-## 사용할 수 있는 도구
+대표 스킬 → 관련 파트 색인 → 필요한 규칙 순서로 읽습니다. 정확한 규칙 경로를 이미 알면 색인을 생략하고, 현재 맥락에 있는 문서는 중복 조회하지 않습니다. 전체 규칙을 매 요청에 넣지 않습니다.
 
-| 도구 | 용도 |
+| 파트 | 다루는 내용 | 규칙 |
+|---|---|---:|
+| [상품·주문·회원·배송](skills/commerce-backend-expert/references/commerce/INDEX.md) | 가격·상태·혜택·권한·운영 정합성 | 20 |
+| [재고·동시성](skills/commerce-backend-expert/references/inventory/INDEX.md) | 즉시 차감·예약·멱등성·보상 | 8 |
+| [결제·환불](skills/commerce-backend-expert/references/payment/INDEX.md) | 승인·웹훅·미확정 결과·부분 환불 | 7 |
+| [쿠폰·프로모션](skills/commerce-backend-expert/references/coupon/INDEX.md) | 유효성·발급 한도·할인 배부·복원 | 6 |
+| [정산·지급](skills/commerce-backend-expert/references/settlement/INDEX.md) | 기준일·명세·공제·보류·대사 | 9 |
+| [Java/Spring 구현](skills/commerce-backend-expert/references/spring-commerce/INDEX.md) | 트랜잭션·JPA·이벤트·배치·재시도 | 20 |
+
+가이드는 한영으로 제공하지만 지식 문서는 한국어입니다. 일반 화면 스타일 수정이나 마케팅·판매 전략에는 이 스킬을 적용하지 않습니다.
+
+## 클라이언트별 구성
+
+공통 [plugin.json](plugin.json)과 아래 진입 설정은 모두 같은 `skills/`를 사용하며 지식을 복제하지 않습니다. 현재 버전은 `0.3.0`입니다. **형식·경로 검증과 실제 클라이언트 설치·활성화는 별도입니다.**
+
+| 클라이언트 | 구성 |
 |---|---|
-| `search_knowledge` | 질문에 맞는 규칙 찾기 |
-| `get_rule` | 규칙 전문·적용 조건·예외·근거 확인 |
-| `get_checklist` | 업무별 확인 항목 받기 |
-| `review_commerce_design` | 설계·API·DDL·코드 조각의 검토 후보 찾기 |
+| Codex | 공통 manifest의 OpenAI 설정과 [.codex-plugin/plugin.json](.codex-plugin/plugin.json)의 호환 설정: 스킬·세션 훅 등록 |
+| Claude Code | [.claude-plugin/plugin.json](.claude-plugin/plugin.json)의 스킬·세션 훅 등록 |
+| Cursor | [.cursor-plugin/plugin.json](.cursor-plugin/plugin.json)과 [선택 적용 규칙](.cursor/rules/commerce-backend.mdc) |
+| OpenClaw | 공통 번들 또는 [외부 스킬 경로 설정 예시](.openclaw/skills.example.json). 예시의 절대경로를 바꿔 기존 설정에 병합하며, 이 파일 자체가 자동 적용되지는 않습니다. |
 
-클라이언트가 도구를 호출하므로 사용자가 매번 Tool 이름을 입력할 필요는 없습니다. 검색·규칙·체크리스트는 `responseFormat: "json"`으로 Markdown 중복을 줄일 수 있습니다. 실제 호출 예시는 [실무 시나리오](docs/USAGE_SCENARIOS.ko.md)에 있습니다.
+## 세션 훅
 
-## 현재 제공 범위와 다음 개선
+[세션 훅](hooks/session.json)은 시작·재개·대화 압축 후 짧은 작업 범위와 스킬 경로를 제공합니다. 70개 규칙을 한꺼번에 주입하지 않습니다. 훅이 실행되는 클라이언트에서는 다음을 일반 메시지로 입력합니다.
 
-현재는 로컬 STDIO 방식으로 동작합니다. 지식 검색 자체는 외부 LLM·DB·HTTP 서버를 사용하지 않으며, 연결한 AI 클라이언트가 도구 결과를 활용합니다. 사용자 입력과 도구 결과가 AI 제공자에게 전달되는 범위는 클라이언트 설정에 따릅니다.
+| 메시지 | 동작 |
+|---|---|
+| `commerce off` | 이 세션의 자동 커머스 지침 적용 중단 |
+| `commerce on` | 자동 적용 재개 |
+| `commerce status` | 현재 상태 확인 |
 
-**npm 사용자는 JDK/JRE를 직접 설치할 필요가 없습니다.** Node.js 22 이상과 MCP 클라이언트를 준비하면, 첫 실행에 전용 Temurin JRE 21을 자동으로 다운로드·검증해 사용합니다.
+상태는 프로젝트·세션별로 분리하며 같은 세션의 재개·압축 후 유지합니다. off는 호스트의 스킬 목록을 제거하지 않으며 명시적으로 요청한 스킬 사용도 금지하지 않습니다. 훅은 프롬프트·코드·대화 이력을 저장하거나 외부로 전송하지 않습니다. 켜기·끄기 상태만 클라이언트의 플러그인 데이터 폴더에 기록하며, 해당 경로가 없으면 OS 임시 폴더를 사용합니다.
 
-Windows·macOS·Linux(glibc)의 x64/ARM64를 지원합니다. 압축 해제에는 OS의 `tar`가 필요합니다(Windows 10/11·macOS 기본 제공).
+Codex CLI 0.153.2에서 두 훅의 발견을 확인했습니다. 설치와 별도로 현재 훅 정의의 검토·신뢰가 필요하며, 해당 클라이언트에서 신뢰 후 실제 실행·재개·압축 동작은 미확인입니다. [실행 범위와 호환성 설정](CONTRIBUTING.ko.md#클라이언트-확인)을 확인하세요.
 
-**소스 개발자 안내:** 소스 코드를 직접 빌드하는 경우에만 JDK 21이 필요합니다.
+[Claude](hooks/claude.json)·[Cursor](hooks/cursor.json) 편집 훅은 **스킬 지식을 수정하는 개발자의 선택적 검사**이며 기본 등록하지 않습니다. 세션 훅과 별개이고 일반 사용자 프로젝트의 코드는 검사하지 않습니다. [개발 훅 설정](CONTRIBUTING.ko.md#선택적-개발-훅)
 
-[플러그인 설치형 배포](CONTRIBUTING.ko.md#플러그인-설치형-배포)는 후속 과제입니다.
+## 결과를 판단할 때
 
-## 더 알아보기
+규칙의 적용 조건·예외·근거 범위와 검토 상태를 함께 확인하세요. `active`는 사용 중이라는 뜻이며 정확성 인증이 아닙니다. `needs-review` 19개는 추가 검토 대상입니다. `verifiedBy`·`lastReviewedAt`이 `not-recorded`이면 검토 기록이 없습니다.
 
-- [설치·연결·문제 해결](docs/INSTALLATION.ko.md)
-- [사용 가이드 — 업무 예시·결과 해석·70개 규칙](docs/USAGE_SCENARIOS.ko.md)
-- [기여 가이드 — 개발·검증·개선 계획·릴리스](CONTRIBUTING.ko.md)
+이관본은 합성 개발 업무 7개로 판단과 작업 범위를 평가했습니다. 실제 DB·PG 운영 동작, 설치 후 자동 선택, 모든 업무의 정확성을 입증한 결과는 아닙니다. 토큰·응답 속도 개선도 주장하지 않습니다. [검증 방법과 범위](CONTRIBUTING.ko.md#검증)
 
-## 공개 범위와 라이선스
+## 기존 MCP 사용자
 
-[MIT](LICENSE)로 제공합니다. 현재 기본 YAML은 소스와 배포 JAR에 포함되므로 공개 가능한 범용 지식만 담습니다. 회사별 정책·계약·내부 자료는 추가하지 마세요. 비공개 지식의 별도 저장·로딩은 추후 분리 대상입니다.
+이 브랜치는 **Markdown을 유일한 지식 원본으로 사용하는 구조**로 전환했습니다. 기존 YAML·Java MCP·Gradle·npm 런처와 JRE 다운로드 경로는 제거했습니다. 예전 MCP 설정으로 이 브랜치를 실행할 수 없습니다.
+
+기존 공개 v0.2.2의 소스와 사용법은 [v0.2.2 태그](https://github.com/dakcoh/commerce-context-mcp/tree/v0.2.2)에 보존합니다. 이미 게시한 npm/JAR와 태그는 유지합니다. 전환하려면 기존 MCP 등록을 해제하고 위 플러그인을 설치하세요. [v0.3.0 릴리스](https://github.com/dakcoh/commerce-context-mcp/releases/tag/v0.3.0)에서 소스 압축 파일과 변경·검증 범위를 확인할 수 있습니다.
+
+문서·지식을 고치거나 검사하려면 [기여 가이드](CONTRIBUTING.ko.md)를 확인하세요.

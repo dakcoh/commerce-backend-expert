@@ -1,0 +1,67 @@
+const fs = require("node:fs");
+const path = require("node:path");
+const assert = require("node:assert/strict");
+const {spawnSync} = require("node:child_process");
+
+// Offline packaging/lifecycle check. No model calls, credentials, or user-profile changes.
+const root = path.resolve(__dirname, "..");
+const codex = process.argv[2] || (process.platform === "win32" ? "codex.exe" : "codex");
+fs.mkdirSync(path.join(root, "output"), {recursive: true});
+const output = fs.mkdtempSync(path.join(root, "output/plugin-smoke-"));
+const profile = path.join(output, "profile"), marketplace = path.join(output, "marketplace");
+const plugin = path.join(marketplace, "plugins/commerce-backend-expert"), cwd = path.join(output, "work");
+const pluginId = "commerce-backend-expert@commerce-smoke";
+
+function run(label, args) {
+  const result = spawnSync(codex, args, {cwd, env: {...process.env, CODEX_HOME: profile}, encoding: "utf8", windowsHide: true, timeout: 30000});
+  fs.writeFileSync(path.join(output, label + ".log"), result.stdout || "");
+  fs.writeFileSync(path.join(output, label + ".stderr"), result.stderr || "");
+  assert.ifError(result.error); assert.equal(result.status, 0, result.stderr);
+  return JSON.parse(result.stdout);
+}
+function compareFiles(source, cached) {
+  let count = 0;
+  for (const entry of fs.readdirSync(source, {withFileTypes: true})) {
+    const from = path.join(source, entry.name), to = path.join(cached, entry.name);
+    if (entry.isDirectory()) count += compareFiles(from, to);
+    else { assert.deepEqual(fs.readFileSync(to), fs.readFileSync(from), entry.name); count++; }
+  }
+  return count;
+}
+
+try {
+  fs.mkdirSync(plugin, {recursive: true}); fs.mkdirSync(cwd); fs.mkdirSync(profile);
+  for (const relative of ["plugin.json", "package.json", "LICENSE", ".codex-plugin/plugin.json", ".claude-plugin/plugin.json", ".cursor-plugin/plugin.json", ".cursor/rules/commerce-backend.mdc", "skills", "hooks/session.json", "hooks/session.js"]) {
+    const destination = path.join(plugin, relative); fs.mkdirSync(path.dirname(destination), {recursive: true});
+    fs.cpSync(path.join(root, relative), destination, {recursive: true});
+  }
+  fs.mkdirSync(path.join(marketplace, ".agents/plugins"), {recursive: true});
+  fs.writeFileSync(path.join(marketplace, ".agents/plugins/marketplace.json"), JSON.stringify({name: "commerce-smoke", plugins: [{name: "commerce-backend-expert", source: {source: "local", path: "./plugins/commerce-backend-expert"}, policy: {installation: "AVAILABLE", authentication: "ON_INSTALL"}, category: "Productivity"}]}));
+  run("marketplace-add", ["plugin", "marketplace", "add", marketplace, "--json"]);
+  const available = run("available", ["plugin", "list", "--marketplace", "commerce-smoke", "--available", "--json"]);
+  const installed = run("install", ["plugin", "add", pluginId, "--json"]);
+  const comparedFiles = compareFiles(plugin, installed.installedPath);
+  const listed = run("installed", ["plugin", "list", "--marketplace", "commerce-smoke", "--json"]);
+  assert.ok(listed.installed.some(item => item.name === "commerce-backend-expert" && item.enabled));
+  const entry = path.join(plugin, "skills/commerce-backend-expert/SKILL.md"), source = fs.readFileSync(entry, "utf8");
+  fs.writeFileSync(entry, source + "\n<!-- local refresh probe -->\n");
+  const refreshed = run("reinstall", ["plugin", "add", pluginId, "--json"]);
+  compareFiles(plugin, refreshed.installedPath);
+  fs.writeFileSync(entry, source);
+  const nextVersion = installed.version + "-smoke.1";
+  for (const relative of ["plugin.json", ".codex-plugin/plugin.json", ".claude-plugin/plugin.json", ".cursor-plugin/plugin.json"]) {
+    const file = path.join(plugin, relative), manifest = JSON.parse(fs.readFileSync(file, "utf8"));
+    manifest.version = nextVersion; fs.writeFileSync(file, JSON.stringify(manifest, null, 2));
+  }
+  const upgraded = run("fixture-upgrade", ["plugin", "add", pluginId, "--json"]);
+  assert.equal(upgraded.version, nextVersion); compareFiles(plugin, upgraded.installedPath);
+  run("remove", ["plugin", "remove", pluginId, "--json"]);
+  assert.equal(run("after-remove", ["plugin", "list", "--marketplace", "commerce-smoke", "--json"]).installed.length, 0);
+  assert.ok(!fs.existsSync(upgraded.installedPath));
+  run("marketplace-remove", ["plugin", "marketplace", "remove", "commerce-smoke", "--json"]);
+  const summary = {output, comparedFiles, version: installed.version, fixtureUpgradeVersion: nextVersion, available, installed, sameVersionRefresh: true, differentVersionRefresh: true, removed: true, credentialsCopied: false, modelCalls: 0};
+  fs.writeFileSync(path.join(output, "summary.json"), JSON.stringify(summary, null, 2));
+  console.log(JSON.stringify(summary, null, 2));
+} catch (error) {
+  console.error("Local plugin check failed. Evidence: " + output + "\n" + error.message); process.exitCode = 1;
+}

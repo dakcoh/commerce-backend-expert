@@ -1,116 +1,103 @@
-# Commerce Context MCP
+# Commerce Backend Expert
 
 English · [한국어](README.ko.md)
 
-[![npm version](https://img.shields.io/npm/v/commerce-context-mcp)](https://www.npmjs.com/package/commerce-context-mcp)
-[![CI](https://github.com/dakcoh/commerce-context-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/dakcoh/commerce-context-mcp/actions/workflows/ci.yml)
-[![license](https://img.shields.io/npm/l/commerce-context-mcp)](LICENSE)
+[![CI](https://github.com/dakcoh/commerce-context-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/dakcoh/commerce-context-mcp/actions/workflows/ci.yml) · [MIT](LICENSE)
 
-**An MCP server that helps AI coding tools find design rules and review Korean ecommerce backends.**
+**A Markdown skill for designing, implementing, refactoring, reviewing, and investigating Korean ecommerce backends.**
 
-The catalog contains 70 rules covering inventory, payments, coupons, settlement, orders, shipping, customers, and Java/Spring. Your AI client can retrieve relevant guidance, check when it applies, and use it while reviewing code or designs.
+The skill guides an AI through actual code and business conditions, then selects relevant guidance for the requested development task. It includes 70 rules covering orders, inventory, payments, coupons, settlement, and Java/Spring.
 
-The documentation is available in English and Korean. **The knowledge catalog is currently in Korean.** The server uses keyword search; it does not translate queries. Ask your AI client to search with relevant Korean terms and explain the retrieved guidance in your preferred language. English search quality has not been established by the current regression suite.
+Document-only skill usage requires no Java or Node.js installation, MCP server, or separate API key. The plugin's session hooks require Node.js 22 or later. AI-client access and project build/test requirements remain those of their respective environments.
 
-## What can it help with?
+## Use the skill
 
-- **Use shared review criteria.** Retrieve 70 Korean ecommerce rules and use the same checks for design, implementation, and code review.
-- **Review failure and recovery flows.** Get checks for duplicate requests, unknown payment outcomes, and partial refunds alongside the normal flow.
-- **Check when guidance applies.** Read each rule's conditions, exceptions, recorded references, and review status before applying it to your code.
-- **Connect without installing a JDK.** With Node.js 22 or later and an MCP client, the launcher prepares a private Java 21 runtime on first launch.
+**v0.3.0 is a Markdown skill/plugin release.** It does not update the old npm MCP package; do not install it with `npm install` or register an MCP server. See [client checks](CONTRIBUTING.md#client-checks) for session-hook coverage.
 
-Describe the business scenario and provide the relevant code, then ask for a review:
-
-| Concern | Example request to your AI client |
-|---|---|
-| Overselling | “Review a design that deducts inventory directly in the database without reservations.” |
-| Unknown payment outcome | “Check the lookup and retry flow when a payment provider's response is lost.” |
-| Duplicate webhooks | “Find missing signature checks and duplicate-event handling.” |
-| Partial refunds | “Review coupon and point allocation, including rounding.” |
-| Settlement differences | “List the checks for reconciling a finalized statement against actual payouts.” |
-
-The server provides design guidance. It does not execute orders, payments, or refunds, and does not treat one company's business policies as universal rules.
-
-## Quick start
-
-Version 0.2.2 requires **Node.js 22 or later and an AI client that supports local STDIO MCP servers**.
-
-> **Automatic preparation of a private Java runtime is available from 0.2.0.** Update the package if you use an earlier version. To check unpublished source changes, follow the [local package validation guide](CONTRIBUTING.md#local-validation).
-
-You do not need to install a JDK or configure `JAVA_HOME`. npm installation requires no Java. On first launch, the package downloads, verifies, and caches a private Java 21 runtime and the server JAR. It does not change your system Java, `JAVA_HOME`, or `PATH`.
-
-Prepare the runtime and server, then check the cache:
+Codex CLI:
 
 ```bash
-node -v
-npx -y commerce-context-mcp download
-npx -y commerce-context-mcp doctor
+codex plugin marketplace add https://github.com/dakcoh/commerce-context-mcp.git
+codex plugin add commerce-backend-expert@commerce-context-mcp
 ```
 
-Register the server with your client.
-
-**Codex CLI**
+Claude Code:
 
 ```bash
-codex mcp add commerce-context -- npx -y commerce-context-mcp
+claude plugin marketplace add dakcoh/commerce-context-mcp
+claude plugin install commerce-backend-expert@commerce-context-mcp
 ```
 
-**Claude Code**
+Use a new conversation after installation. Codex hooks require reviewing and trusting their definitions through `/hooks`; execution after trust and actual resume/compaction remain unverified. Prepare Node.js 22 or later when using hooks. For Cursor and OpenClaw, follow [client layouts](#client-layouts) below. You can also download the repository and provide the documents directly.
 
-```bash
-claude mcp add --transport stdio commerce-context -- npx -y commerce-context-mcp
-```
+1. Make the [general skill](skills/commerce-backend-expert/SKILL.md) or [payment/refund review skill](skills/commerce-review/SKILL.md) available to your AI. They share knowledge, so copy the entire `skills/` directory when moving them.
+2. Provide the relevant project and business conditions, and specify the requested task.
+3. Review the rules read, code locations, changes, executed tests, and unresolved conditions.
 
-For clients using JSON configuration, connection troubleshooting, and cache recovery, see the [installation guide](npm/README.md). Check the connection after registration and start a new conversation:
+Reference the entry SKILL.md path and ask, for example:
 
-> “Use commerce-context to review this payment webhook. Search the Korean catalog for relevant rules, then explain their applicability and any remaining checks in English.”
+> Read this skill and review my payment webhook. Trace callers, upstream validation, and persistence. Distinguish applicable guidance, confirmed defects, and remaining checks.
 
-npm installation only installs the launcher. Downloads happen on first launch or with `download`; subsequent launches reuse verified caches. Run `download` in advance to reduce the wait during the first MCP connection. The server needs no separate LLM API key. Your AI client's subscription and data handling terms still apply.
-
-## Reading the results
-
-| Field or label | Meaning and next step |
+| Task | Example request |
 |---|---|
-| `matchConfidence`, `queryCoverage` | Query-to-rule search match, not a factual accuracy score. |
-| `project-guidance` | Guidance maintained by this project, not independent external verification. |
-| `external-source` | Guidance with external references. Check their scope; this does not establish that the entire rule is verified. |
-| `needs-review` | Check applicability, evidence, and review records before relying on the rule. |
-| `verifiedBy`, `lastReviewedAt` | Actual review records; JSON contains `null` when no record exists. |
-| `partial: true` | Only part of a checklist was returned. Narrow the scenario and request more. |
-| `analysisTruncated: true` | Only selected sections of a large input were searched. Retry with the relevant code. |
+| Design | “Design recovery for direct database stock deduction and a lost payment approval response.” |
+| Implementation | “Use a date/sequence business key to prevent duplicates; check midnight retries and request-content conflicts.” |
+| Refactoring | “Simplify stock deduction while preserving returns, exceptions, transactions, and side-effect order.” |
+| Payment/refund review | “Use commerce-review to distinguish actual defects from additional checks in this refund code. Do not edit the code.” |
+| Incident analysis | “An approval response was lost. Explain what to inspect using the original transaction and state history.” |
 
-`active` means a rule is enabled in the catalog. Neither an empty search nor a review candidate establishes whether a defect exists. Check current official material, actual code, and the operating environment for payment contracts, legal, tax, and security decisions.
+## Read only relevant guidance
 
-## Tools
+The entry skill selects a domain index, then reads the required rules. It skips the index when the exact rule path is already known and avoids rereading documents already in context. It does not load the entire catalog for every request.
 
-| Tool | Purpose |
+| Domain | Coverage | Rules |
+|---|---|---:|
+| [Products, orders, customers, shipping](skills/commerce-backend-expert/references/commerce/INDEX.md) | Prices, states, benefits, authorization, operational integrity | 20 |
+| [Inventory and concurrency](skills/commerce-backend-expert/references/inventory/INDEX.md) | Direct deduction, reservations, idempotency, compensation | 8 |
+| [Payments and refunds](skills/commerce-backend-expert/references/payment/INDEX.md) | Approvals, webhooks, unknown outcomes, partial refunds | 7 |
+| [Coupons and promotions](skills/commerce-backend-expert/references/coupon/INDEX.md) | Eligibility, issuance limits, discount allocation, restoration | 6 |
+| [Settlement and payouts](skills/commerce-backend-expert/references/settlement/INDEX.md) | Dates, statements, deductions, holds, reconciliation | 9 |
+| [Java/Spring implementation](skills/commerce-backend-expert/references/spring-commerce/INDEX.md) | Transactions, JPA, events, batches, retries | 20 |
+
+Guides are bilingual; the knowledge documents are in Korean. This skill does not apply to ordinary frontend styling, marketing, or sales strategy.
+
+## Client layouts
+
+The shared [plugin.json](plugin.json) and client entrypoints below use the same `skills/` source without copying knowledge. The current version is `0.3.0`. **Format/path checks and actual client installation/activation are separate.**
+
+| Client | Configuration |
 |---|---|
-| `search_knowledge` | Find rules relevant to a query. |
-| `get_rule` | Read a full rule, applicability, exceptions, and evidence. |
-| `get_checklist` | Retrieve checks for a domain or scenario. |
-| `review_commerce_design` | Find review candidates in a design, API, DDL, or code excerpt. |
+| Codex | OpenAI settings in the shared manifest and compatibility settings in [.codex-plugin/plugin.json](.codex-plugin/plugin.json): skills and session hooks |
+| Claude Code | Skills and session hooks in [.claude-plugin/plugin.json](.claude-plugin/plugin.json) |
+| Cursor | [.cursor-plugin/plugin.json](.cursor-plugin/plugin.json) and an [optional routing rule](.cursor/rules/commerce-backend.mdc) |
+| OpenClaw | Shared bundle, or the [extra skill directory example](.openclaw/skills.example.json). Replace the absolute path and merge into existing configuration; this example is not applied automatically. |
 
-Your client invokes the tools; you do not need to type a tool name in every message. Search, rule, and checklist calls accept `responseFormat: "json"` to avoid duplicate Markdown. See the [usage guide](docs/USAGE_SCENARIOS.md) for actual tool arguments.
+## Session hooks
 
-## Supported environment and scope
+[Session hooks](hooks/session.json) provide concise scope and skill paths at startup, resume, and after conversation compaction. They do not inject all 70 rules. On clients running these hooks, send the following as ordinary messages:
 
-The server runs locally over STDIO. Knowledge retrieval uses the YAML packaged in the JAR, without an external LLM, database, or HTTP server. Your connected AI client decides how tool results are used and which data is sent to its provider.
+| Message | Behavior |
+|---|---|
+| `commerce off` | Stop automatic commerce guidance for this session |
+| `commerce on` | Resume automatic guidance |
+| `commerce status` | Report the current state |
 
-**npm users do not need to install a JDK or JRE.** With Node.js 22 or later and an MCP client, the launcher automatically downloads, verifies, and uses a private Temurin JRE 21 on first launch.
+State is isolated by project and session and survives resume/compaction of that session. Off does not remove host skill discovery or prohibit explicitly requested skills. Hooks do not store or transmit prompts, code, or transcripts. Only the on/off flag is stored in the client's plugin-data directory, falling back to the OS temporary directory if unavailable.
 
-Supported platforms are Windows, macOS, and glibc-based Linux, for x64 and ARM64. Extraction needs the OS `tar` command, included with Windows 10/11 and macOS. Alpine/musl and 32-bit systems are unsupported.
+Both hooks were discovered in Codex CLI 0.153.2. Review/trust of the current hook definition is required separately from installation. Execution after trust and actual resume/compaction remain unverified in that client. See [runtime scope and compatibility settings](CONTRIBUTING.md#client-checks).
 
-**For source developers:** JDK 21 is required only when building the source code yourself.
+The [Claude](hooks/claude.json) and [Cursor](hooks/cursor.json) edit hooks are **optional checks for knowledge contributors**, not registered by default. They are separate from session hooks and do not inspect ordinary user-project code. See [developer hook setup](CONTRIBUTING.md#optional-development-hooks).
 
-[Plugin installation packaging](CONTRIBUTING.md#plugin-installation-package) is planned.
+## Interpret the results
 
-## Documentation
+Check each rule's conditions, exceptions, evidence scope, and review state. `active` means in use, not certified accurate. Nineteen rules are `needs-review`. `not-recorded` under `verifiedBy` or `lastReviewedAt` means there is no recorded review.
 
-- [Installation, connection, and troubleshooting](npm/README.md)
-- [Usage scenarios, result interpretation, and all 70 rules](docs/USAGE_SCENARIOS.md)
-- [Contributing, validation, runtime policy, and releases](CONTRIBUTING.md)
-- [한국어 안내](README.ko.md)
+The migrated documents were evaluated on seven synthetic development tasks. This does not establish live DB/PG behavior, automatic skill selection after installation, or correctness across all tasks. No token or response-time improvement is claimed. See [validation and its limits](CONTRIBUTING.md#validation).
 
-## Public data and license
+## Existing MCP users
 
-Licensed under [MIT](LICENSE). The default YAML catalog is included in the source repository and distributed JAR. Contribute only public, general guidance; do not add company policies, contracts, private material, customer data, or keys. Separate storage and loading of private knowledge are future work.
+This branch now uses **Markdown as the sole knowledge source**. The old YAML, Java MCP, Gradle build, npm launcher, and JRE download path have been removed. Existing MCP settings cannot run this branch.
+
+The public v0.2.2 source and instructions remain in the [v0.2.2 tag](https://github.com/dakcoh/commerce-context-mcp/tree/v0.2.2). Published npm/JAR artifacts and tags remain unchanged. To migrate, remove the old MCP registration and install the plugin above. The [v0.3.0 release](https://github.com/dakcoh/commerce-context-mcp/releases/tag/v0.3.0) provides a source archive and describes the changes and validation scope.
+
+For knowledge changes and developer checks, see [Contributing](CONTRIBUTING.md).
