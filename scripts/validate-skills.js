@@ -235,8 +235,9 @@ function validateRepository(root = repositoryRoot) {
   const review = path.join(root, "skills/commerce-review/SKILL.md");
   validateFrontmatter(fs.readFileSync(review, "utf8"), "commerce-review");
   const reviewLinks = validateLinks(review, path.dirname(review));
+  const license = fs.readFileSync(path.join(root, "LICENSE"), "utf8").replaceAll("\r\n", "\n");
   for (const name of ["commerce-backend-expert", "commerce-review"]) {
-    assert.equal(fs.readFileSync(path.join(root, "skills", name, "LICENSE"), "utf8"), fs.readFileSync(path.join(root, "LICENSE"), "utf8"), `${name}: bundle the repository license`);
+    assert.equal(fs.readFileSync(path.join(root, "skills", name, "LICENSE"), "utf8").replaceAll("\r\n", "\n"), license, `${name}: bundle the repository license`);
   }
   const documents = ["README.md", "README.ko.md", "CONTRIBUTING.md", "CONTRIBUTING.ko.md", "tests/README.md", "benchmarks/scenarios.md", "benchmarks/README.md", ".cursor/rules/commerce-backend.mdc"];
   const documentationLinks = documents.reduce((sum, relative) => sum + validateLinks(path.join(root, relative), root), 0);
