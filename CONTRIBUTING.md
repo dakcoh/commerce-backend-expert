@@ -58,6 +58,7 @@ The Markdown in `skills/commerce-backend-expert/` is the knowledge source. Maint
 | Automatic checks after knowledge edits | [hooks/](hooks/) — see [setup](#optional-development-hooks) below |
 | Session guidance and on/off state | [hooks/session.js](hooks/session.js), [registration](hooks/session.json) |
 | Local installation, refresh, and removal checks | [scripts/smoke-plugin.js](scripts/smoke-plugin.js) |
+| Actual Claude hook lifecycle checks with local model responses | [scripts/smoke-claude-hooks.js](scripts/smoke-claude-hooks.js) |
 | CI environment | [.github/workflows/ci.yml](.github/workflows/ci.yml) |
 | Developer-script CommonJS scope and YAML parser | [package.json](package.json) — private, developer-check dependency only |
 
@@ -119,13 +120,13 @@ The checker handles Markdown edits inside `skills/`, validating both skills and 
 
 ## Client checks
 
-**Updated on 2026-10-24.** Distinguish configuration checks, client-reported enabled state, and actual document application by the model. See the [0.3.1 validation record](validation/0.3.1.md) for the new checks; earlier model and Claude results remain dated 2026-10-23.
+**Updated on 2026-10-24.** Distinguish configuration checks, client-reported enabled state, and actual document application by the model. See the [0.3.1 validation record](validation/0.3.1.md) for the new checks; earlier model evaluations remain dated 2026-10-23.
 
 | Environment | Verified scope | Unverified or limited |
 |---|---|---|
 | Codex CLI 0.153.2 | 89 runtime files match the cache; actual v0.3.0 → 0.3.1 upgrade with the preserved marketplace ID, same-version refresh, fixture-version refresh, removal. In an isolated profile, both hooks ran after `/hooks` review/trust; off survived process restart/resume and actual compaction, and context reached the local response fixture | Hook checks used a deterministic local model-response fixture, not real inference. Automatic compaction and other client versions remain unverified |
 | Codex app-server with a read-only file tool | Actual skill/rule reads for natural refund/webhook requests without explicit skill invocation; no commerce reads for CSS | Three synthetic cases, one run each. Does not establish native CLI-tool behavior, live DB/PG behavior, or quality gains against no plugin |
-| Claude Code 2.1.114 | Manifest validation and discovery of both skills. Successful live `SessionStart` from current sources without a prompt. Separate `commerce off` state write | The off-trial copy also contained a diagnostic default hook file. Inference stopped due to insufficient credits. Model application and actual resume/compaction unverified |
+| Claude Code 2.1.114 | Deployment hooks only, both skills discovered. Twelve isolated CLI checks cover startup, off/status/on, quoted and negated prompts, process restart/resume, actual `/compact`, fresh sessions/projects, and context delivery to a localhost Messages response fixture | Loaded with `--plugin-dir`; marketplace installation is separate. Actual model application, automatic compaction, and other client versions remain unverified |
 | Cursor and OpenClaw | Repository configuration/path checks | Client execution unverified |
 | Optional hooks | Local checker and regression tests | Execution through client-registered hooks unverified |
 | Individual skill installation | Local installs of each skill and both together using `skills@1.7.4` on Node 24, with resolved references. Review-only installation needs no sibling folder | No model or session-hook execution |
@@ -144,6 +145,14 @@ node scripts/smoke-plugin.js /absolute/path/to/codex v0.3.0
 ```
 
 On Windows, pass the actual path to `codex.exe` as the first argument. The optional second argument selects a local Git baseline. This checks installation, exact file sets and contents, refresh, and removal; it does not execute models or hooks.
+
+With an available Claude Code executable, repeat the actual hook checks separately:
+
+```bash
+node scripts/smoke-claude-hooks.js /absolute/path/to/claude
+```
+
+This script uses a fresh configuration directory and plugin copy, disables model tools, and routes requests to a deterministic localhost Messages fixture with a dummy key. It copies no credentials and makes no remote model calls. It asserts client hook responses, a real compaction boundary, and delivered context; evidence goes under ignored `output/claude-hooks-*`. It is separate from the 37 offline tests and requires Claude Code 2.1.114's hook event output. Client binaries are not installed by the script.
 
 <details>
 <summary>Manual client checks and format references</summary>
@@ -167,7 +176,7 @@ Official documentation used for format checks:
 
 ## Remaining work and history
 
-- Complete Claude hook invocation and resume/compaction checks; check automatic compaction and additional Codex versions separately.
+- Check automatic compaction and additional Codex/Claude versions separately; complete Cursor/OpenClaw client checks.
 - Repeat natural-language evaluations with a no-plugin control. Do not generalize one trial into quality or token savings.
 - Individually review the evidence and conditions of the 19 `needs-review` rules.
 
