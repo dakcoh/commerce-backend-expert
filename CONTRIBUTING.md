@@ -59,6 +59,7 @@ The Markdown in `skills/commerce-backend-expert/` is the knowledge source. Maint
 | Session guidance and on/off state | [hooks/session.js](hooks/session.js), [registration](hooks/session.json) |
 | Local installation, refresh, and removal checks | [scripts/smoke-plugin.js](scripts/smoke-plugin.js) |
 | Actual Claude hook lifecycle checks with local model responses | [scripts/smoke-claude-hooks.js](scripts/smoke-claude-hooks.js) |
+| Optional DB/Redis/Spring checks and Cursor authentication boundary | [Isolated runtime record](validation/runtime/README.md), [runner](scripts/smoke-runtime.ps1), [Cursor probe](scripts/probe-cursor.js) |
 | CI environment | [.github/workflows/ci.yml](.github/workflows/ci.yml) |
 | Developer-script CommonJS scope and YAML parser | [package.json](package.json) — private, developer-check dependency only |
 
@@ -136,6 +137,8 @@ The checker handles Markdown edits inside `skills/`, validating both skills and 
 Plugin installation checks used a separate `CODEX_HOME` and work directory without changing normal user settings. The runtime fixture contained only manifests, license, module-scope configuration, routing rule, skills, and session hooks. Version-refresh checks changed fixture copies. Explicit skill evaluations use existing CLI authentication with process-local evaluation instructions and configuration. Release sources also contain bilingual docs, marketplaces, and developer checks. These results do not establish hook execution across all clients.
 
 All 19 high-risk rules received recorded AI document reviews on 2026-10-24, comparing official evidence scope with applicability and failure conditions. All remain `needs-review`: deployed PG/Redis/DB behavior and individual tax/privacy decisions were not established. See the [follow-up review record](validation/followup-review.md) for changes, remaining conditions, and client results. The 2026-10-23 model evaluations were not rerun after these rule changes.
+
+Subsequently, [15 synthetic runtime cases](validation/runtime/README.md) ran against actual PostgreSQL 16.15, Redis 7.0.15, and Spring/JPA. A Lua-error counterexample led to clearer coupon guidance and checklists. These checks are separate from the 37 offline tests and production verification. JDK/Gradle/WSL are needed only for the optional fixture; actual PG APIs, failover, business-policy approval, and model application remain unverified.
 
 Repeat the local installation check without credentials or model calls. Evidence is written under ignored `output/plugin-smoke-*` directories.
 

@@ -112,6 +112,8 @@ Codex CLI 0.153.2(`/hooks` 검토·신뢰 후)와 Claude Code 2.1.114의 격리 
 
 규칙의 적용 조건·예외·근거 범위와 검토 상태를 함께 확인하세요. `active`는 사용 중이라는 뜻이며 정확성 인증이 아닙니다. `needs-review` 19개는 AI 문서 검토를 기록했지만 실제 연동·사업 정책 검증이 남아 있습니다. [규칙별 후속 검토·인증 없는 클라이언트 확인](validation/followup-review.md)을 참고하세요. `verifiedBy`·`lastReviewedAt`이 `not-recorded`이면 검토 기록이 없습니다.
 
+선택적 [격리 런타임 검증 15개](validation/runtime/README.md)에서는 PostgreSQL·Redis·Spring/JPA의 실패 경계를 실행하고 Lua 오류 복구 지침을 보완했습니다. 합성 사례이며 실제 PG·사업 정책·모델 적용 검증과 별도입니다.
+
 [공개 행동 평가](benchmarks/README.md)는 고정 합성 입력과 실제 스킬 내용을 사용합니다. 실제 DB·PG 운영 동작, 설치 후 자동 선택, 모든 업무의 정확성을 입증하는 절차는 아닙니다. 토큰·응답 속도 개선도 주장하지 않습니다. [검증 방법과 범위](CONTRIBUTING.ko.md#검증)
 
 ## 기존 MCP 사용자

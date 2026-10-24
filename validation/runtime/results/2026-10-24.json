@@ -1,0 +1,158 @@
+{
+  "date": "2026-10-24",
+  "sourceBase": "142e6ec453c2566da00c0d587a778d4eee29664e",
+  "environment": {
+    "host": "Windows x64",
+    "services": "WSL Ubuntu 24.04",
+    "java": "21.0.2",
+    "gradle": "8.14.5",
+    "python": "3.12.3",
+    "postgres": "postgres (PostgreSQL) 16.15 (Ubuntu 16.15-0ubuntu0.24.04.1)",
+    "redis": "Redis server v=7.0.15 sha=00000000:0 malloc=jemalloc-5.3.0 bits=64 build=d064f9f48c901a92",
+    "springFramework": "7.0.10",
+    "springSecurity": "7.1.2",
+    "hibernate": "7.2.11.Final",
+    "jedis": "6.2.0",
+    "postgresqlJdbc": "42.7.8"
+  },
+  "tests": [
+    {
+      "class": "validation.RedisBoundaryTest",
+      "name": "expiredOwnerNeedsResourceFencingAndCompensationNeedsAttemptToken()",
+      "result": "passed"
+    },
+    {
+      "class": "validation.RedisBoundaryTest",
+      "name": "redisReservationLossStillCannotExceedDbCap()",
+      "result": "passed"
+    },
+    {
+      "class": "validation.RedisBoundaryTest",
+      "name": "luaRuntimeErrorDoesNotRollBackEarlierWrites()",
+      "result": "passed"
+    },
+    {
+      "class": "validation.RedisBoundaryTest",
+      "name": "streamRedeliveryAfterDbCommitBeforeAckIsIdempotent()",
+      "result": "passed"
+    },
+    {
+      "class": "validation.SpringBoundaryTest",
+      "name": "signedJwtStillNeedsIssuerTimeAudienceAndResourceAuthorization()",
+      "result": "passed"
+    },
+    {
+      "class": "validation.SpringBoundaryTest",
+      "name": "actualJpaFlushMarksRollbackOnlyAndProxyRetryUsesAFreshTransaction()",
+      "result": "passed"
+    },
+    {
+      "class": "validation.TransactionTest",
+      "name": "refundUnitConflictRollsBackTheWholeReservationEvenBelowOrderCap()",
+      "result": "passed"
+    },
+    {
+      "class": "validation.TransactionTest",
+      "name": "concurrentAttemptClaimIsDurableAndDifferentFingerprintIsRejected()",
+      "result": "passed"
+    },
+    {
+      "class": "validation.TransactionTest",
+      "name": "payoutUncertaintyKeepsFundsReservedUntilTerminalReconciliation()",
+      "result": "passed"
+    },
+    {
+      "class": "validation.TransactionTest",
+      "name": "lockTimeoutAndAbortedTransactionRequireRollback()",
+      "result": "passed"
+    },
+    {
+      "class": "validation.TransactionTest",
+      "name": "restorationBusinessKeyAndOriginalLimitAreAtomic()",
+      "result": "passed"
+    },
+    {
+      "class": "validation.TransactionTest",
+      "name": "lostApprovalResponseKeepsDurableAttemptAndReconcilesWithoutNewApproval()",
+      "result": "passed"
+    },
+    {
+      "class": "validation.TransactionTest",
+      "name": "concurrentRefundsCannotBothReserveTheLastAmount()",
+      "result": "passed"
+    },
+    {
+      "class": "validation.TransactionTest",
+      "name": "deadlockVictimCanRetryOnlyAfterEndingItsTransaction()",
+      "result": "passed"
+    },
+    {
+      "class": "validation.TransactionTest",
+      "name": "checkpointAndBusinessEffectRollBackTogetherAndSeoulDayIsHalfOpen()",
+      "result": "passed"
+    }
+  ],
+  "total": 15,
+  "failures": 0,
+  "cleanup": {
+    "stopped": true,
+    "portsClosed": true,
+    "temporaryClusterRemoved": true
+  },
+  "buildFailureCleanup": {
+    "injectedExitCode": 9,
+    "servicesStopped": true,
+    "temporaryClusterRemoved": true,
+    "environmentRestored": true
+  },
+  "cursorProbe": {
+    "version": "2026.10.22-27dcf5f",
+    "platform": "win32",
+    "checks": [
+      {
+        "skills": [
+          "commerce-backend-expert"
+        ],
+        "result": "authentication-required",
+        "discoveryVerified": false
+      },
+      {
+        "skills": [
+          "commerce-review"
+        ],
+        "result": "authentication-required",
+        "discoveryVerified": false
+      },
+      {
+        "skills": [
+          "commerce-backend-expert",
+          "commerce-review"
+        ],
+        "result": "authentication-required",
+        "discoveryVerified": false
+      }
+    ],
+    "discoveryVerified": false,
+    "modelApplicationVerified": false
+  },
+  "sourceSHA256": {
+    "scripts/smoke-runtime.ps1": "90793c52583c69663f547c25ac2ba05ec590d0f0b887bf0a4f46e8a576d968a9",
+    "scripts/probe-cursor.js": "07fe095ba0cd7571d67da0def301236e1b9452101b093249da53b9494c5a6150",
+    "validation/runtime/build.gradle": "a4071ef17847451887299a65d4db8968b3232621058f491d28bc9c909b6abf44",
+    "validation/runtime/settings.gradle": "106d36f1ccb5510076ee6f94a6a34a8da2acd2ff5a35f7af53d9ac920dda8817",
+    "validation/runtime/services.py": "492af532c6c5a7e57a2e9f9cacbf8aad2b68b76eb568a432888a4d4c44c61876",
+    "validation/runtime/src/test/java/validation/DatabaseTest.java": "748035717f937fa20d23c9493217a14c127b0c4d4ceea4dd05970c84e42578cb",
+    "validation/runtime/src/test/java/validation/RedisBoundaryTest.java": "04840c4be9d207cd83ed30476fa98770d7c3b4f38ae44647b1eb4cb021b4155b",
+    "validation/runtime/src/test/java/validation/SpringBoundaryTest.java": "62d12db6da625ab3ec6a05f73dcdcb6b6f097a6d5b7db77be743b5d8e543f560",
+    "validation/runtime/src/test/java/validation/Stock.java": "7e41a92f917a77cf317e74ee42fab68b4f2d63f82062bdb7a62e82f3455be83f",
+    "validation/runtime/src/test/java/validation/TransactionTest.java": "c5367d7cb6f472c7d2d466f7fef1e153c67954dcc93cef4a29049ac126555a16"
+  },
+  "limits": [
+    "Synthetic reference transactions, not production backend validation",
+    "Payment approval is a localhost response-loss fixture; no PG API calls",
+    "Redis reservation deletion is not restart or failover",
+    "No live business, legal, accounting, or privacy-policy approval",
+    "JWT decoder and method proxies, not a complete HTTP security chain",
+    "No Cursor or OpenClaw model inference; Cursor discovery remains unverified"
+  ]
+}

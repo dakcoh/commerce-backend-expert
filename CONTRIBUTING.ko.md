@@ -59,6 +59,7 @@ node scripts/validate-skills.js /path/to/baseline.json
 | 사용자 세션의 지침·켜기·끄기 | [hooks/session.js](hooks/session.js), [등록 설정](hooks/session.json) |
 | 로컬 설치·갱신·제거 시험 | [scripts/smoke-plugin.js](scripts/smoke-plugin.js) |
 | 로컬 모델 응답으로 실제 Claude 훅 수명주기 확인 | [scripts/smoke-claude-hooks.js](scripts/smoke-claude-hooks.js) |
+| 선택적 DB·Redis·Spring 검증과 Cursor 인증 경계 | [격리 실행 기록](validation/runtime/README.md), [실행기](scripts/smoke-runtime.ps1), [Cursor probe](scripts/probe-cursor.js) |
 | CI 실행 환경 | [.github/workflows/ci.yml](.github/workflows/ci.yml) |
 | 개발 스크립트의 CommonJS 범위·YAML 파서 | [package.json](package.json) — 비공개·개발 검사 의존성만 포함 |
 
@@ -136,6 +137,8 @@ Codex CLI 0.153.2에서는 루트 manifest에 Agent Plugins `$schema`가 있으�
 플러그인 설치 시험은 별도의 `CODEX_HOME`과 작업 폴더에서 수행했으며 평소 사용자 설정은 변경하지 않았습니다. 런타임 시험용 패키지는 manifest·라이선스·모듈 범위 설정·라우팅 규칙·스킬·세션 훅만 포함했습니다. 버전 갱신 검사는 시험용 복사본에서 수행했습니다. 명시적 스킬 평가는 기존 인증을 CLI를 통해 사용하며 프로세스 안에서 평가용 지침·설정을 지정합니다. 배포 소스에는 한영 문서·마켓플레이스·개발 검사 도구도 포함합니다. 위 결과를 모든 클라이언트의 훅 실행 검증으로 확대하지 않습니다.
 
 고위험 규칙 19개 모두 2026-10-24에 공식 문서의 근거 범위와 적용·실패 조건을 대조하고 AI 문서 검토를 기록했습니다. PG·Redis·DB 운영 동작과 개별 세무·개인정보 판단은 확인하지 않았으므로 `needs-review` 19개를 유지합니다. 수정 내용·규칙별 미확인 조건·클라이언트 결과는 [후속 검토 기록](validation/followup-review.md)에 남겼습니다. 2026-10-23 모델 평가는 이번 규칙 변경 후 재실행한 결과가 아닙니다.
+
+이후 PostgreSQL 16.15·Redis 7.0.15·Spring/JPA의 [합성 런타임 사례 15개](validation/runtime/README.md)를 실제 실행했습니다. Lua 오류 전 쓰기가 남는 반례를 쿠폰 지침·체크리스트에 반영했습니다. 기본 테스트 37개 및 운영 검증과 별도이며 JDK·Gradle·WSL은 이 선택적 시험에만 필요합니다. 실제 PG·failover·사업 정책 승인·모델 적용은 미확인입니다.
 
 로컬 설치 시험은 모델·인증 정보 없이 재현할 수 있습니다. 결과는 무시되는 `output/plugin-smoke-*`에 남습니다.
 

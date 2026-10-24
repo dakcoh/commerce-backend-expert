@@ -1,0 +1,24 @@
+plugins { id 'java' }
+repositories { mavenCentral() }
+def output = System.getenv('COMMERCE_TEST_OUTPUT')
+if (!output) throw new GradleException('Run with scripts/smoke-runtime.ps1 and isolated test services')
+layout.buildDirectory = file(output + '/build')
+dependencies {
+    testImplementation 'org.junit.jupiter:junit-jupiter:5.13.4'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+    testImplementation 'org.postgresql:postgresql:42.7.8'
+    testImplementation 'org.springframework:spring-orm:7.0.10'
+    testImplementation 'org.springframework:spring-context:7.0.10'
+    testImplementation 'org.springframework:spring-jdbc:7.0.10'
+    testImplementation 'org.springframework.security:spring-security-config:7.1.2'
+    testImplementation 'org.springframework.security:spring-security-oauth2-resource-server:7.1.2'
+    testImplementation 'org.springframework.security:spring-security-oauth2-jose:7.1.2'
+    testImplementation 'org.hibernate.orm:hibernate-core:7.2.11.Final'
+    testImplementation 'redis.clients:jedis:6.2.0'
+}
+tasks.withType(JavaCompile).configureEach { options.compilerArgs += ['-parameters'] }
+test {
+    useJUnitPlatform()
+    maxParallelForks = 1
+    testLogging { events 'passed', 'failed', 'skipped'; exceptionFormat 'short' }
+}

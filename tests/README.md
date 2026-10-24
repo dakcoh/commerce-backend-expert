@@ -30,4 +30,6 @@ node --test tests/hooks.test.js
 
 [OpenClaw 발견 검사](../scripts/smoke-openclaw.js)는 실제 CLI에서 extraDirs 개별·동시 설치와 번들 링크 설치·제거를 확인합니다. 인증·모델·게이트웨이는 사용하지 않으며 기본 테스트 수와 모델 적용 평가에 합산하지 않습니다.
 
+[격리 런타임 사례 15개](../validation/runtime/README.md)는 실제 PostgreSQL·Redis·Spring/JPA를 사용하는 별도 개발 검증입니다. 실제 PG·회사 정책을 검증한 결과는 아니며 기본 Node.js 검사에 Java·DB 의존성을 추가하지 않습니다. [Cursor probe](../scripts/probe-cursor.js)는 세 설치 조합의 인증 제한을 기록하며, 스킬 발견을 통과 처리하지 않습니다.
+
 English: Tests are grouped by behavior, use Node's built-in runner, and run offline. Shared helpers create disposable fixtures; assertions stay in their test files. Model evaluations live in `benchmarks/` and are never part of the default test command.

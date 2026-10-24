@@ -7,9 +7,9 @@
 - status: needs-review
 - evidenceLevel: external-source
 - owner: commerce-context-maintainers
-- verifiedBy: Codex (AI 문서 검토)
+- verifiedBy: Codex (AI 문서·격리 런타임 검토)
 - lastReviewedAt: 2026-10-24
-- changeNote: DB-only·Redis·큐 소비자의 한도와 중복 처리 경계를 검토했다. 실제 큐 재전달·Redis 장애는 미검증이다.
+- changeNote: PostgreSQL 16.15·Redis 7.0.15 합성 시험으로 발급 한도·Streams 재전달·Lua 오류 후 쓰기 잔존을 확인했다. 실제 사업 정책·클러스터 failover는 미검증이다.
 - jurisdiction: KR
 
 ## 요약
@@ -30,6 +30,7 @@
 
 - DB 조건부 수량 갱신과 발급 업무키 UNIQUE를 같은 트랜잭션에서 처리하는 DB-only 방식도 가능하다. 확보 성공 여부와 양수 수량·총 한도를 함께 검증한다
 - Redis 사용 시 재고 확인·감소와 사용자 중복 선점을 하나의 Lua Script로 처리한다. DECR와 SETNX를 애플리케이션에서 따로 호출하면 전체 흐름은 원자적이지 않다
+- Lua 실행 중 다른 요청이 끼어들지 않는 것과 오류 시 자동 롤백은 다르다. 입력·키 타입·자격·한도 검사를 쓰기 전에 수행하고, 쓰기 뒤 오류·응답 유실 시 영속 attempt와 원장을 대사한다. 스크립트 실패만으로 앞선 수량 감소가 없었다고 간주하지 않는다
 - DB 비관락: SELECT ... FOR UPDATE → 발급 수량 체크 + 업데이트 원자적 처리 (단: 트래픽 폭주 시 DB 커넥션 소진 위험)
 - 메시지 큐 (비동기 발급): 접수와 발급 확정을 구분한다. 다중 소비자·파티션·재전달이 있으므로 큐의 존재나 단일 소비자 설정만으로 중복 방지·전체 순서를 보장하지 않는다. 소비자도 업무키 제약과 원자적 한도 확보를 적용하고 DB 확정 뒤 ack하며, 중단 후 재전달을 멱등 처리한다
 - 이중 발급 방어: 1인 1매 캠페인은 userId + campaignId 등을 업무키로 사용할 수 있다. couponId가 캠페인인지 개별 발급권인지 정의하고, 회차별 발급·1인 N매 한도는 그 자격 범위에 맞춰 제약과 원자적 수량 검증을 설계한다
@@ -43,6 +44,7 @@
 
 - [ ] 선착순 쿠폰 발급 시 오버이슈 방지 로직이 있는가?
 - [ ] 발급 자격·회차·사용자 한도에 맞춘 업무키 제약과 원자적 수량 검증이 있는가?
+- [ ] Lua를 쓰면 첫 쓰기 전 검증과 오류·응답 유실 뒤 부분 반영 대사 경로가 있는가?
 
 ## 출처
 
@@ -75,6 +77,16 @@
 - reviewedAt: 2026-10-24
 - accessedAt: 2026-10-24
 - note: UNIQUE·CHECK 등 DB 제약의 기술적 범위만 참고한다. 업무키 설계·회계 정책이나 운영 DB 검증은 별도다.
+
+### Redis — Transaction Rollbacks
+
+- source: https://redis.io/blog/you-dont-need-transaction-rollbacks-in-redis/
+- type: official-documentation
+- sourceVersion: 2020-05-04 기술 설명; Redis 7.0.15 격리 실행 대조
+- publishedAt: 2020-05-04
+- reviewedAt: 2026-10-24
+- accessedAt: 2026-10-24
+- note: 스크립트 원자성과 오류 복구를 구분하는 참고다. DECR 뒤 WRONGTYPE의 쓰기 잔존은 격리 사례로 확인했으며 모든 장애·클러스터 복구를 입증하지 않는다.
 
 ## 태그
 
