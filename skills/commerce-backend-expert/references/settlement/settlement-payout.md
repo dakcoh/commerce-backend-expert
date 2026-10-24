@@ -5,11 +5,11 @@
 - category: payout
 - severity: high
 - status: needs-review
-- evidenceLevel: project-guidance
+- evidenceLevel: external-source
 - owner: commerce-context-maintainers
-- verifiedBy: not-recorded
-- lastReviewedAt: not-recorded
-- changeNote: not-recorded
+- verifiedBy: Codex (AI 문서 검토)
+- lastReviewedAt: 2026-10-24
+- changeNote: 요청 접수와 실제 지급 완료·미확정 확보액·원천징수 조건을 검토했다. 실제 은행·PG 결과와 개별 세무 판단은 미검증이다.
 - jurisdiction: KR
 
 ## 요약
@@ -57,7 +57,7 @@
 
 ## 출처
 
-### 프로젝트 관리 지식 — 외부 근거 미첨부
+### 프로젝트 관리 지식 — 이관 출처
 
 - source: src/main/resources/knowledge/settlement.yml
 - type: project-guidance
@@ -66,6 +66,26 @@
 - reviewedAt: not-recorded
 - accessedAt: not-recorded
 - note: 프로젝트가 관리하는 일반 설계 지침이다. 독립적인 외부 근거로 간주하지 말고, 고위험 결정은 최신 공식 자료로 확인한다.
+
+### 토스페이먼츠 — 지급대행 v2
+
+- source: https://docs.tosspayments.com/guides/v2/payouts
+- type: official-documentation
+- sourceVersion: v2
+- publishedAt: not-recorded
+- reviewedAt: 2026-10-24
+- accessedAt: 2026-10-24
+- note: 지급 요청·잔액·멱등키의 토스 계약 참고다. 내부 대사식·은행 전반의 계약을 입증하지 않는다.
+
+### 소득세법 제127조 — 원천징수의무
+
+- source: https://law.go.kr/LSW/lsLinkCommonInfo.do?chrClsCd=010202&lsJoLnkSeq=1029623555
+- type: official-documentation
+- sourceVersion: 법률 제21221호; 시행 2026-07-01
+- publishedAt: not-recorded
+- reviewedAt: 2026-10-24
+- accessedAt: 2026-10-24
+- note: 원천징수의 소득 유형·의무자 조건 참고다. 개인 셀러 전체의 대상 여부나 세율을 확정하지 않는다.
 
 ## 태그
 

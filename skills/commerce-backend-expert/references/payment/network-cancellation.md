@@ -5,11 +5,11 @@
 - category: network-cancel
 - severity: high
 - status: needs-review
-- evidenceLevel: project-guidance
+- evidenceLevel: external-source
 - owner: commerce-context-maintainers
-- verifiedBy: not-recorded
-- lastReviewedAt: not-recorded
-- changeNote: not-recorded
+- verifiedBy: Codex (AI 문서 검토)
+- lastReviewedAt: 2026-10-24
+- changeNote: 응답 유실·늦은 승인·보상의 대사 경계와 시도 기록의 커밋을 검토했다. 실제 PG 망취소 계약은 별도 확인한다.
 - jurisdiction: KR
 
 ## 요약
@@ -30,7 +30,7 @@
 
 ## 구현 가이드
 
-- 결제 요청 직전에 DB에 결제 시도 ID·요청 지문·PENDING 상태를 기록한다
+- 외부 결제 요청 전에 DB에 결제 시도 ID·요청 지문·PENDING 상태를 영속 커밋한다. 외부 호출 실패로 이 시도 기록까지 롤백해 복구 근거를 잃지 않는다
 - 응답 타임아웃은 해당 결제 시도를 UNCERTAIN으로 기록한다. 주문·예약 상태와 취소 의사는 별도로 보존하고 미확정 결과만으로 재고를 무조건 해제하지 않는다
 - 스케줄러나 재처리 워커가 계약상 허용된 시점에 인증된 조회 API를 호출하거나 검증된 웹훅으로 원 시도를 확인한다. 결제 ID·주문·금액·통화를 대조하고 검증되지 않은 수신 body만으로 확정하지 않는다
 - 결제사업자 응답을 내부 상태에 매핑하고 성공·실패·취소·계속 미확정 상태를 구분한다
@@ -50,7 +50,7 @@
 
 ## 출처
 
-### 프로젝트 관리 지식 — 외부 근거 미첨부
+### 프로젝트 관리 지식 — 이관 출처
 
 - source: src/main/resources/knowledge/payment.yml
 - type: project-guidance
@@ -59,6 +59,26 @@
 - reviewedAt: not-recorded
 - accessedAt: not-recorded
 - note: 프로젝트가 관리하는 일반 설계 지침이다. 독립적인 외부 근거로 간주하지 말고, 고위험 결정은 최신 공식 자료로 확인한다.
+
+### 토스페이먼츠 — 결제 상태와 취소 API
+
+- source: https://docs.tosspayments.com/reference
+- type: official-documentation
+- sourceVersion: not-recorded
+- publishedAt: not-recorded
+- reviewedAt: 2026-10-24
+- accessedAt: 2026-10-24
+- note: 토스의 상태·조회·부분취소 계약 참고다. 내부 환불 한도·배부 정책이나 다른 PG를 검증한 기록은 아니다.
+
+### AWS Builders Library — Idempotent APIs
+
+- source: https://aws.amazon.com/builders-library/making-retries-safe-with-idempotent-APIs/
+- type: official-documentation
+- sourceVersion: not-recorded
+- publishedAt: not-recorded
+- reviewedAt: 2026-10-24
+- accessedAt: 2026-10-24
+- note: 요청 식별·파라미터 불일치·재시도의 설계 참고다. 회사 정책이나 특정 PG 보장을 입증하지 않는다.
 
 ## 태그
 

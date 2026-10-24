@@ -78,7 +78,8 @@ test("each document format rejects deleted or empty core guidance", () => {
 });
 
 test("review metadata does not turn unreviewed high-risk guidance into an active rule", () => {
-  const rules = copyRules(); payment(rules).status = "active";
+  const rules = copyRules();
+  Object.assign(payment(rules), {verifiedBy: null, lastReviewedAt: null, changeNote: null, status: "active"});
   assert.throws(() => validateRules(rules), /unreviewed high risk/);
   payment(rules).verifiedBy = "named-reviewer";
   assert.throws(() => validateRules(rules), /incomplete review/);

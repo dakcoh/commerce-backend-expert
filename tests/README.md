@@ -28,4 +28,6 @@ node --test tests/hooks.test.js
 
 [Claude 훅 검사](../scripts/smoke-claude-hooks.js)는 실제 Claude Code와 localhost 응답 대역으로 시작·명령·재개·압축·문맥 전달을 확인합니다. 클라이언트 실행 파일이 필요한 별도 검사이며 기본 테스트 수에 합산하지 않습니다.
 
+[OpenClaw 발견 검사](../scripts/smoke-openclaw.js)는 실제 CLI에서 extraDirs 개별·동시 설치와 번들 링크 설치·제거를 확인합니다. 인증·모델·게이트웨이는 사용하지 않으며 기본 테스트 수와 모델 적용 평가에 합산하지 않습니다.
+
 English: Tests are grouped by behavior, use Node's built-in runner, and run offline. Shared helpers create disposable fixtures; assertions stay in their test files. Model evaluations live in `benchmarks/` and are never part of the default test command.

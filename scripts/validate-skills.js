@@ -239,7 +239,7 @@ function validateRepository(root = repositoryRoot) {
   for (const name of ["commerce-backend-expert", "commerce-review"]) {
     assert.equal(fs.readFileSync(path.join(root, "skills", name, "LICENSE"), "utf8").replaceAll("\r\n", "\n"), license, `${name}: bundle the repository license`);
   }
-  const documents = ["README.md", "README.ko.md", "CONTRIBUTING.md", "CONTRIBUTING.ko.md", "tests/README.md", "benchmarks/scenarios.md", "benchmarks/README.md", "validation/0.3.1.md", ".cursor/rules/commerce-backend.mdc"];
+  const documents = ["README.md", "README.ko.md", "CONTRIBUTING.md", "CONTRIBUTING.ko.md", "tests/README.md", "benchmarks/scenarios.md", "benchmarks/README.md", "validation/0.3.1.md", "validation/followup-review.md", ".cursor/rules/commerce-backend.mdc"];
   const documentationLinks = documents.reduce((sum, relative) => sum + validateLinks(path.join(root, relative), root), 0);
   const manifest = JSON.parse(fs.readFileSync(path.join(root, "plugin.json"), "utf8"));
   // The portable schema marker hides bundled hooks in Codex CLI 0.153.2.

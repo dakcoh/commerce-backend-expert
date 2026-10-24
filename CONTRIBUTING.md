@@ -127,14 +127,15 @@ The checker handles Markdown edits inside `skills/`, validating both skills and 
 | Codex CLI 0.153.2 | 89 runtime files match the cache; actual v0.3.0 → 0.3.1 upgrade with the preserved marketplace ID, same-version refresh, fixture-version refresh, removal. In an isolated profile, both hooks ran after `/hooks` review/trust; off survived process restart/resume and actual compaction, and context reached the local response fixture | Hook checks used a deterministic local model-response fixture, not real inference. Automatic compaction and other client versions remain unverified |
 | Codex app-server with a read-only file tool | Actual skill/rule reads for natural refund/webhook requests without explicit skill invocation; no commerce reads for CSS | Three synthetic cases, one run each. Does not establish native CLI-tool behavior, live DB/PG behavior, or quality gains against no plugin |
 | Claude Code 2.1.114 | Deployment hooks only, both skills discovered. Twelve isolated CLI checks cover startup, off/status/on, quoted and negated prompts, process restart/resume, actual `/compact`, fresh sessions/projects, and context delivery to a localhost Messages response fixture | Loaded with `--plugin-dir`; marketplace installation is separate. Actual model application, automatic compaction, and other client versions remain unverified |
-| Cursor and OpenClaw | Repository configuration/path checks | Client execution unverified |
+| OpenClaw 2026.10.6 on Node 24.22.1 | Isolated extraDirs discovery of either skill and both together; Codex-format bundle link installation, discovery, and removal; availability flags and exact file contents checked | Model selection/application unverified. Foreign client session hooks are not executed |
+| Cursor CLI 2026.10.22-27dcf5f | Repository format/path checks, CLI version/options, and isolated `--plugin-dir` entry | Authentication required; actual skill/rule discovery and model application unverified |
 | Optional hooks | Local checker and regression tests | Execution through client-registered hooks unverified |
 | Individual skill installation | Local installs of each skill and both together using `skills@1.7.4` on Node 24, with resolved references. Review-only installation needs no sibling folder | No model or session-hook execution |
-| Explicit skill application | Public [answers, hashes, and reads](benchmarks/README.md) for five current-skill cases: refund, valid webhook, synchronous webhook, watchdog, CSS | One run each; answers reviewed in the same Codex session. Separate from automatic discovery, a no-skill control, or live-system checks |
+| Explicit skill application (2026-10-23 snapshot) | Public [answers, hashes, and reads](benchmarks/README.md) for five cases: refund, valid webhook, synchronous webhook, watchdog, CSS | One run each; answers reviewed in the same Codex session. Separate from automatic discovery, a no-skill control, or live-system checks; not rerun after the follow-up rule edits |
 
 Plugin installation checks used a separate `CODEX_HOME` and work directory without changing normal user settings. The runtime fixture contained only manifests, license, module-scope configuration, routing rule, skills, and session hooks. Version-refresh checks changed fixture copies. Explicit skill evaluations use existing CLI authentication with process-local evaluation instructions and configuration. Release sources also contain bilingual docs, marketplaces, and developer checks. These results do not establish hook execution across all clients.
 
-The two changed high-risk rules, `webhook-handling` and `concurrency-distributed`, received a recorded AI document review on 2026-10-24 against the official Toss Payments and Redisson references. Both remain `needs-review`: provider-specific authentication, deployed Redis/DB behavior, and production safety were not established. All 19 review items remain tracked.
+All 19 high-risk rules received recorded AI document reviews on 2026-10-24, comparing official evidence scope with applicability and failure conditions. All remain `needs-review`: deployed PG/Redis/DB behavior and individual tax/privacy decisions were not established. See the [follow-up review record](validation/followup-review.md) for changes, remaining conditions, and client results. The 2026-10-23 model evaluations were not rerun after these rule changes.
 
 Repeat the local installation check without credentials or model calls. Evidence is written under ignored `output/plugin-smoke-*` directories.
 
@@ -153,6 +154,14 @@ node scripts/smoke-claude-hooks.js /absolute/path/to/claude
 ```
 
 This script uses a fresh configuration directory and plugin copy, disables model tools, and routes requests to a deterministic localhost Messages fixture with a dummy key. It copies no credentials and makes no remote model calls. It asserts client hook responses, a real compaction boundary, and delivered context; evidence goes under ignored `output/claude-hooks-*`. It is separate from the 37 offline tests and requires Claude Code 2.1.114's hook event output. Client binaries are not installed by the script.
+
+Repeat OpenClaw installation/discovery without login or model calls using an already installed client's `openclaw.mjs`:
+
+```bash
+node scripts/smoke-openclaw.js /absolute/path/to/openclaw/openclaw.mjs
+```
+
+The script uses fresh state/configuration/work folders, checks individual and combined extraDirs discovery plus bundle link installation/removal, and writes evidence to `output/openclaw-discovery-*`. It copies the reviewed local bundle; `--force --accept-capabilities` provides the client's normal installation consent for that fixture. It starts no gateway, model, or session hooks and leaves normal settings unchanged. This tested OpenClaw version requires Node 24.22.1 or later, separately from the repository's Node 22 checks.
 
 <details>
 <summary>Manual client checks and format references</summary>
@@ -176,9 +185,9 @@ Official documentation used for format checks:
 
 ## Remaining work and history
 
-- Check automatic compaction and additional Codex/Claude versions separately; complete Cursor/OpenClaw client checks.
+- Check automatic compaction and additional Codex/Claude versions separately; verify authenticated Cursor discovery/application and OpenClaw model application.
 - Repeat natural-language evaluations with a no-plugin control. Do not generalize one trial into quality or token savings.
-- Individually review the evidence and conditions of the 19 `needs-review` rules.
+- Verify the remaining PG/DB/Redis and business-policy conditions recorded for the 19 `needs-review` rules.
 
 <details>
 <summary>Previous synthetic evaluation and the v0.2.2 migration</summary>

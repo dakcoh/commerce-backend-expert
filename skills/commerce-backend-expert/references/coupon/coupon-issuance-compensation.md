@@ -5,11 +5,11 @@
 - category: issuance
 - severity: high
 - status: needs-review
-- evidenceLevel: project-guidance
+- evidenceLevel: external-source
 - owner: commerce-context-maintainers
-- verifiedBy: not-recorded
-- lastReviewedAt: not-recorded
-- changeNote: not-recorded
+- verifiedBy: Codex (AI 문서 검토)
+- lastReviewedAt: 2026-10-24
+- changeNote: Redis 원자성과 DB 결과 미확정·선점 토큰 보상의 경계를 검토했다. 장애 복구·failover·운영 대사는 미검증이다.
 - jurisdiction: KR
 
 ## 요약
@@ -33,7 +33,7 @@ Redis 선점 + DB 확정 모델을 선택했다면 영속 attempt와 원장 대�
 - 선점 전에 attempt 식별자와 발급 업무키를 영속 저장하고 Redis 선점 기록을 연결한다. 메모리의 reserved boolean만으로는 프로세스 중단 후 상태를 복구할 수 없다
 - 1단계 Redis 선점: 하나의 Lua Script에서 자격·사용자 한도·재고를 확인하고 수량 감소와 선점 토큰 저장을 원자적으로 처리한다
 - 2단계 DB 저장 (@Transactional): 발급 원장과 자격 범위에 맞는 업무키 제약으로 최종 이중 발급을 방어한다
-- 3단계 성공 확정: Redis 선점 성공 + DB 저장 성공 = 발급 확정
+- 3단계 성공 확정: DB 발급 원장의 영속 커밋을 확인해 발급을 확정한다. Redis 선점과 DB는 하나의 커밋이 아니므로 Redis 재시작·failover로 선점이 유실되거나 중복 허용돼도 DB 업무키·총 발급 한도와 원장 대사가 최종 불변식을 지켜야 한다
 - DB commit 응답 유실이나 중복키 오류는 동일 attempt와 원장을 조회해 성공·실패·미확정을 구분한다. 이미 발급 성공한 요청을 실패로 오인해 수량을 되돌리지 않는다
 - 4단계 DB 실패 확정 시 Lua Script 보상: 현재 선점 토큰이 해당 attempt와 일치하고 아직 보상되지 않은 경우에만 선점 제거와 INCR을 함께 수행한다
 - SREM 성공 시에만 INCR하는 방식도 이전 시도의 늦은 보상이 새 선점을 지우지 않도록 선점 토큰·상태 검증이 필요하다
@@ -56,7 +56,7 @@ Redis 선점 + DB 확정 모델을 선택했다면 영속 attempt와 원장 대�
 
 ## 출처
 
-### 프로젝트 관리 지식 — 외부 근거 미첨부
+### 프로젝트 관리 지식 — 이관 출처
 
 - source: src/main/resources/knowledge/coupon.yml
 - type: project-guidance
@@ -65,6 +65,26 @@ Redis 선점 + DB 확정 모델을 선택했다면 영속 attempt와 원장 대�
 - reviewedAt: not-recorded
 - accessedAt: not-recorded
 - note: 프로젝트가 관리하는 일반 설계 지침이다. 독립적인 외부 근거로 간주하지 말고, 고위험 결정은 최신 공식 자료로 확인한다.
+
+### Redis — Scripting with Lua
+
+- source: https://redis.io/docs/latest/develop/programmability/eval-intro/
+- type: official-documentation
+- sourceVersion: not-recorded
+- publishedAt: not-recorded
+- reviewedAt: 2026-10-24
+- accessedAt: 2026-10-24
+- note: Redis 안의 스크립트 원자성·스크립트 캐시 휘발성 참고다. Redis와 DB의 원자적 커밋·영속성을 보장하지 않는다.
+
+### PostgreSQL — Constraints
+
+- source: https://www.postgresql.org/docs/18/ddl-constraints.html
+- type: official-documentation
+- sourceVersion: 18
+- publishedAt: not-recorded
+- reviewedAt: 2026-10-24
+- accessedAt: 2026-10-24
+- note: UNIQUE·CHECK 등 DB 제약의 기술적 범위만 참고한다. 업무키 설계·회계 정책이나 운영 DB 검증은 별도다.
 
 ## 태그
 

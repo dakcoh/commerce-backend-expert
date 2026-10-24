@@ -5,11 +5,11 @@
 - category: integrity
 - severity: high
 - status: needs-review
-- evidenceLevel: project-guidance
+- evidenceLevel: external-source
 - owner: commerce-context-maintainers
-- verifiedBy: not-recorded
-- lastReviewedAt: not-recorded
-- changeNote: not-recorded
+- verifiedBy: Codex (AI 문서 검토)
+- lastReviewedAt: 2026-10-24
+- changeNote: 원장 대사식의 포함 항목과 UTC 저장·업무 타임존의 구분을 검토했다. 실제 장부·계약 대사와 운영 DB는 미검증이다.
 - jurisdiction: KR
 
 ## 요약
@@ -33,7 +33,7 @@
 - 누락은 정의한 기준 이벤트와 cutoff의 대상 집합 대비 확정·보류·차기 처리·실패 집합으로 검증하고 각 차이의 사유를 추적한다
 - 정산 잔액 대사 예시: 기초 잔액 + 당기 확정액 + 보정액 - 별도 확정 공제 - 성공 지급 누계 = 기말 잔액. 지급 보류·진행 중 이체는 미지급 잔액의 구성으로 추적하고 성공 지급으로 세지 않는다
 - 음수 기말 잔액은 회수 채권·차기 상계 등 정책상 잔액으로 구분한다. 지급 보류액을 공제와 미지급 잔액 양쪽에 중복 차감하지 않는다
-- 타임존(UTC vs KST)을 서비스 전반에서 일관되게 적용
+- 저장 시각과 정산 업무 타임존을 구분한다. UTC 저장과 Asia/Seoul 업무일 계산은 함께 사용할 수 있으며, 업무일의 시작 포함·다음 시작 제외 구간을 같은 시각 기준으로 변환한다. 서버 기본 타임존이나 23:59:59 절단에 의존하지 않는다
 
 ## 피해야 할 패턴
 
@@ -48,7 +48,7 @@
 
 ## 출처
 
-### 프로젝트 관리 지식 — 외부 근거 미첨부
+### 프로젝트 관리 지식 — 이관 출처
 
 - source: src/main/resources/knowledge/settlement.yml
 - type: project-guidance
@@ -57,6 +57,26 @@
 - reviewedAt: not-recorded
 - accessedAt: not-recorded
 - note: 프로젝트가 관리하는 일반 설계 지침이다. 독립적인 외부 근거로 간주하지 말고, 고위험 결정은 최신 공식 자료로 확인한다.
+
+### PostgreSQL — Date/Time Types
+
+- source: https://www.postgresql.org/docs/18/datatype-datetime.html
+- type: official-documentation
+- sourceVersion: 18
+- publishedAt: not-recorded
+- reviewedAt: 2026-10-24
+- accessedAt: 2026-10-24
+- note: UTC 저장·출력 타임존 변환 참고다. 정산 업무일·cutoff·대사식은 프로젝트와 계약이 정의한다.
+
+### PostgreSQL — Constraints
+
+- source: https://www.postgresql.org/docs/18/ddl-constraints.html
+- type: official-documentation
+- sourceVersion: 18
+- publishedAt: not-recorded
+- reviewedAt: 2026-10-24
+- accessedAt: 2026-10-24
+- note: UNIQUE·CHECK 등 DB 제약의 기술적 범위만 참고한다. 업무키 설계·회계 정책이나 운영 DB 검증은 별도다.
 
 ## 태그
 
