@@ -119,11 +119,11 @@ The checker handles Markdown edits inside `skills/`, validating both skills and 
 
 ## Client checks
 
-**Recorded on 2026-10-23.** Distinguish configuration checks, client-reported enabled state, and actual document application by the model.
+**Updated on 2026-10-24.** Distinguish configuration checks, client-reported enabled state, and actual document application by the model. See the [0.3.1 validation record](validation/0.3.1.md) for the new checks; earlier model and Claude results remain dated 2026-10-23.
 
 | Environment | Verified scope | Unverified or limited |
 |---|---|---|
-| Codex CLI 0.153.2 | Local installation/enabled state, equality of all 89 current packaged files and cache, same-version reinstall, fixture-version upgrade, removal and cache removal. `SessionStart` and `UserPromptSubmit` discovered after omitting root `$schema` | Both hooks are correctly `untrusted`. Execution after user review/trust and actual resume/compaction remain unverified |
+| Codex CLI 0.153.2 | 89 runtime files match the cache; actual v0.3.0 → 0.3.1 upgrade with the preserved marketplace ID, same-version refresh, fixture-version refresh, removal. In an isolated profile, both hooks ran after `/hooks` review/trust; off survived process restart/resume and actual compaction, and context reached the local response fixture | Hook checks used a deterministic local model-response fixture, not real inference. Automatic compaction and other client versions remain unverified |
 | Codex app-server with a read-only file tool | Actual skill/rule reads for natural refund/webhook requests without explicit skill invocation; no commerce reads for CSS | Three synthetic cases, one run each. Does not establish native CLI-tool behavior, live DB/PG behavior, or quality gains against no plugin |
 | Claude Code 2.1.114 | Manifest validation and discovery of both skills. Successful live `SessionStart` from current sources without a prompt. Separate `commerce off` state write | The off-trial copy also contained a diagnostic default hook file. Inference stopped due to insufficient credits. Model application and actual resume/compaction unverified |
 | Cursor and OpenClaw | Repository configuration/path checks | Client execution unverified |
@@ -133,13 +133,17 @@ The checker handles Markdown edits inside `skills/`, validating both skills and 
 
 Plugin installation checks used a separate `CODEX_HOME` and work directory without changing normal user settings. The runtime fixture contained only manifests, license, module-scope configuration, routing rule, skills, and session hooks. Version-refresh checks changed fixture copies. Explicit skill evaluations use existing CLI authentication with process-local evaluation instructions and configuration. Release sources also contain bilingual docs, marketplaces, and developer checks. These results do not establish hook execution across all clients.
 
+The two changed high-risk rules, `webhook-handling` and `concurrency-distributed`, received a recorded AI document review on 2026-10-24 against the official Toss Payments and Redisson references. Both remain `needs-review`: provider-specific authentication, deployed Redis/DB behavior, and production safety were not established. All 19 review items remain tracked.
+
 Repeat the local installation check without credentials or model calls. Evidence is written under ignored `output/plugin-smoke-*` directories.
 
 ```bash
 node scripts/smoke-plugin.js /absolute/path/to/codex
+# Also verify upgrade from the exact local release tag (requires Git and tar):
+node scripts/smoke-plugin.js /absolute/path/to/codex v0.3.0
 ```
 
-On Windows, pass the actual path to `codex.exe` as the last argument. This checks installation, file equality, refresh, and removal; it does not execute models or hooks.
+On Windows, pass the actual path to `codex.exe` as the first argument. The optional second argument selects a local Git baseline. This checks installation, exact file sets and contents, refresh, and removal; it does not execute models or hooks.
 
 <details>
 <summary>Manual client checks and format references</summary>
@@ -163,7 +167,7 @@ Official documentation used for format checks:
 
 ## Remaining work and history
 
-- Verify bundled-hook discovery, trust, invocation, and resume/compaction in supported clients.
+- Complete Claude hook invocation and resume/compaction checks; check automatic compaction and additional Codex versions separately.
 - Repeat natural-language evaluations with a no-plugin control. Do not generalize one trial into quality or token savings.
 - Individually review the evidence and conditions of the 19 `needs-review` rules.
 

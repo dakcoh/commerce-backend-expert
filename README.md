@@ -46,7 +46,7 @@ claude plugin marketplace add dakcoh/commerce-backend-expert
 claude plugin install commerce-backend-expert@commerce-context-mcp
 ```
 
-Use Node.js 24.22.1 LTS for hooks. Start a new conversation; Codex also requires reviewing and trusting definitions through `/hooks`. Execution after trust and actual resume/compaction remain unverified. See [client layouts](#client-layouts) and [client checks](CONTRIBUTING.md#client-checks).
+Use Node.js 24.22.1 LTS for hooks. Start a new conversation; Codex also requires reviewing and trusting definitions through `/hooks`. Codex CLI 0.153.2 hook invocation, resume, and compaction were checked with a local model-response fixture. Other client limits are listed in [client checks](CONTRIBUTING.md#client-checks); see also [client layouts](#client-layouts).
 
 `@commerce-context-mcp` is the marketplace identifier preserved for existing installations and updates. The current plugin runs no MCP server and uses a different installation path from the historical npm MCP package.
 
@@ -83,7 +83,7 @@ Guides are bilingual; the knowledge documents are in Korean. This skill does not
 
 ## Client layouts
 
-The shared [plugin.json](plugin.json) and client entrypoints below use the same `skills/` source without copying knowledge. The current version is `0.3.0`. **Format/path checks and actual client installation/activation are separate.**
+The shared [plugin.json](plugin.json) and client entrypoints below use the same `skills/` source without copying knowledge. The current version is `0.3.1`. **Format/path checks and actual client installation/activation are separate.**
 
 | Client | Configuration |
 |---|---|
@@ -104,7 +104,7 @@ The shared [plugin.json](plugin.json) and client entrypoints below use the same 
 
 State is isolated by project and session and survives resume/compaction of that session. Off does not remove host skill discovery or prohibit explicitly requested skills. Hooks do not store or transmit prompts, code, or transcripts. Only the on/off flag is stored in the client's plugin-data directory, falling back to the OS temporary directory if unavailable.
 
-Both hooks were discovered in Codex CLI 0.153.2. Review/trust of the current hook definition is required separately from installation. Execution after trust and actual resume/compaction remain unverified in that client. See [runtime scope and compatibility settings](CONTRIBUTING.md#client-checks).
+Codex CLI 0.153.2 invoked both hooks after review/trust in an isolated profile. Off survived process restart/resume and actual compaction; hook context reached subsequent requests to a local model-response fixture. This checks client integration, not model behavior or every client's hooks. See [runtime scope and compatibility settings](CONTRIBUTING.md#client-checks).
 
 The [Claude](hooks/claude.json) and [Cursor](hooks/cursor.json) edit hooks are **optional checks for knowledge contributors**, not registered by default. They are separate from session hooks and do not inspect ordinary user-project code. See [developer hook setup](CONTRIBUTING.md#optional-development-hooks).
 

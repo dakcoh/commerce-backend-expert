@@ -7,9 +7,9 @@
 - status: needs-review
 - evidenceLevel: external-source
 - owner: commerce-context-maintainers
-- verifiedBy: not-recorded
-- lastReviewedAt: not-recorded
-- changeNote: not-recorded
+- verifiedBy: Codex (AI 문서 검토)
+- lastReviewedAt: 2026-10-24
+- changeNote: 공식 RLock 문서로 획득·lease·watchdog·소유 스레드 해제 계약을 검토했다. Redis 장애·DB 불변식·운영 적용은 미검증이므로 needs-review를 유지한다.
 - jurisdiction: KR
 
 ## 요약
@@ -67,9 +67,9 @@
 - type: official-documentation
 - sourceVersion: not-recorded
 - publishedAt: not-recorded
-- reviewedAt: not-recorded
-- accessedAt: 2026-10-23
-- note: RLock의 watchdog·leaseTime·획득 결과·소유 스레드 해제 계약의 참고다. Redis 장애·DB 불변식과 현장 설정의 안전성을 검증한 기록은 아니다.
+- reviewedAt: 2026-10-24
+- accessedAt: 2026-10-24
+- note: RLock의 watchdog·leaseTime·획득 결과·소유 스레드 해제 계약을 문서로 확인했다. Redis 장애·DB 불변식과 현장 설정의 안전성을 검증한 기록은 아니며 needs-review를 유지한다.
 
 ## 태그
 

@@ -7,9 +7,9 @@
 - status: needs-review
 - evidenceLevel: external-source
 - owner: commerce-context-maintainers
-- verifiedBy: not-recorded
-- lastReviewedAt: not-recorded
-- changeNote: not-recorded
+- verifiedBy: Codex (AI 문서 검토)
+- lastReviewedAt: 2026-10-24
+- changeNote: 공식 웹훅 문서의 응답·재전송 범위와 짧은 동기 처리 조건을 검토했다. PG별 인증·운영 적용은 미검증이므로 needs-review를 유지한다.
 - jurisdiction: KR
 
 ## 요약
@@ -68,11 +68,11 @@ PG사 웹훅은 이벤트별 인증·검증과 내구성 있는 반영을 완료
 
 - source: https://docs.tosspayments.com/guides/v2/webhook
 - type: official-documentation
-- sourceVersion: not-recorded
+- sourceVersion: v2
 - publishedAt: not-recorded
-- reviewedAt: not-recorded
-- accessedAt: 2026-10-23
-- note: 토스페이먼츠의 응답 제한시간·성공 코드·재전송 정책 참고다. 짧은 동기 처리와 비동기 분리의 선택은 내부 설계 판단이며 모든 PG가 같은 응답 코드를 허용한다는 근거가 아니다.
+- reviewedAt: 2026-10-24
+- accessedAt: 2026-10-24
+- note: 열람한 v2 문서는 10초 이내 HTTP 200 응답과 실패 시 최대 7회 재전송을 안내한다. 토스페이먼츠에 한정한 참고이며 다른 PG에 같은 코드를 강제하지 않는다. 짧은 동기 처리·비동기 분리는 내부 설계 판단이고 이벤트별 인증·실제 PG 동작을 검증한 기록은 아니다.
 
 ## 태그
 
