@@ -110,7 +110,7 @@ The [Claude](hooks/claude.json) and [Cursor](hooks/cursor.json) edit hooks are *
 
 ## Interpret the results
 
-Check each rule's conditions, exceptions, evidence scope, and review state. `active` means in use, not certified accurate. Nineteen rules are `needs-review`. `not-recorded` under `verifiedBy` or `lastReviewedAt` means there is no recorded review.
+Check each rule's conditions, exceptions, evidence scope, and review state. `active` means in use, not certified accurate. All 19 `needs-review` rules have recorded AI document reviews, with integration and business-policy checks remaining. See the [follow-up reviews and client checks without authentication](validation/followup-review.md). `not-recorded` under `verifiedBy` or `lastReviewedAt` means there is no recorded review.
 
 The [public behavior evaluation](benchmarks/README.md) uses fixed synthetic inputs and the actual skill text. It does not establish live DB/PG behavior, automatic skill selection after installation, or correctness across all tasks. No token or response-time improvement is claimed. See [validation and its limits](CONTRIBUTING.md#validation).
 

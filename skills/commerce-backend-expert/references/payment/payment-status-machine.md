@@ -5,11 +5,11 @@
 - category: state-machine
 - severity: high
 - status: needs-review
-- evidenceLevel: project-guidance
+- evidenceLevel: external-source
 - owner: commerce-context-maintainers
-- verifiedBy: not-recorded
-- lastReviewedAt: not-recorded
-- changeNote: not-recorded
+- verifiedBy: Codex (AI 문서 검토)
+- lastReviewedAt: 2026-10-24
+- changeNote: 내부 UNCERTAIN과 PG 상태의 매핑·전이 가드를 검토했다. 실제 계약·지연 이벤트 경합은 미검증이다.
 - jurisdiction: KR
 
 ## 요약
@@ -29,7 +29,7 @@
 ## 구현 가이드
 
 - 결제 시도 상태 예시: PENDING → PROCESSING → PAID | FAILED | UNCERTAIN | CANCELLED. 주문 상태와 승인·환불 거래 상태를 분리하고 PG 상태는 계약에 맞게 매핑한다
-- UNCERTAIN은 검증된 웹훅·인증된 조회·대사 워커 등 허용된 경로로 확정한다. 사용자의 성공 주장만으로 변경하지 않으며, 과거 이벤트로 최신 상태를 덮지 않는다
+- UNCERTAIN은 내부의 결과 미확정 상태이며 PG가 같은 이름의 상태를 제공한다고 가정하지 않는다. 검증된 웹훅·인증된 조회·대사 워커 등 허용된 경로로 확정한다. 사용자의 성공 주장만으로 변경하지 않으며, 과거 이벤트로 최신 상태를 덮지 않는다
 - 환불 거래는 원 결제를 참조해 REQUESTED·PROCESSING·SUCCEEDED·FAILED·UNCERTAIN 등을 별도로 기록한다. 원 결제 요약은 PAID·PARTIAL_CANCELLED·REFUNDED 등으로 집계한다
 - 전이 가드 — 결제 가능한 주문에서 활성 결제 시도를 원자적으로 선점한다. 같은 시도의 중복 실행을 막고 확정 실패 후 새 시도는 별도로 생성한다
 - 전이 가드 — PAID 또는 PARTIAL_CANCELLED 등 허용 상태에서 잔여 환불 가능액과 처리 중 환불을 검사한다. 부분 환불 후에도 잔액 범위 안의 추가 환불을 허용한다
@@ -54,7 +54,7 @@
 
 ## 출처
 
-### 프로젝트 관리 지식 — 외부 근거 미첨부
+### 프로젝트 관리 지식 — 이관 출처
 
 - source: src/main/resources/knowledge/payment.yml
 - type: project-guidance
@@ -63,6 +63,26 @@
 - reviewedAt: not-recorded
 - accessedAt: not-recorded
 - note: 프로젝트가 관리하는 일반 설계 지침이다. 독립적인 외부 근거로 간주하지 말고, 고위험 결정은 최신 공식 자료로 확인한다.
+
+### 토스페이먼츠 — 결제 상태와 취소 API
+
+- source: https://docs.tosspayments.com/reference
+- type: official-documentation
+- sourceVersion: not-recorded
+- publishedAt: not-recorded
+- reviewedAt: 2026-10-24
+- accessedAt: 2026-10-24
+- note: 토스의 상태·조회·부분취소 계약 참고다. 내부 환불 한도·배부 정책이나 다른 PG를 검증한 기록은 아니다.
+
+### PostgreSQL — Constraints
+
+- source: https://www.postgresql.org/docs/18/ddl-constraints.html
+- type: official-documentation
+- sourceVersion: 18
+- publishedAt: not-recorded
+- reviewedAt: 2026-10-24
+- accessedAt: 2026-10-24
+- note: UNIQUE·CHECK 등 DB 제약의 기술적 범위만 참고한다. 업무키 설계·회계 정책이나 운영 DB 검증은 별도다.
 
 ## 태그
 

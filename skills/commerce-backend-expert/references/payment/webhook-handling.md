@@ -9,7 +9,7 @@
 - owner: commerce-context-maintainers
 - verifiedBy: Codex (AI 문서 검토)
 - lastReviewedAt: 2026-10-24
-- changeNote: 공식 웹훅 문서의 응답·재전송 범위와 짧은 동기 처리 조건을 검토했다. PG별 인증·운영 적용은 미검증이므로 needs-review를 유지한다.
+- changeNote: 기존 문서 검토와 함께 상태 매핑·짧은 동기 처리 조건을 교차 검토했다. 실제 이벤트별 인증과 부하·장애는 미검증이다.
 - jurisdiction: KR
 
 ## 요약
@@ -54,7 +54,7 @@ PG사 웹훅은 이벤트별 인증·검증과 내구성 있는 반영을 완료
 
 ## 출처
 
-### 프로젝트 관리 지식 — 외부 근거 미첨부
+### 프로젝트 관리 지식 — 이관 출처
 
 - source: src/main/resources/knowledge/payment.yml
 - type: project-guidance
@@ -73,6 +73,16 @@ PG사 웹훅은 이벤트별 인증·검증과 내구성 있는 반영을 완료
 - reviewedAt: 2026-10-24
 - accessedAt: 2026-10-24
 - note: 열람한 v2 문서는 10초 이내 HTTP 200 응답과 실패 시 최대 7회 재전송을 안내한다. 토스페이먼츠에 한정한 참고이며 다른 PG에 같은 코드를 강제하지 않는다. 짧은 동기 처리·비동기 분리는 내부 설계 판단이고 이벤트별 인증·실제 PG 동작을 검증한 기록은 아니다.
+
+### 토스페이먼츠 — 결제 상태와 취소 API
+
+- source: https://docs.tosspayments.com/reference
+- type: official-documentation
+- sourceVersion: not-recorded
+- publishedAt: not-recorded
+- reviewedAt: 2026-10-24
+- accessedAt: 2026-10-24
+- note: 토스의 상태·조회·부분취소 계약 참고다. 내부 환불 한도·배부 정책이나 다른 PG를 검증한 기록은 아니다.
 
 ## 태그
 

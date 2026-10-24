@@ -5,11 +5,11 @@
 - category: security
 - severity: high
 - status: needs-review
-- evidenceLevel: project-guidance
+- evidenceLevel: external-source
 - owner: commerce-context-maintainers
-- verifiedBy: not-recorded
-- lastReviewedAt: not-recorded
-- changeNote: not-recorded
+- verifiedBy: Codex (AI 문서 검토)
+- lastReviewedAt: 2026-10-24
+- changeNote: 파기와 법정 분리 보존, 결제 인증정보의 승인 후 보관 금지를 구분했다. 실제 필드 분류·보존기간·보안 통제는 미검증이다.
 - jurisdiction: KR
 
 ## 요약
@@ -33,9 +33,9 @@
 
 ## 반드시 지켜야 할 원칙
 
-- 개인정보는 목적에 필요한 최소 범위만 저장한다.
+- 개인정보는 목적에 필요한 최소 범위만 저장한다. 목적 달성·보존기간 만료 후 파기하되 다른 법령상 보존 대상은 근거·기간을 확인해 일반 이용 데이터와 분리 저장·관리한다.
 - 운영자 조회와 수정은 권한, 사유, 감사 로그를 요구한다.
-- 결제 카드 원문, 인증 값, 불필요한 민감 정보는 저장하지 않는다.
+- 결제 카드 원문과 불필요한 민감 정보는 저장하지 않는다. PCI 적용 범위에서 승인 후 민감 인증정보(SAD)는 암호화해도 보관하지 않으며, 카드 데이터·토큰·PG 식별자의 보관 조건을 같은 것으로 취급하지 않는다.
 
 ## 권장 흐름
 
@@ -64,7 +64,7 @@
 
 ## 출처
 
-### 프로젝트 관리 지식 — 외부 근거 미첨부
+### 프로젝트 관리 지식 — 이관 출처
 
 - source: src/main/resources/knowledge/commerce.yml
 - type: project-guidance
@@ -73,6 +73,26 @@
 - reviewedAt: not-recorded
 - accessedAt: not-recorded
 - note: 프로젝트가 관리하는 일반 설계 지침이다. 독립적인 외부 근거로 간주하지 말고, 고위험 결정은 최신 공식 자료로 확인한다.
+
+### 개인정보 보호법 제21조 — 파기와 분리 보존
+
+- source: https://www.law.go.kr/LSW/lsLinkCommonInfo.do?chrClsCd=010202&lsJoLnkSeq=1029335641
+- type: official-documentation
+- sourceVersion: 법률 제21445호; 시행 2026-09-11
+- publishedAt: not-recorded
+- reviewedAt: 2026-10-24
+- accessedAt: 2026-10-24
+- note: 파기와 다른 법령상 보존 시 분리 저장 조건만 확인했다. 필드별 법정 보존기간·개별 사업자의 적법성 판단은 별도 검토다.
+
+### PCI SSC FAQ 1154 — Sensitive Authentication Data
+
+- source: https://www.pcisecuritystandards.org/faqs/1154/
+- type: official-documentation
+- sourceVersion: 2025-07 FAQ 1154
+- publishedAt: not-recorded
+- reviewedAt: 2026-10-24
+- accessedAt: 2026-10-24
+- note: 승인 후 SAD 보관 금지와 암호화 예외 부재를 확인했다. PAN·토큰의 모든 저장 조건이나 PCI 인증 완료의 근거는 아니다.
 
 ## 태그
 

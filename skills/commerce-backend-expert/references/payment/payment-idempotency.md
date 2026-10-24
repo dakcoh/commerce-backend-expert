@@ -7,9 +7,9 @@
 - status: needs-review
 - evidenceLevel: external-source
 - owner: commerce-context-maintainers
-- verifiedBy: not-recorded
-- lastReviewedAt: not-recorded
-- changeNote: not-recorded
+- verifiedBy: Codex (AI 문서 검토)
+- lastReviewedAt: 2026-10-24
+- changeNote: 내부 업무키·요청 지문과 PG 키의 보장 범위·만료를 구분했다. 실제 PG 재시도·미확정 거래는 별도 검증한다.
 - jurisdiction: KR
 
 ## 요약
@@ -37,7 +37,7 @@
 - 주문 단위 키 예시: "payment:{orderId}:{attempt}"
 - 또는 UUID v4를 논리적 결제 시도 생성 시 한 번 생성해 DB에 저장한다. 요청마다 새 UUID를 생성하는 방식과 구분한다
 - 외부 전달 헤더나 필드 이름은 결제사업자의 공식 문서를 따른다
-- 같은 키 재요청의 응답과 처리 보장은 결제사업자마다 다르므로 공식 문서의 의미와 보존 기간을 확인한다
+- 같은 키 재요청의 응답과 처리 보장은 결제사업자마다 다르므로 공식 문서의 의미와 보존 기간을 확인한다. 처리 중 응답·확정 실패·유효기간 만료를 구분하고, 키 만료가 원 거래 실패의 증거라고 가정하지 않는다
 - 키 보존 기간은 PG사 중복 요청 보장 기간과 내부 재시도·분쟁 조회 기간을 기준으로 정한다
 - 외부 키의 보존 기간이 끝나도 내부 업무키·원 거래 이력을 대사한다. 결과가 미확정이면 새 외부 키를 만들어 같은 결제를 재승인하지 않는다
 
@@ -55,25 +55,25 @@
 
 ## 출처
 
-### AWS Builders' Library — Making retries safe with idempotent APIs
+### AWS Builders Library — Idempotent APIs
 
 - source: https://aws.amazon.com/builders-library/making-retries-safe-with-idempotent-APIs/
 - type: official-documentation
 - sourceVersion: not-recorded
 - publishedAt: not-recorded
-- reviewedAt: not-recorded
-- accessedAt: 2026-10-21
-- note: 호출자 범위의 요청 식별·파라미터 대조·원자적 반영에 관한 설계 참고다. 특정 키 형식을 모든 PG의 계약으로 일반화하지 않는다.
+- reviewedAt: 2026-10-24
+- accessedAt: 2026-10-24
+- note: 요청 식별·파라미터 불일치·재시도의 설계 참고다. 회사 정책이나 특정 PG 보장을 입증하지 않는다.
 
-### 토스페이먼츠 API — 인증 및 기타 헤더 설정
+### 토스페이먼츠 — 멱등키 헤더
 
 - source: https://docs.tosspayments.com/reference/using-api/authorization
 - type: official-documentation
 - sourceVersion: not-recorded
 - publishedAt: not-recorded
-- reviewedAt: not-recorded
-- accessedAt: 2026-10-21
-- note: 토스페이먼츠의 인증·멱등키 규격 확인용 예시다. 무작위 고유값 권고와 보장 범위·기간은 해당 사업자의 계약이며 다른 PG나 내부 업무키의 공통 규격이 아니다.
+- reviewedAt: 2026-10-24
+- accessedAt: 2026-10-24
+- note: 토스의 키 규격·유효기간·요청 범위 참고다. 내부 업무키와 미확정 거래 대사는 별도 설계다.
 
 ## 태그
 

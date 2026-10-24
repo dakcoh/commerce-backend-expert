@@ -5,11 +5,11 @@
 - category: loyalty
 - severity: high
 - status: needs-review
-- evidenceLevel: project-guidance
+- evidenceLevel: external-source
 - owner: commerce-context-maintainers
-- verifiedBy: not-recorded
-- lastReviewedAt: not-recorded
-- changeNote: not-recorded
+- verifiedBy: Codex (AI 문서 검토)
+- lastReviewedAt: 2026-10-24
+- changeNote: 원장·사용 가능 잔액·이벤트별 누적 복원 한도를 교차 검토했다. 포인트 만료·복원·법적 성격과 회계 정책은 사업자 검토가 필요하다.
 - jurisdiction: KR
 
 ## 요약
@@ -68,7 +68,7 @@
 
 ## 출처
 
-### 프로젝트 관리 지식 — 외부 근거 미첨부
+### 프로젝트 관리 지식 — 이관 출처
 
 - source: src/main/resources/knowledge/commerce.yml
 - type: project-guidance
@@ -77,6 +77,26 @@
 - reviewedAt: not-recorded
 - accessedAt: not-recorded
 - note: 프로젝트가 관리하는 일반 설계 지침이다. 독립적인 외부 근거로 간주하지 말고, 고위험 결정은 최신 공식 자료로 확인한다.
+
+### PostgreSQL — Constraints
+
+- source: https://www.postgresql.org/docs/18/ddl-constraints.html
+- type: official-documentation
+- sourceVersion: 18
+- publishedAt: not-recorded
+- reviewedAt: 2026-10-24
+- accessedAt: 2026-10-24
+- note: UNIQUE·CHECK 등 DB 제약의 기술적 범위만 참고한다. 업무키 설계·회계 정책이나 운영 DB 검증은 별도다.
+
+### AWS Builders Library — Idempotent APIs
+
+- source: https://aws.amazon.com/builders-library/making-retries-safe-with-idempotent-APIs/
+- type: official-documentation
+- sourceVersion: not-recorded
+- publishedAt: not-recorded
+- reviewedAt: 2026-10-24
+- accessedAt: 2026-10-24
+- note: 요청 식별·파라미터 불일치·재시도의 설계 참고다. 회사 정책이나 특정 PG 보장을 입증하지 않는다.
 
 ## 태그
 

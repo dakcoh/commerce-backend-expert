@@ -7,9 +7,9 @@
 - status: needs-review
 - evidenceLevel: external-source
 - owner: commerce-context-maintainers
-- verifiedBy: not-recorded
-- lastReviewedAt: not-recorded
-- changeNote: not-recorded
+- verifiedBy: Codex (AI 문서 검토)
+- lastReviewedAt: 2026-10-24
+- changeNote: 주문·라인·단위 수량의 미확정 점유와 환불 한도, PG 계약·내부 배부 정책의 구분을 검토했다. 실거래·DB 동시성은 미검증이다.
 - jurisdiction: KR
 
 ## 요약
@@ -31,6 +31,7 @@
 - 동일 환불을 식별하는 업무키는 UUID·전역 순번 또는 (상점, 업무 종류, 원 업무일자, 순번) 등 고유 범위가 확보된 식별자다. 원래 키를 영속 저장해 자정이 지난 재시도에도 유지하며, 요청마다 날짜·순번·UUID를 재발급해 같은 환불을 새 거래로 만들지 않는다
 - 같은 키에 원 결제·환불 대상·금액·통화 등 요청 지문을 대조하고 다른 요청은 거부한다. 동일 환불의 재전송에는 기존 상태·결과를 반환하며, 금액이 같더라도 서로 다른 정상 부분 환불은 별도 업무키로 기록한다
 - 원자적 잔액 확보로 확정 성공 누적 환불액 + 처리 중·미확정 환불액 + 새 요청액 ≤ 원 결제액을 검증한다. 같은 키의 동시 요청도 UNIQUE·조건부 상태 전이 등으로 환불 생성·금액 확보를 같은 로컬 트랜잭션에서 한 번만 반영한다
+- 주문 전체 한도와 별도로 라인·개별 단위·수량의 확정 성공·처리 중·미확정 환불 점유를 원자적으로 검증한다. 주문 총액 이내여도 같은 단위를 다시 포함하거나 라인 잔량을 초과하면 거부한다
 - 환불 성공은 확보액을 확정으로 옮기고 확정 실패만 해제한다. 응답 유실은 같은 환불의 인증된 조회·검증된 웹훅으로 원 결제·환불 거래·금액을 대사하며, 시간 경과만으로 실패 처리하지 않는다. 남은 라인·배송비·세금·결제 수단별 환불 가능액도 초과하지 않는다
 - 환불·취소·보상도 각 논리적 업무의 키와 요청 지문을 영속 보관하고 외부 멱등성·조회 계약에 맞춰 재처리한다. 결과 미확정이나 외부 키 보존 기간 만료를 이유로 새 키를 발급해 재실행하지 않는다
 - 출고 전 취소는 확보한 수량을 해당 재고 모델에 맞게 한 번 해제·복구한다. 출고 후 반품은 회수·검수 결과로 판매 가능 재고 복구 여부를 결정하며 환불 성공만으로 불량 재고를 판매 가능하게 만들지 않는다
@@ -53,20 +54,30 @@
 - [ ] 환불의 미확정 결과를 인증된 조회·검증된 웹훅으로 확인하고 취소·보상도 멱등하게 처리하는가?
 - [ ] 부분 취소 시 쿠폰/포인트 환불 금액을 역산하는가?
 - [ ] 정산 완료 후 환불의 공제·출금 절차가 계약에 맞는가?
-- [ ] 환불 요청 전 허용 상태와 잔여 환불 가능액·처리 중 금액을 원자적으로 검증하는가?
+- [ ] 주문·라인·개별 단위의 금액·수량 한도에 처리 중·미확정 점유까지 포함해 원자적으로 검증하는가?
 - [ ] 반복 환불의 배부 잔차와 출고 전 취소·반품 검수의 재고 복구가 구분되는가?
 
 ## 출처
 
-### AWS Builders' Library — Making retries safe with idempotent APIs
+### AWS Builders Library — Idempotent APIs
 
 - source: https://aws.amazon.com/builders-library/making-retries-safe-with-idempotent-APIs/
 - type: official-documentation
 - sourceVersion: not-recorded
 - publishedAt: not-recorded
-- reviewedAt: not-recorded
-- accessedAt: 2026-10-21
-- note: 동일 요청 식별자·요청 내용 불일치 검증의 설계 참고다. PG별 환불 계약이나 할인·정산 산식을 입증하는 자료는 아니다.
+- reviewedAt: 2026-10-24
+- accessedAt: 2026-10-24
+- note: 요청 식별·파라미터 불일치·재시도의 설계 참고다. 회사 정책이나 특정 PG 보장을 입증하지 않는다.
+
+### 토스페이먼츠 — 결제 상태와 취소 API
+
+- source: https://docs.tosspayments.com/reference
+- type: official-documentation
+- sourceVersion: not-recorded
+- publishedAt: not-recorded
+- reviewedAt: 2026-10-24
+- accessedAt: 2026-10-24
+- note: 토스의 상태·조회·부분취소 계약 참고다. 내부 환불 한도·배부 정책이나 다른 PG를 검증한 기록은 아니다.
 
 ## 태그
 

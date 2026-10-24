@@ -5,11 +5,11 @@
 - category: concurrency
 - severity: high
 - status: needs-review
-- evidenceLevel: project-guidance
+- evidenceLevel: external-source
 - owner: commerce-context-maintainers
-- verifiedBy: not-recorded
-- lastReviewedAt: not-recorded
-- changeNote: not-recorded
+- verifiedBy: Codex (AI 문서 검토)
+- lastReviewedAt: 2026-10-24
+- changeNote: 요청 지문·진행 상태·rollback-only 밖의 재시도와 외부 부수효과 경계를 검토했다. 실제 트랜잭션·외부 연동은 미검증이다.
 - jurisdiction: KR
 
 ## 요약
@@ -36,7 +36,8 @@
 - 충돌이 드문 엔티티는 @Version 낙관락과 제한된 재시도를 사용한다.
 - 충돌이 잦은 단일 DB 자원은 PESSIMISTIC_WRITE와 락 타임아웃을 검토한다.
 - 선착순 발급은 DB 조건부 수량 차감과 발급 범위별 UNIQUE 제약을 같은 트랜잭션에서 처리할 수 있다. Redis Lua Script를 선택하면 DB 발급 원장과 영속 시도 기록, 실패 보상과 대사를 함께 설계한다.
-- 멱등성 키와 처리 결과를 저장하고 같은 키 요청에는 기존 결과를 반환한다.
+- 멱등성 키에 요청 지문·처리 상태·결과를 함께 저장한다. 같은 키의 다른 요청은 거부하고, 처리 중·미확정과 확정 결과를 구분해 같은 업무만 재사용한다.
+- 낙관락 예외로 rollback-only가 된 트랜잭션 안에서 루프를 돌리지 않는다. 기존 트랜잭션 종료 후 새 트랜잭션에서 다시 조회하며 외부 승인·지급을 로컬 재시도에 함께 반복하지 않는다.
 
 ## 피해야 할 패턴
 
@@ -52,7 +53,7 @@
 
 ## 출처
 
-### 프로젝트 관리 지식 — 외부 근거 미첨부
+### 프로젝트 관리 지식 — 이관 출처
 
 - source: src/main/resources/knowledge/spring-commerce.yml
 - type: project-guidance
@@ -61,6 +62,36 @@
 - reviewedAt: not-recorded
 - accessedAt: not-recorded
 - note: 프로젝트가 관리하는 일반 설계 지침이다. 독립적인 외부 근거로 간주하지 말고, 고위험 결정은 최신 공식 자료로 확인한다.
+
+### Jakarta Persistence — Optimistic Locking
+
+- source: https://jakarta.ee/specifications/persistence/3.2/jakarta-persistence-spec-3.2.html
+- type: official-documentation
+- sourceVersion: 3.2
+- publishedAt: not-recorded
+- reviewedAt: 2026-10-24
+- accessedAt: 2026-10-24
+- note: 낙관락 검사 시점·OptimisticLockException의 rollback과 잠금 힌트 이식성 참고다. 운영 DB 성능·정합성 검증은 아니다.
+
+### Spring Framework — Transaction Propagation
+
+- source: https://docs.spring.io/spring-framework/reference/data-access/transaction/declarative/tx-propagation.html
+- type: official-documentation
+- sourceVersion: 7.0.10
+- publishedAt: not-recorded
+- reviewedAt: 2026-10-24
+- accessedAt: 2026-10-24
+- note: REQUIRED의 물리 트랜잭션 공유와 rollback-only 전파 참고다. PG·Redis 효과는 로컬 롤백으로 취소되지 않는다.
+
+### AWS Builders Library — Idempotent APIs
+
+- source: https://aws.amazon.com/builders-library/making-retries-safe-with-idempotent-APIs/
+- type: official-documentation
+- sourceVersion: not-recorded
+- publishedAt: not-recorded
+- reviewedAt: 2026-10-24
+- accessedAt: 2026-10-24
+- note: 요청 식별·파라미터 불일치·재시도의 설계 참고다. 회사 정책이나 특정 PG 보장을 입증하지 않는다.
 
 ## 태그
 

@@ -9,7 +9,7 @@
 - owner: commerce-context-maintainers
 - verifiedBy: Codex (AI 문서 검토)
 - lastReviewedAt: 2026-10-24
-- changeNote: 공식 RLock 문서로 획득·lease·watchdog·소유 스레드 해제 계약을 검토했다. Redis 장애·DB 불변식·운영 적용은 미검증이므로 needs-review를 유지한다.
+- changeNote: 기존 RLock 계약 검토에 더해 fencing과 DB version의 보호 범위를 구분했다. Redis 장애와 보호 자원의 실제 거부 동작은 미검증이다.
 - jurisdiction: KR
 
 ## 요약
@@ -35,7 +35,7 @@
 - Redisson에서 leaseTime을 지정하지 않는 획득 방식은 watchdog이 살아 있는 인스턴스의 만료를 갱신한다. watchdog timeout·갱신 실패·인스턴스 중단 뒤의 만료를 검증하고, 명시적 leaseTime이 없다는 이유만으로 영구 점유라고 판단하지 않는다
 - MSA라는 이유만으로 분산락을 선택하지 않는다. DB 조건부 UPDATE, 비관락, 메시지 직렬화와 비교한다
 - 고정 lease 또는 watchdog 등 실제 만료·갱신 계약을 확인한다. 해제는 소유 스레드와 만료 경합을 처리하며 TTL에만 의존해 정상 해제를 생략하지 않는다
-- lease 만료 후 늦게 도착한 작업이 최신 상태를 덮지 않도록 fencing token 또는 DB version 검증을 함께 사용한다
+- 일반 RLock의 획득만으로 fencing token이 발급되지는 않는다. fencing을 쓰면 보호 자원이 토큰 순서를 원자적으로 확인해 오래된 쓰기를 거부해야 한다. DB version은 읽은 버전을 조건으로 갱신할 때의 충돌 방어이며 락 소유권이나 외부 부수효과까지 보장하는 것으로 대체하지 않는다
 
 ## 피해야 할 패턴
 
@@ -51,7 +51,7 @@
 
 ## 출처
 
-### 프로젝트 관리 지식 — 외부 근거 미첨부
+### 프로젝트 관리 지식 — 이관 출처
 
 - source: src/main/resources/knowledge/inventory.yml
 - type: project-guidance
@@ -70,6 +70,16 @@
 - reviewedAt: 2026-10-24
 - accessedAt: 2026-10-24
 - note: RLock의 watchdog·leaseTime·획득 결과·소유 스레드 해제 계약을 문서로 확인했다. Redis 장애·DB 불변식과 현장 설정의 안전성을 검증한 기록은 아니며 needs-review를 유지한다.
+
+### Jakarta Persistence — Optimistic Locking
+
+- source: https://jakarta.ee/specifications/persistence/3.2/jakarta-persistence-spec-3.2.html
+- type: official-documentation
+- sourceVersion: 3.2
+- publishedAt: not-recorded
+- reviewedAt: 2026-10-24
+- accessedAt: 2026-10-24
+- note: 낙관락 검사 시점·OptimisticLockException의 rollback과 잠금 힌트 이식성 참고다. 운영 DB 성능·정합성 검증은 아니다.
 
 ## 태그
 
