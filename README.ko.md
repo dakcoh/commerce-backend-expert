@@ -46,7 +46,7 @@ claude plugin marketplace add dakcoh/commerce-backend-expert
 claude plugin install commerce-backend-expert@commerce-context-mcp
 ```
 
-세션 훅에는 Node.js 24.22.1 LTS를 사용하세요. 새 대화에서 사용하며, Codex는 `/hooks`에서 정의를 검토·신뢰해야 실행합니다. 신뢰 후 실제 실행·재개·압축은 미검증입니다. [클라이언트별 구성](#클라이언트별-구성)과 [검증 현황](CONTRIBUTING.ko.md#클라이언트-확인)을 참고하세요.
+세션 훅에는 Node.js 24.22.1 LTS를 사용하세요. 새 대화에서 사용하며, Codex는 `/hooks`에서 정의를 검토·신뢰해야 실행합니다. Codex CLI 0.153.2와 Claude Code 2.1.114의 실제 훅 호출·재개·수동 압축은 로컬 모델 응답 대역으로 확인했습니다. 다른 클라이언트의 제한은 [검증 현황](CONTRIBUTING.ko.md#클라이언트-확인)에 기록합니다. [클라이언트별 구성](#클라이언트별-구성)도 참고하세요.
 
 `@commerce-context-mcp`는 기존 설치와 업데이트를 위한 마켓플레이스 식별자입니다. 현재 플러그인은 MCP 서버를 실행하지 않으며, 과거 npm MCP 패키지와 설치 경로가 다릅니다.
 
@@ -83,7 +83,7 @@ claude plugin install commerce-backend-expert@commerce-context-mcp
 
 ## 클라이언트별 구성
 
-공통 [plugin.json](plugin.json)과 아래 진입 설정은 모두 같은 `skills/`를 사용하며 지식을 복제하지 않습니다. 현재 버전은 `0.3.0`입니다. **형식·경로 검증과 실제 클라이언트 설치·활성화는 별도입니다.**
+공통 [plugin.json](plugin.json)과 아래 진입 설정은 모두 같은 `skills/`를 사용하며 지식을 복제하지 않습니다. 현재 버전은 `0.3.1`입니다. **형식·경로 검증과 실제 클라이언트 설치·활성화는 별도입니다.**
 
 | 클라이언트 | 구성 |
 |---|---|
@@ -104,7 +104,7 @@ claude plugin install commerce-backend-expert@commerce-context-mcp
 
 상태는 프로젝트·세션별로 분리하며 같은 세션의 재개·압축 후 유지합니다. off는 호스트의 스킬 목록을 제거하지 않으며 명시적으로 요청한 스킬 사용도 금지하지 않습니다. 훅은 프롬프트·코드·대화 이력을 저장하거나 외부로 전송하지 않습니다. 켜기·끄기 상태만 클라이언트의 플러그인 데이터 폴더에 기록하며, 해당 경로가 없으면 OS 임시 폴더를 사용합니다.
 
-Codex CLI 0.153.2에서 두 훅의 발견을 확인했습니다. 설치와 별도로 현재 훅 정의의 검토·신뢰가 필요하며, 해당 클라이언트에서 신뢰 후 실제 실행·재개·압축 동작은 미확인입니다. [실행 범위와 호환성 설정](CONTRIBUTING.ko.md#클라이언트-확인)을 확인하세요.
+Codex CLI 0.153.2(`/hooks` 검토·신뢰 후)와 Claude Code 2.1.114의 격리 프로필에서 두 훅의 실제 호출을 확인했습니다. 프로세스 재시작·재개와 실제 수동 압축 뒤 off가 유지됐고, 훅 문맥이 로컬 모델 응답 대역으로 보내는 다음 요청에 포함됐습니다. 클라이언트 연결 검증이며 AI의 실제 행동이나 모든 클라이언트의 훅을 검증한 결과는 아닙니다. [실행 범위와 호환성 설정](CONTRIBUTING.ko.md#클라이언트-확인)을 확인하세요.
 
 [Claude](hooks/claude.json)·[Cursor](hooks/cursor.json) 편집 훅은 **스킬 지식을 수정하는 개발자의 선택적 검사**이며 기본 등록하지 않습니다. 세션 훅과 별개이고 일반 사용자 프로젝트의 코드는 검사하지 않습니다. [개발 훅 설정](CONTRIBUTING.ko.md#선택적-개발-훅)
 

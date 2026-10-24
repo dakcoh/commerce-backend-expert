@@ -25,7 +25,7 @@ function copySkill(destination) {
 function repositoryFixture(t) {
   const destination = path.join(temporaryDirectory(t), "repository");
   // Only source paths: never copy .git, local profiles, credentials or output.
-  for (const relative of ["skills", "hooks", "scripts", "tests", "benchmarks", "README.md", "README.ko.md", "CONTRIBUTING.md", "CONTRIBUTING.ko.md", "LICENSE", "package.json", "package-lock.json", "plugin.json", ".nvmrc", ".codex-plugin", ".claude-plugin", ".cursor-plugin", ".agents/plugins/marketplace.json", ".cursor/rules", ".openclaw/skills.example.json", ".github/workflows/ci.yml"]) {
+  for (const relative of ["skills", "hooks", "scripts", "tests", "benchmarks", "validation", "README.md", "README.ko.md", "CONTRIBUTING.md", "CONTRIBUTING.ko.md", "LICENSE", "package.json", "package-lock.json", "plugin.json", ".nvmrc", ".codex-plugin", ".claude-plugin", ".cursor-plugin", ".agents/plugins/marketplace.json", ".cursor/rules", ".openclaw/skills.example.json", ".github/workflows/ci.yml"]) {
     fs.mkdirSync(path.dirname(path.join(destination, relative)), {recursive: true});
     fs.cpSync(path.join(repositoryRoot, relative), path.join(destination, relative), {recursive: true});
   }
