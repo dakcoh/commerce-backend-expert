@@ -11,6 +11,8 @@ metadata:
 
 요청한 코드·diff의 범위를 확인하고 실제 결함과 추가 확인 조건을 구분한다. 리뷰 요청만으로 코드를 수정하거나 운영 결제·환불을 실행하지 않는다.
 
+For refunds, both amount and line/unit/quantity limits include succeeded refunds and reservations held by processing or unknown attempts. Pending/unknown status never permits an overlapping claim and is not proof of success. Release a reservation only after definitive failure; reconcile an unknown outcome before replacing its attempt. An unchanged retry preserves the original key and request fingerprint.
+
 ## 코드와 계약을 함께 추적
 
 1. 변경 코드에서 호출자 → 서비스 → SQL·제약 → PG 연동·이벤트·워커와 테스트를 필요한 범위까지 읽는다. 상위 경로의 검증·영속 수신·트랜잭션을 확인하기 전에 누락으로 판정하지 않는다.
@@ -25,7 +27,9 @@ metadata:
 - **재고·혜택 복원:** 미확정 결제를 실패로 보고 먼저 복구하지 않는다. 확정된 취소·환불의 대상과 원 업무를 연결해 한 번 반영하고, 반품 검수 전 재고와 출고 전 확보 수량의 해제를 구별한다.
 - **Spring·저장소:** 원자적 선점·한도 검증·업무키 제약의 커밋 경계를 확인한다. 외부 PG 효과가 로컬 롤백으로 취소된다고 가정하지 않으며, 락은 실제 범위·획득 성공·해제·만료 후 쓰기까지 검토한다.
 
-이 스킬은 단독 설치로 위 절차를 수행한다. 환경에 `commerce-backend-expert`도 제공되면 필요한 경우 해당 스킬의 색인에서 관련 상세 규칙만 선택한다. 함께 설치됐다고 가정해 형제 폴더를 조회하거나 문서를 자동 다운로드하지 않는다.
+이 스킬은 단독 설치로 위 절차를 수행하며 상세 규칙 파일을 포함하지 않는다. 단독 설치에서는 이 파일과 제공된 코드로 리뷰한다. 환경에 `commerce-backend-expert`가 실제로 제공된 경우에만 필요한 상세 규칙을 해당 스킬의 색인에서 고른다. 형제 폴더의 존재를 가정하거나 문서를 자동 다운로드하지 않는다.
+
+This skill works alone and bundles no detailed-rule files. A planned, failed, or unavailable read is not evidence that a rule was verified.
 
 현재 맥락의 문서를 중복 조회하거나 모든 파트를 로딩하지 않는다. 규칙의 조건·예외·전제와 출처 범위를 읽고 실제 코드·PG 계약에 적용되는지 판단한다. `active`는 정확성 인증이 아니며 `needs-review`·검토자/검토일 미기록을 검토 완료로 설명하지 않는다.
 
