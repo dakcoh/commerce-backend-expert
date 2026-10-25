@@ -4,6 +4,8 @@
 
 **2026-10-26 이슈 정리:** [#15](https://github.com/dakcoh/commerce-backend-expert/issues/15)의 설치·발견/Cursor 적용과 [#18](https://github.com/dakcoh/commerce-backend-expert/issues/18)의 공개 계약·합성 정책 검증을 완료 범위로 정리했다. OpenClaw의 실제 적용 실패는 [#22](https://github.com/dakcoh/commerce-backend-expert/issues/22), 실제 PG·사업 정책 등 운영 도입 전 검증은 [#23](https://github.com/dakcoh/commerce-backend-expert/issues/23)으로 이관한다. 실패가 해결됐다는 뜻은 아니다. JSON의 `remainingIssues: [15, 18]`과 소스/판정은 실행 당시 기록으로 보존한다.
 
+**추가 검증:** [2026-10-26 사용/미사용 수치](../benchmarks/comparison-2026-10-26.md)와 [OpenClaw 실제 반환 본문 대조](openclaw-model-2026-10-26.md)를 추가했다. 아래 2026-10-25 기록과 소스·호출 수를 합산하지 않는다.
+
 ## 지침 변경
 
 - 미확정 환불의 금액·단위 점유, 원 시도 대사, 같은 키·다른 키·업무 단위의 구분을 명시했다. 실제 입력의 분기·조기 반환·상태 쓰기를 추적하고 산식부터 확인한다.

@@ -26,6 +26,31 @@
     "prompt": "재고 작업을 보호하는 Redisson 락 사용을 검토해줘. 고정 leaseTime을 주지 않는 tryLock 대기 방식이고 watchdog timeout·갱신·인스턴스 중단 후 만료를 검증했어. 획득 실패 시 작업하지 않고 인터럽트는 상위로 전파해. 획득 성공 시 finally에서 소유권과 만료 경합에 맞게 해제하며, 저장소는 version 조건으로 늦은 쓰기를 거부해. DB 제약도 유지해. 코드와 운영 환경은 제공하지 않았어. 제공된 계약에서 확인된 결함과 더 확인할 조건을 나눠줘."
   },
   {
+    "id": "payment-uncertain",
+    "skill": "commerce-backend-expert",
+    "files": [],
+    "prompt": "승인 호출이 5초 후 타임아웃됐어. 재고 차감은 DB에 커밋됐지만 PG 상태·웹훅·원장 결과는 아직 몰라. 새 키로 다시 승인하고 재고부터 복구해도 될까? 운영 접근은 없어. 현재 확인 가능한 판단과 다음 확인 순서를 설명해줘."
+  },
+  {
+    "id": "coupon-redelivery",
+    "skill": "commerce-backend-expert",
+    "files": [],
+    "prompt": "쿠폰 소비자 A가 발급 원장을 DB에 커밋한 직후 ack 전에 종료됐어. 소비자 B가 같은 요청을 다시 받았고 다른 파티션에도 같은 캠페인의 발급 요청이 있어. 캠페인 발급 한도는 100개이고 현재 원장에는 99개야. 큐는 파티션 안에서만 순서를 보장해. 이 구조에서 중복 발급과 총 한도 초과를 막으려면 무엇을 확인하고 바꿔야 할까? 코드·운영 환경은 제공하지 않았어."
+  },
+  {
+    "id": "retry-rollback-only",
+    "skill": "commerce-backend-expert",
+    "files": [],
+    "prompt": "Spring 서비스의 @Transactional 메서드에서 Hibernate flush가 OptimisticLockException을 던졌어. catch 안에서 같은 트랜잭션·같은 엔티티로 재시도하면 될까? 이 메서드에는 외부 PG 승인 호출도 있어. 실제 코드와 실행 환경은 없어. 최소한의 수정 방향과 확인할 실패 구간을 검토해줘."
+  },
+  {
+    "id": "benefit-policy",
+    "default": false,
+    "skill": "commerce-review",
+    "files": [],
+    "prompt": "합성 부분 환불 정책을 검토해줘. 환불액은 저장된 라인별 실결제액으로 계산하고, 남은 상품의 할인액은 회수하지 않는 '혜택 유지' 정책이야. 별도 쿠폰 정책은 PG 환불 성공이 확정된 뒤 원 쿠폰을 한 번 재발급하도록 허용해. 사용 포인트와 적립 포인트는 없어. 현재 환불은 PG 응답 유실로 UNKNOWN이야. 혜택 유지이므로 쿠폰 재발급도 영구 금지해야 할까? 지금 보류할 일과 결과 확정 뒤 허용할 일을 구분해줘. 실제 운영 접근이나 코드 변경은 하지 마."
+  },
+  {
     "id": "frontend-scope",
     "skill": "commerce-backend-expert",
     "files": [

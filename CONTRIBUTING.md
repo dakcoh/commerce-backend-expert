@@ -128,17 +128,18 @@ The checker handles Markdown edits inside `skills/`, validating both skills and 
 | Codex CLI 0.153.2 | 89 runtime files match the cache; actual v0.3.0 → 0.3.1 upgrade with the preserved marketplace ID, same-version refresh, fixture-version refresh, removal. In an isolated profile, both hooks ran after `/hooks` review/trust; off survived process restart/resume and actual compaction, and context reached the local response fixture | Hook checks used a deterministic local model-response fixture, not real inference. Automatic compaction and other client versions remain unverified |
 | Codex app-server with a read-only file tool | Actual skill/rule reads for natural refund/webhook requests without explicit skill invocation; no commerce reads for CSS | Three synthetic cases, one run each. Does not establish native CLI-tool behavior, live DB/PG behavior, or quality gains against no plugin |
 | Claude Code 2.1.114 | Deployment hooks only, both skills discovered. Twelve isolated CLI checks cover startup, off/status/on, quoted and negated prompts, process restart/resume, actual `/compact`, fresh sessions/projects, and context delivery to a localhost Messages response fixture | Loaded with `--plugin-dir`; marketplace installation is separate. Actual model application, automatic compaction, and other client versions remain unverified |
-| OpenClaw 2026.10.6 on Node 24.22.1 | Isolated extraDirs/bundle discovery and removal; actual local inference and some skill reads | Tested local configurations fail guidance application; discovery/read transport is insufficient. Foreign client session hooks are not executed |
+| OpenClaw 2026.10.6/2026.10.7 on Node 24.22.1 | Isolated extraDirs/bundle discovery and removal; actual local inference and some skill reads. Latest [content/output checks](validation/openclaw-model-2026-10-26.md) | Tested local configurations fail guidance application. Native ok or zero tool failures do not establish returned file contents. Foreign client session hooks are not executed |
 | Cursor CLI 2026.10.22-27dcf5f | Authenticated `--plugin-dir` runs of either skill and both together; actual skill/rule reads; CSS reads no commerce documents and changes only two values | Auto backend is opaque; one run per case. CLI scope, not IDE GUI/marketplace, session controls, or general quality certification |
 | Optional hooks | Local checker and regression tests | Execution through client-registered hooks unverified |
 | Individual skill installation | Local installs of each skill and both together using `skills@1.7.4` on Node 24, with resolved references. Review-only installation needs no sibling folder | No model or session-hook execution |
 | Explicit skill application (2026-10-23 snapshot) | Public [answers, hashes, and reads](benchmarks/README.md) for five cases: refund, valid webhook, synchronous webhook, watchdog, CSS | One run each; answers reviewed in the same Codex session. Separate from automatic discovery, a no-skill control, or live-system checks; not rerun after the follow-up rule edits |
+| Skill/no-skill comparison (2026-10-26) | [48 fixed-model runs and a separate 12-run policy regression](benchmarks/comparison-2026-10-26.md), with inputs, answers, actual reads, time, tokens and judgments | Explicit-skill synthetic comparison. General quality, speed or billing gains were not established; semantics judged by the implementing AI |
 
 Plugin installation checks used a separate `CODEX_HOME` and work directory without changing normal user settings. The runtime fixture contained only manifests, license, module-scope configuration, routing rule, skills, and session hooks. Version-refresh checks changed fixture copies. Explicit skill evaluations use existing CLI authentication with process-local evaluation instructions and configuration. Release sources also contain bilingual docs, marketplaces, and developer checks. These results do not establish hook execution across all clients.
 
 All 19 high-risk rules received recorded AI document reviews on 2026-10-24, comparing official evidence scope with applicability and failure conditions. All remain `needs-review`: deployed PG/Redis/DB behavior and individual tax/privacy decisions were not established. See the [follow-up review record](validation/followup-review.md) for changes, remaining conditions, and client results. The 2026-10-23 model evaluations were not rerun after these rule changes.
 
-Subsequently, [15 synthetic runtime cases](validation/runtime/README.md) ran against actual PostgreSQL 16.15, Redis 7.0.15, and Spring/JPA. A Lua-error counterexample led to clearer coupon guidance and checklists. These checks are separate from the 37 offline tests and production verification. JDK/Gradle/WSL are needed only for the optional fixture; actual PG APIs, production failover and business-policy approval remain unverified. Model application has separate scoped results and failures above.
+Subsequently, [15 synthetic runtime cases](validation/runtime/README.md) ran against actual PostgreSQL 16.15, Redis 7.0.15, and Spring/JPA. A Lua-error counterexample led to clearer coupon guidance and checklists. These checks are separate from the then-current 37 offline tests and production verification. JDK/Gradle/WSL are needed only for the optional fixture; actual PG APIs, production failover and business-policy approval remain unverified. Model application has separate scoped results and failures above.
 
 Repeat the local installation check without credentials or model calls. Evidence is written under ignored `output/plugin-smoke-*` directories.
 
@@ -166,6 +167,14 @@ node scripts/smoke-openclaw.js /absolute/path/to/openclaw/openclaw.mjs
 
 The script uses fresh state/configuration/work folders, checks individual and combined extraDirs discovery plus bundle link installation/removal, and writes evidence to `output/openclaw-discovery-*`. It copies the reviewed local bundle; `--force --accept-capabilities` provides the client's normal installation consent for that fixture. It starts no gateway, model, or session hooks and leaves normal settings unchanged. This tested OpenClaw version requires Node 24.22.1 or later, separately from the repository's Node 22 checks.
 
+Use the separate [native model probe](scripts/probe-openclaw-model.js) for actual local reads and exact output preservation. It uses an already-running loopback Ollama server and installed model, tests a control file without skills, then checks CSS with both skills. **The example is a reproduction command, not a passing configuration.** See [observed failures and criteria](validation/openclaw-model-2026-10-26.md).
+
+```bash
+node scripts/probe-openclaw-model.js /path/to/openclaw/openclaw.mjs http://127.0.0.1:11434 qwen3-coder:30b 0 off
+```
+
+Run `npm run benchmark:hooks` for 30 local samples of each session-hook command versus empty Node stdin handling. It does not measure model/client dispatch latency. See [results and raw measurements](benchmarks/comparison-2026-10-26.md#세션-훅의-로컬-실행-비용).
+
 <details>
 <summary>Manual client checks and format references</summary>
 
@@ -189,7 +198,7 @@ Official documentation used for format checks:
 ## Remaining work and history
 
 - Check automatic compaction, additional Codex/Claude versions and Cursor IDE/marketplace separately; resolve OpenClaw local model/tool-call and guidance-adherence failures in [#22](https://github.com/dakcoh/commerce-backend-expert/issues/22).
-- Repeat natural-language evaluations with a no-plugin control. Do not generalize one trial into quality or token savings.
+- Extend to independent grading, unseen workloads and automatic selection. Do not generalize the [current repeated comparison](benchmarks/comparison-2026-10-26.md) into quality or token savings.
 - Track the remaining PG/DB/Redis and business-policy conditions recorded for the 19 `needs-review` rules as pre-adoption validation in [#23](https://github.com/dakcoh/commerce-backend-expert/issues/23).
 
 Installation/discovery and Cursor application work from [#15](https://github.com/dakcoh/commerce-backend-expert/issues/15), and public-contract/synthetic-policy checks from [#18](https://github.com/dakcoh/commerce-backend-expert/issues/18), have been recorded as completed scope. Moving failures and unverified conditions into follow-up issues does not mean they passed.

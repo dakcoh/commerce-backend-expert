@@ -1,6 +1,10 @@
 # 행동 평가 / Behavior evaluation
 
-이 평가는 **현재 SKILL.md 전체를 명시적으로 제공했을 때의 적용**을 확인한다. 스킬 선택·훅·미사용 대비 성능을 평가하지 않는다. 실제 DB·PG·Redis와 네트워크 업무는 실행하지 않는다.
+이 평가는 **현재 SKILL.md 전체를 명시적으로 제공했을 때의 적용**을 확인한다. 반복 비교 모드에서는 같은 모델의 미사용 대조군도 실행한다. 자동 스킬 선택·훅·클라이언트 설치 전체의 성능과 실제 DB·PG·Redis 업무는 평가하지 않는다.
+
+최신 [48회 비교 수치와 해석](comparison-2026-10-26.md) · [정책 구분 수정 후 회귀](results/2026-10-26-policy-followup.json). 실제 호출·실패·미실행과 실행 당시의 소스·기준을 구분한다.
+
+세션 훅의 로컬 기동 비용은 `npm run benchmark:hooks`로 모델 없이 따로 측정한다. 등록 명령과 빈 Node stdin 처리의 30회씩 비교이며, 클라이언트 내부의 실행 대기·모델 시간은 포함하지 않는다.
 
 ## 실행
 
@@ -22,6 +26,26 @@ npm run benchmark -- /absolute/path/to/codex model refund-overlap webhook-sync
 
 `output/behavior-eval-*`에 실제 모델·설정, 제공한 스킬의 SHA-256, 추가로 읽은 문서의 경로·SHA-256, 거부된 읽기 횟수, 답변과 클라이언트 오류가 남는다. 스킬 본문은 developer instructions로 직접 전달하므로 SKILL.md의 별도 읽기 이벤트가 없어도 되며, 자동 발견 성공으로 집계하지 않는다. 실패·중단은 성공으로 처리하지 않는다. 완료 상태 이후에도 답변을 판정 기준으로 별도 검토해야 한다.
 
+## 미사용 대비 반복 비교
+
+고정 모델 ID를 명시하고 `--compare --repeat=3`을 추가한다. 기본은 8종 × 3회 × 2조건, 총 48개 모델 요청이며 계정 사용량을 소비한다. 필요한 사례 ID로 범위를 줄일 수 있다. CI는 모델을 호출하지 않는다.
+
+```bash
+npm run benchmark -- /absolute/path/to/codex model --compare --repeat=3
+```
+
+각 쌍은 같은 입력·도구·medium 추론 설정을 사용한다. 사례/회차별 사용·미사용 순서를 교차하고 매 실행을 저장소 밖의 새 폴더·임시 스레드에서 시작한다. 미사용 조건에는 스킬 본문·참조 폴더를 제공하지 않는다. 사용 조건에는 선택한 스킬 하나와 해당 참조만 제공한다. 다른 지침 소스와 예상하지 않은 도구 실행은 오류로 기록한다. 모델/인증 등 실패가 두 번 연속 발생하면 추가 호출을 중단한다.
+
+`output/behavior-comparison-*`의 계획에는 소스 커밋·순서와 사전 고정한 [채점 기준](rubric.json)의 해시를 기록한다. 기준은 작업 모델에 전달하지 않는다. 각 실행의 실제 답변을 기준 4개로 검토하고 모두 만족해야 사례 통과로 집계한다. 실패·누락을 분모에서 조용히 제외하지 않는다. 의미 판단은 구현 세션의 AI 검토이며 독립적인 사람 채점이 아니다. CSS 원문 보존은 파일과 직접 비교한다.
+
+자동 측정은 모델 턴 시간(앱 서버 시작 제외), 실제 파일 조회, 입력·캐시 입력·출력 토큰을 구분한다. `measurements.json`은 완료된 실행의 측정 요약이며 정확성 채점은 별도다. 캐시·네트워크·서버 부하와 반복 간 변동을 함께 보고하고, 토큰 수를 금액 절감으로 환산하지 않는다. 계정의 실제 청구 금액은 측정하지 않는다. 작은 합성 표본의 차이를 운영 정확도·전체 개발 생산성으로 확대하지 않는다.
+
+후속 `benefit-policy` 사례는 기본 8종에 자동 합산하지 않는다. 명시적으로 선택해 할인액 정책과 쿠폰 권리 복원의 구분을 검사한다. `rubric.json` v2는 이 사례를 추가하며, 앞선 비교는 실행 당시 v1의 해시와 기준을 보존한다.
+
+```bash
+npm run benchmark -- /absolute/path/to/codex model --compare --repeat=3 refund-overlap benefit-policy
+```
+
 ## 확인할 결과
 
 | 사례 | 핵심 판정 |
@@ -36,7 +60,7 @@ npm run benchmark -- /absolute/path/to/codex model refund-overlap webhook-sync
 
 2026-10-23, Codex CLI 0.153.2·gpt-6-astra·medium에서 각 사례를 1회 실행했다. [실행 기록](results/2026-10-23.json) 하나에 입력·모델·해시·실제 조회·답변·검토 사유를 보관한다. 답변을 별도 Markdown 파일로 중복 보관하지 않는다. 결과 검토는 구현을 진행한 같은 Codex 세션에서 수행했고, 독립 채점자·미사용 대조군·반복 실험은 없다. 한 번의 고정 입력 결과를 일반적인 품질 향상·비용 절감으로 확대하지 않는다. 동일 모델·설정에서도 답변은 달라질 수 있다.
 
-이 기록은 당시 소스의 해시를 보존한 결과다. [2026-10-24 후속 규칙 수정](../validation/followup-review.md) 뒤 모델 평가를 다시 실행하지 않았으며, [추가 검토 사례](scenarios.md#후속-검토-사례--모델-평가-미실행)도 모델 평가 통과 수에 포함하지 않는다.
+이 기록은 당시 소스의 해시를 보존한 결과다. 2026-10-23 실행은 [후속 규칙 수정](../validation/followup-review.md) 전의 결과이며, 아래 5개 통과 수에 다른 날짜의 비교나 [추가 검토 사례](scenarios.md#후속-검토-사례--2026-10-24-기록)를 합산하지 않는다.
 
 | 사례 | 확인 |
 |---|---|
@@ -48,4 +72,4 @@ npm run benchmark -- /absolute/path/to/codex model refund-overlap webhook-sync
 
 설계 참고: [OpenAI App Server](https://learn.chatgpt.com/docs/app-server), [스킬 평가 안내](https://developers.openai.com/blog/eval-skills).
 
-English: Run the command with an authenticated Codex CLI and a supported model. The runner explicitly supplies the exact selected SKILL.md as developer instructions in a temporary read-only thread. It records hashes, actual reads, answers, and failures. This is not automatic discovery, a no-skill comparison, or live DB/PG validation. Model usage is charged to the configured account; CI runs only offline tests. Review completed answers manually before recording a pass.
+English: The runner explicitly supplies the selected SKILL.md in a temporary read-only thread. Use a fixed supported model with `--compare --repeat=3` for alternating skill/no-skill pairs. The default eight cases and optional `benefit-policy` follow-up remain separate. Hashes, actual reads, answers, failures, turn times and API token counters are recorded. This does not measure automatic discovery, full plugin hooks or production DB/PG behavior. Model usage consumes account allowance; CI is offline. Review completed answers against the frozen rubric before recording a pass.
