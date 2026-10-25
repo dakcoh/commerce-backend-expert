@@ -36,6 +36,12 @@ npm run benchmark -- /absolute/path/to/codex model --compare --repeat=3
 
 자동 측정은 모델 턴 시간(앱 서버 시작 제외), 실제 파일 조회, 입력·캐시 입력·출력 토큰을 구분한다. `measurements.json`은 완료된 실행의 측정 요약이며 정확성 채점은 별도다. 캐시·네트워크·서버 부하와 반복 간 변동을 함께 보고하고, 토큰 수를 금액 절감으로 환산하지 않는다. 계정의 실제 청구 금액은 측정하지 않는다. 작은 합성 표본의 차이를 운영 정확도·전체 개발 생산성으로 확대하지 않는다.
 
+후속 `benefit-policy` 사례는 기본 8종에 자동 합산하지 않는다. 명시적으로 선택해 할인액 정책과 쿠폰 권리 복원의 구분을 검사한다. `rubric.json` v2는 이 사례를 추가하며, 앞선 비교는 실행 당시 v1의 해시와 기준을 보존한다.
+
+```bash
+npm run benchmark -- /absolute/path/to/codex model --compare --repeat=3 refund-overlap benefit-policy
+```
+
 ## 확인할 결과
 
 | 사례 | 핵심 판정 |
@@ -50,7 +56,7 @@ npm run benchmark -- /absolute/path/to/codex model --compare --repeat=3
 
 2026-10-23, Codex CLI 0.153.2·gpt-6-astra·medium에서 각 사례를 1회 실행했다. [실행 기록](results/2026-10-23.json) 하나에 입력·모델·해시·실제 조회·답변·검토 사유를 보관한다. 답변을 별도 Markdown 파일로 중복 보관하지 않는다. 결과 검토는 구현을 진행한 같은 Codex 세션에서 수행했고, 독립 채점자·미사용 대조군·반복 실험은 없다. 한 번의 고정 입력 결과를 일반적인 품질 향상·비용 절감으로 확대하지 않는다. 동일 모델·설정에서도 답변은 달라질 수 있다.
 
-이 기록은 당시 소스의 해시를 보존한 결과다. [2026-10-24 후속 규칙 수정](../validation/followup-review.md) 뒤 모델 평가를 다시 실행하지 않았으며, [추가 검토 사례](scenarios.md#후속-검토-사례--모델-평가-미실행)도 모델 평가 통과 수에 포함하지 않는다.
+이 기록은 당시 소스의 해시를 보존한 결과다. 2026-10-23 실행은 [후속 규칙 수정](../validation/followup-review.md) 전의 결과이며, 아래 5개 통과 수에 다른 날짜의 비교나 [추가 검토 사례](scenarios.md#후속-검토-사례--2026-10-24-기록)를 합산하지 않는다.
 
 | 사례 | 확인 |
 |---|---|
@@ -62,4 +68,4 @@ npm run benchmark -- /absolute/path/to/codex model --compare --repeat=3
 
 설계 참고: [OpenAI App Server](https://learn.chatgpt.com/docs/app-server), [스킬 평가 안내](https://developers.openai.com/blog/eval-skills).
 
-English: Run the command with an authenticated Codex CLI and a supported model. The runner explicitly supplies the exact selected SKILL.md as developer instructions in a temporary read-only thread. It records hashes, actual reads, answers, and failures. This is not automatic discovery, a no-skill comparison, or live DB/PG validation. Model usage is charged to the configured account; CI runs only offline tests. Review completed answers manually before recording a pass.
+English: The runner explicitly supplies the selected SKILL.md in a temporary read-only thread. Use a fixed supported model with `--compare --repeat=3` for alternating skill/no-skill pairs. The default eight cases and optional `benefit-policy` follow-up remain separate. Hashes, actual reads, answers, failures, turn times and API token counters are recorded. This does not measure automatic discovery, full plugin hooks or production DB/PG behavior. Model usage consumes account allowance; CI is offline. Review completed answers against the frozen rubric before recording a pass.

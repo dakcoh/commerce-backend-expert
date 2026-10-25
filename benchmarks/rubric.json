@@ -1,5 +1,5 @@
 {
-  "version": 1,
+  "version": 2,
   "scoring": "Four binary criteria per completed run. A run passes only when all four pass. Missing, failed or contaminated runs are not passes. Criteria are never sent to the task model. Semantic review is by the implementing Codex session, not an independent human grader.",
   "cases": {
     "refund-overlap": [
@@ -43,6 +43,12 @@
       "End the original transaction and retry through a fresh transaction with freshly read state.",
       "Account for actual proxy/transaction boundary and eventual flush/commit failure rather than catching only a method body exception.",
       "Do not blindly repeat external PG approval; retain attempt identity and reconcile uncertain external effects."
+    ],
+    "benefit-policy": [
+      "Distinguish retained discount allocation from the separate coupon reissue policy; do not impose a permanent ban merely from benefit retention.",
+      "Do not reissue the coupon while the PG refund outcome is UNKNOWN; reconcile the original refund first.",
+      "Allow the supplied once-only coupon reissue policy after definitive refund success and preserve idempotency.",
+      "Do not invent used/earned points, claim actual PG execution, or present the synthetic policy as operational approval."
     ],
     "frontend-scope": [
       "Return one HTML code block equal to the fixture except button padding 0 -> 12px and .buttons gap 0 -> 8px.",

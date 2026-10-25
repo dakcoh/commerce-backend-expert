@@ -3,7 +3,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 const {temporaryDirectory} = require("./helpers");
-const {readFixture, comparisonSchedule, summarizeMeasurements} = require("../scripts/evaluate-behavior");
+const {readFixture, comparisonSchedule, summarizeMeasurements, selectCases} = require("../scripts/evaluate-behavior");
 
 test("evaluation reader bounds real paths and file sizes before returning contents", t => {
   const directory = temporaryDirectory(t);
@@ -35,6 +35,13 @@ test("comparison pairs each case and repetition and counterbalances arm order", 
   assert.deepEqual(jobs.slice(4, 6).map(item => item.arm), ["skill", "baseline"]);
   assert.throws(() => comparisonSchedule([], 0));
   assert.throws(() => comparisonSchedule([], 6));
+});
+
+test("follow-up cases run only when selected and unknown IDs cannot trigger model calls", () => {
+  const cases = [{id: "main"}, {id: "followup", default: false}];
+  assert.deepEqual(selectCases(cases, []), [cases[0]]);
+  assert.deepEqual(selectCases(cases, ["followup"]), [cases[1]]);
+  assert.throws(() => selectCases(cases, ["typo"]), /Unknown evaluation case/);
 });
 
 test("measurement summaries exclude failed runs and preserve missing token data", () => {

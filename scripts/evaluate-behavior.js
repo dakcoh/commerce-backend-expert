@@ -23,6 +23,11 @@ function comparisonSchedule(cases, repeats) {
   })).flat();
 }
 
+function selectCases(cases, selected) {
+  assert.ok(selected.every(id => cases.some(item => item.id === id)), "Unknown evaluation case");
+  return cases.filter(item => selected.length ? selected.includes(item.id) : item.default !== false);
+}
+
 function summarizeMeasurements(records) {
   const median = values => {
     if (!values.length) return null;
@@ -50,11 +55,10 @@ function summarizeMeasurements(records) {
 async function evaluate(codex, model, selected = [], comparison = false, repeats = 3) {
   const repository = path.resolve(__dirname, "..");
   const cases = JSON.parse(fs.readFileSync(path.join(repository, "benchmarks/cases.json"), "utf8"));
-  assert.ok(selected.every(id => cases.some(item => item.id === id)), "Unknown evaluation case");
+  const chosen = selectCases(cases, selected);
   fs.mkdirSync(path.join(repository, "output"), {recursive: true});
   const output = fs.mkdtempSync(path.join(repository, comparison ? "output/behavior-comparison-" : "output/behavior-eval-"));
   const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), "commerce-behavior-"));
-  const chosen = cases.filter(item => !selected.length || selected.includes(item.id));
   const jobs = comparison ? comparisonSchedule(chosen, repeats) : chosen.map(item => ({...item, arm: "skill", repeat: 1}));
   const records = [];
   const snapshot = path.join(fixtureRoot, "source");
@@ -178,4 +182,4 @@ if (require.main === module) {
     console.error("Usage: node scripts/evaluate-behavior.js <codex executable> [model|-] [--compare --repeat=3] [case IDs...]"); process.exitCode = 1;
   } else evaluate(process.argv[2], process.argv[3] === "-" ? undefined : process.argv[3], args.filter(value => !value.startsWith("--")), comparison, repeat ? Number(repeat.slice(9)) : 3).catch(error => { console.error(error.message); process.exitCode = 1; });
 }
-module.exports = {readFixture, comparisonSchedule, summarizeMeasurements};
+module.exports = {readFixture, comparisonSchedule, summarizeMeasurements, selectCases};
