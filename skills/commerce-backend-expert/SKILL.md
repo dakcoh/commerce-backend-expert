@@ -22,6 +22,8 @@ metadata:
 
 현재 개발 환경의 도구로 함께 제공된 Markdown을 읽는다. MCP·Java·npm 실행은 필요 없다.
 
+Before answering from this skill, open the matching index below and the selected rule's conditions and failure/recovery guidance with the file reader. Resolve links relative to this SKILL.md. Use a known rule path directly and reuse content already in context. If a read fails or no rule applies, state that limit instead of claiming verified guidance.
+
 | 작업의 중심 | 먼저 읽을 색인 |
 |---|---|
 | 상품·가격·주문·배송·회원·포인트·권한 | [상품·주문·회원·배송](references/commerce/INDEX.md) |

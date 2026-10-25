@@ -11,6 +11,8 @@ metadata:
 
 요청한 코드·diff의 범위를 확인하고 실제 결함과 추가 확인 조건을 구분한다. 리뷰 요청만으로 코드를 수정하거나 운영 결제·환불을 실행하지 않는다.
 
+Before claiming a defect, trace the supplied input through the actual predicates, early returns and state writes. Distinguish same-key retries, different-key requests and overlapping business units. Compute totals before claiming that an amount limit is exceeded.
+
 For refunds, both amount and line/unit/quantity limits include succeeded refunds and reservations held by processing or unknown attempts. Pending/unknown status never permits an overlapping claim and is not proof of success. Release a reservation only after definitive failure; reconcile an unknown outcome before replacing its attempt. An unchanged retry preserves the original key and request fingerprint.
 
 ## 코드와 계약을 함께 추적
