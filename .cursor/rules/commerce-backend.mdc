@@ -3,8 +3,8 @@ description: 한국 이커머스 백엔드의 주문·재고·결제·환불·�
 alwaysApply: false
 ---
 
-이커머스 백엔드 개발 요청에 해당하면 이 파일 기준 [대표 스킬](../../skills/commerce-backend-expert/SKILL.md)을 읽고 관련 파트의 규칙만 선택한다. 실제 호출 경로·업무 조건·적용 예외를 확인한 뒤 요청한 작업을 수행한다.
+결제·환불 코드 리뷰는 환경에서 제공하는 [리뷰 스킬](../../skills/commerce-review/SKILL.md)을 우선 따른다. 리뷰 단독 설치에 대표 스킬이나 상세 규칙이 필요하다고 가정하지 않는다.
 
-결제·환불 코드 리뷰는 [리뷰 스킬](../../skills/commerce-review/SKILL.md)의 절차를 따른다.
+그 밖의 이커머스 백엔드 개발은 제공된 [대표 스킬](../../skills/commerce-backend-expert/SKILL.md)을 읽고 관련 규칙만 선택한다. 실제 호출 경로·업무 조건·적용 예외를 확인하며, 설치되지 않은 스킬의 경로를 추측하거나 문서를 자동 다운로드하지 않는다.
 
 일반 화면 스타일·마케팅 요청에는 적용하지 않는다. 지식 원본은 `skills/commerce-backend-expert/`이며 규칙을 이 파일에 복제하지 않는다.
