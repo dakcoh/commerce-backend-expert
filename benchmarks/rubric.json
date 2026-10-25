@@ -1,0 +1,54 @@
+{
+  "version": 1,
+  "scoring": "Four binary criteria per completed run. A run passes only when all four pass. Missing, failed or contaminated runs are not passes. Criteria are never sent to the task model. Semantic review is by the implementing Codex session, not an independent human grader.",
+  "cases": {
+    "refund-overlap": [
+      "Trace the new key past the existing-key return and identify acceptance of the overlapping X-1 unit.",
+      "Explain that 6669 + 13339 = 20008 <= 20009; an order amount cap alone does not prevent this overlap.",
+      "Keep unknown/processing reservations for amount and units; reconcile the original attempt rather than assume failure or release early.",
+      "Separate request fingerprint validation from this different-key overlap and do not claim real DB/PG execution."
+    ],
+    "webhook-async": [
+      "Accept the supplied PG contract's HTTP 202 success response.",
+      "Do not invent missing upstream signature/shop/order/amount validation.",
+      "Recognize durable inbox commit before response and do not claim durability is absent.",
+      "Separate additional crash/reordering/concurrency checks from confirmed defects."
+    ],
+    "webhook-sync": [
+      "Accept a short synchronous transaction within the supplied response deadline.",
+      "Do not require a queue or worker as a confirmed missing requirement.",
+      "Preserve the supplied uniqueness, conditional transition, duplicate response and reconciliation facts.",
+      "Keep unprovided runtime/concurrency evidence as additional checks, without claiming execution."
+    ],
+    "lock-watchdog": [
+      "Recognize watchdog renewal and expiration without an explicit fixed leaseTime.",
+      "Do not diagnose a permanent lock or mandate a fixed five-second lease from the supplied facts.",
+      "Recognize acquisition/release handling and version/DB defenses already supplied.",
+      "Keep actual configuration, pause, failure and contention checks conditional; do not claim runtime verification."
+    ],
+    "payment-uncertain": [
+      "Do not equate a timeout with definitive PG approval failure.",
+      "Reject new-key reapproval while the original outcome is unknown.",
+      "Do not release or restore the committed stock before a definitive outcome and compensation decision.",
+      "Propose original transaction lookup/authenticated notices/ledger reconciliation with provider-contract limits; do not claim operational access."
+    ],
+    "coupon-redelivery": [
+      "Use durable request/business-key uniqueness to make redelivery idempotent.",
+      "Protect the campaign's shared total atomically across partitions, including the 99-to-100 boundary.",
+      "Acknowledge only after durable DB commitment; a crash before ack must be safe to redeliver.",
+      "Do not treat per-partition ordering or a standalone Redis reservation as a complete durable global-cap guarantee."
+    ],
+    "retry-rollback-only": [
+      "Reject retrying the same failed transaction/persistence context after OptimisticLockException.",
+      "End the original transaction and retry through a fresh transaction with freshly read state.",
+      "Account for actual proxy/transaction boundary and eventual flush/commit failure rather than catching only a method body exception.",
+      "Do not blindly repeat external PG approval; retain attempt identity and reconcile uncertain external effects."
+    ],
+    "frontend-scope": [
+      "Return one HTML code block equal to the fixture except button padding 0 -> 12px and .buttons gap 0 -> 8px.",
+      "Read the provided HTML file successfully rather than inventing its contents.",
+      "Do not read commerce reference documents for this CSS-only request.",
+      "Do not claim saved files or browser/runtime testing when no such tool executed."
+    ]
+  }
+}
