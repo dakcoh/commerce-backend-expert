@@ -2,6 +2,8 @@
 
 2026-10-25, #15 후속 검증이다. [입력·조회·답변·판정 기록](results/2026-10-25-model-application.json)은 원문 스트림·소스별 스킬 해시를 보존한다. 내부 추론 텍스트와 인증 정보는 공개하지 않는다. 판정자는 구현을 진행한 Codex AI이며 독립적인 사람 검토·운영 인증이 아니다.
 
+**2026-10-26 이슈 정리:** [#15](https://github.com/dakcoh/commerce-backend-expert/issues/15)의 설치·발견/Cursor 적용과 [#18](https://github.com/dakcoh/commerce-backend-expert/issues/18)의 공개 계약·합성 정책 검증을 완료 범위로 정리했다. OpenClaw의 실제 적용 실패는 [#22](https://github.com/dakcoh/commerce-backend-expert/issues/22), 실제 PG·사업 정책 등 운영 도입 전 검증은 [#23](https://github.com/dakcoh/commerce-backend-expert/issues/23)으로 이관한다. 실패가 해결됐다는 뜻은 아니다. JSON의 `remainingIssues: [15, 18]`과 소스/판정은 실행 당시 기록으로 보존한다.
+
 ## 지침 변경
 
 - 미확정 환불의 금액·단위 점유, 원 시도 대사, 같은 키·다른 키·업무 단위의 구분을 명시했다. 실제 입력의 분기·조기 반환·상태 쓰기를 추적하고 산식부터 확인한다.
@@ -39,7 +41,7 @@ Windows x64·OpenClaw 2026.10.6·Ollama 0.40.10에서 실제 로컬 가중치로
 
 CSS 실패에서는 native API의 `message.content`가 최종 답변과 동일한 도구 호출 JSON이고, `tool_calls`와 실제 호출 수는 0이었다. 모델 제안을 실행된 도구로 복구 해석하거나 JSON 본문만으로 도구 실행 성공을 꾸미지 않는다. 이 관찰만으로 원인을 플러그인·Ollama·모델 중 하나로 단정하지 않는다.
 
-**시험한 OpenClaw 로컬 구성은 커머스 문서 적용에 합격하지 못했다.** 설치·발견·문서 전송과 지침 준수는 다르다. Markdown을 명확히 했다는 이유로 #15를 닫거나 지원 범위를 확대하지 않는다. #18의 실제 PG·사업 정책·권한 있는 개인정보/세무 검토도 미완료다.
+**시험한 OpenClaw 로컬 구성은 커머스 문서 적용에 합격하지 못했다.** 설치·발견·문서 전송과 지침 준수는 다르다. Markdown을 명확히 했다는 이유로 적용 실패를 해결 처리하거나 지원 범위를 확대하지 않는다. 미해결 조건은 #22와 #23에서 계속 추적한다.
 
 ## 재현과 검증
 
@@ -57,4 +59,4 @@ node openclaw.mjs agent exec --config <config> --state-dir <state> --cwd <work> 
 
 문서 검사와 오프라인 테스트 37개, 두 스킬의 Skill Creator frontmatter 검사가 통과했다. CI의 OS 3종 × Node 2종 결과는 PR에서 같은 HEAD 기준으로 확인한다. 모델 호출은 CI에 포함하지 않는다. 시험 서버·프로세스를 종료하고 포트 닫힘을 확인했으며 가중치·원문은 무시되는 `output/`에 보관한다. 평소 설정·PATH·기존 태그는 유지한다.
 
-English: Review instructions clarify uncertain refund reservations, concrete branch tracing, and standalone resource availability. Authenticated Cursor CLI checks cover actual reads and exact CSS preservation. Fourteen bounded OpenClaw/Ollama trials retain application failures despite discovery/skill delivery. No production or general model-quality certification is implied; #15 and #18 remain open.
+English: Review instructions clarify uncertain refund reservations, concrete branch tracing, and standalone resource availability. Authenticated Cursor CLI checks cover actual reads and exact CSS preservation. Fourteen bounded OpenClaw/Ollama trials retain application failures despite discovery/skill delivery. Completed scope from #15/#18 is separated from unresolved OpenClaw failures (#22) and pre-adoption production validation (#23). The JSON retains its historical issue references; no failed result or unverified condition is marked as passed.

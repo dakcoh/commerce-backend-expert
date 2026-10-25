@@ -121,7 +121,7 @@ The checker handles Markdown edits inside `skills/`, validating both skills and 
 
 ## Client checks
 
-**Updated on 2026-10-25.** Distinguish configuration checks, client activation, and actual model application. See [0.3.1 lifecycle validation](validation/0.3.1.md) and the latest [model application and limitations](validation/model-application.md); earlier model evaluations remain dated 2026-10-23.
+**Updated on 2026-10-26.** Distinguish configuration checks, client activation, and actual model application. See [0.3.1 lifecycle validation](validation/0.3.1.md) and the latest [model application and limitations](validation/model-application.md); earlier model evaluations remain dated 2026-10-23.
 
 | Environment | Verified scope | Unverified or limited |
 |---|---|---|
@@ -188,9 +188,11 @@ Official documentation used for format checks:
 
 ## Remaining work and history
 
-- Check automatic compaction, additional Codex/Claude versions and Cursor IDE/marketplace separately; resolve OpenClaw local model/tool-call and guidance-adherence failures in #15.
+- Check automatic compaction, additional Codex/Claude versions and Cursor IDE/marketplace separately; resolve OpenClaw local model/tool-call and guidance-adherence failures in [#22](https://github.com/dakcoh/commerce-backend-expert/issues/22).
 - Repeat natural-language evaluations with a no-plugin control. Do not generalize one trial into quality or token savings.
-- Verify the remaining PG/DB/Redis and business-policy conditions recorded for the 19 `needs-review` rules.
+- Track the remaining PG/DB/Redis and business-policy conditions recorded for the 19 `needs-review` rules as pre-adoption validation in [#23](https://github.com/dakcoh/commerce-backend-expert/issues/23).
+
+Installation/discovery and Cursor application work from [#15](https://github.com/dakcoh/commerce-backend-expert/issues/15), and public-contract/synthetic-policy checks from [#18](https://github.com/dakcoh/commerce-backend-expert/issues/18), have been recorded as completed scope. Moving failures and unverified conditions into follow-up issues does not mean they passed.
 
 <details>
 <summary>Previous synthetic evaluation and the v0.2.2 migration</summary>
