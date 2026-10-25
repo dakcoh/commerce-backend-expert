@@ -121,7 +121,7 @@ Codex CLI 0.153.2에서는 루트 manifest에 Agent Plugins `$schema`가 있으�
 
 ## 클라이언트 확인
 
-**갱신 기준일: 2026-10-25.** 설정 형식 검사, 클라이언트 활성 상태, 모델 문서 적용을 구분합니다. [0.3.1 생명주기 검증](validation/0.3.1.md)과 최신 [문서 적용·모델 제약](validation/model-application.md)을 구별하며 이전 모델 평가는 2026-10-23 기록입니다.
+**갱신 기준일: 2026-10-26.** 설정 형식 검사, 클라이언트 활성 상태, 모델 문서 적용을 구분합니다. [0.3.1 생명주기 검증](validation/0.3.1.md)과 최신 [문서 적용·모델 제약](validation/model-application.md)을 구별하며 이전 모델 평가는 2026-10-23 기록입니다.
 
 | 환경 | 확인한 범위 | 미확인·제한 |
 |---|---|---|
@@ -188,9 +188,11 @@ Codex 설치 명령은 모델의 자동 선택을 검증하지 않습니다. Cla
 
 ## 남은 작업과 이전 기록
 
-- 자동 압축·다른 Codex/Claude 버전·Cursor IDE/마켓플레이스를 별도로 확인하고, #15의 OpenClaw 로컬 모델 도구 호출·지침 준수 실패를 해결합니다.
+- 자동 압축·다른 Codex/Claude 버전·Cursor IDE/마켓플레이스를 별도로 확인하고, [#22](https://github.com/dakcoh/commerce-backend-expert/issues/22)의 OpenClaw 로컬 모델 도구 호출·지침 준수 실패를 해결합니다.
 - 자연어 평가를 반복하고 미사용 대조군과 비교합니다. 단일 시험을 일반적인 품질·토큰 개선으로 확대하지 않습니다.
-- `needs-review` 규칙 19개에 기록한 실제 PG·DB·Redis·사업 정책의 미확인 조건을 검증합니다.
+- `needs-review` 규칙 19개에 기록한 실제 PG·DB·Redis·사업 정책의 미확인 조건은 [#23](https://github.com/dakcoh/commerce-backend-expert/issues/23)에서 운영 도입 전 검증으로 추적합니다.
+
+[#15](https://github.com/dakcoh/commerce-backend-expert/issues/15)의 설치·발견/Cursor 적용과 [#18](https://github.com/dakcoh/commerce-backend-expert/issues/18)의 공개 계약·합성 정책 검증은 완료 범위로 정리했습니다. 후속으로 옮긴 실패·미확인 조건은 해결됐다는 의미가 아닙니다.
 
 <details>
 <summary>기존 합성 평가와 v0.2.2 전환 배경</summary>
