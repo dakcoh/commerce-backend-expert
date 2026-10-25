@@ -39,6 +39,8 @@ function summarizeMeasurements(records) {
       medianInputTokens: median(values(record => record.tokenUsage?.total?.inputTokens)),
       medianCachedInputTokens: median(values(record => record.tokenUsage?.total?.cachedInputTokens)),
       medianOutputTokens: median(values(record => record.tokenUsage?.total?.outputTokens)),
+      inputTokenMeasurements: values(record => record.tokenUsage?.total?.inputTokens).length,
+      outputTokenMeasurements: values(record => record.tokenUsage?.total?.outputTokens).length,
       totalInputTokens: values(record => record.tokenUsage?.total?.inputTokens).reduce((a, b) => a + b, 0),
       totalOutputTokens: values(record => record.tokenUsage?.total?.outputTokens).reduce((a, b) => a + b, 0),
       successfulReads: completed.reduce((sum, record) => sum + record.reads.length, 0)}];
@@ -55,6 +57,9 @@ async function evaluate(codex, model, selected = [], comparison = false, repeats
   const chosen = cases.filter(item => !selected.length || selected.includes(item.id));
   const jobs = comparison ? comparisonSchedule(chosen, repeats) : chosen.map(item => ({...item, arm: "skill", repeat: 1}));
   const records = [];
+  const snapshot = path.join(fixtureRoot, "source");
+  for (const name of new Set(chosen.map(item => item.skill))) fs.cpSync(path.join(repository, "skills", name), path.join(snapshot, "skills", name), {recursive: true});
+  fs.cpSync(path.join(repository, "benchmarks/fixtures"), path.join(snapshot, "fixtures"), {recursive: true});
   const version = spawnSync(codex, ["--version"], {encoding: "utf8", windowsHide: true, timeout: 10000});
   assert.ifError(version.error); assert.equal(version.status, 0, "Codex version check failed");
   const listed = spawnSync(codex, ["plugin", "list", "--json"], {encoding: "utf8", windowsHide: true, timeout: 30000});
@@ -73,8 +78,8 @@ async function evaluate(codex, model, selected = [], comparison = false, repeats
     const skill = path.join(fixture, "skills", item.skill);
     fs.mkdirSync(directory, {recursive: true});
     fs.mkdirSync(cwd, {recursive: true});
-    if (item.arm === "skill") fs.cpSync(path.join(repository, "skills", item.skill), skill, {recursive: true});
-    for (const file of item.files) fs.copyFileSync(path.join(repository, "benchmarks/fixtures", file), path.join(cwd, file));
+    if (item.arm === "skill") fs.cpSync(path.join(snapshot, "skills", item.skill), skill, {recursive: true});
+    for (const file of item.files) fs.copyFileSync(path.join(snapshot, "fixtures", file), path.join(cwd, file));
     const roots = [{path: fs.realpathSync(cwd), label: "workspace"}];
     if (item.arm === "skill") roots.push({path: fs.realpathSync(skill), label: "skills/" + item.skill});
     const entry = item.arm === "skill" ? readFixture(path.join(skill, "SKILL.md"), cwd, roots) : null;
