@@ -5,7 +5,8 @@
   "scripts": {
     "check": "node scripts/validate-skills.js",
     "test": "node --test tests/*.test.js",
-    "benchmark": "node scripts/evaluate-behavior.js"
+    "benchmark": "node scripts/evaluate-behavior.js",
+    "benchmark:hooks": "node scripts/benchmark-session-hooks.js"
   },
   "devDependencies": {
     "yaml": "2.9.1"

@@ -116,6 +116,8 @@ An optional [15-case isolated runtime fixture](validation/runtime/README.md) exe
 
 The [public behavior evaluation](benchmarks/README.md) uses fixed synthetic inputs and the actual skill text. It does not establish live DB/PG behavior, automatic skill selection after installation, or correctness across all tasks. No token or response-time improvement is claimed. See [validation and its limits](CONTRIBUTING.md#validation).
 
+In a [48-run skill/no-skill comparison](benchmarks/comparison-2026-10-26.md), both arms met the predefined criteria in 24/24 runs. The median paired time difference was +2.5% with the skill; total input tokens increased 65.5%. This sample does not establish general quality, speed or billing gains. An additional policy assumption was corrected and checked in a separate 12-run regression.
+
 ## Existing MCP users
 
 This branch now uses **Markdown as the sole knowledge source**. The old YAML, Java MCP, Gradle build, npm launcher, and JRE download path have been removed. Existing MCP settings cannot run this branch.
