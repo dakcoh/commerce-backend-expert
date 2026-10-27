@@ -175,6 +175,14 @@ function validateLinks(file, root) {
   return links;
 }
 
+function validateDocumentation(directory, root) {
+  return fs.readdirSync(directory, {withFileTypes: true}).reduce((links, entry) => {
+    const file = path.join(directory, entry.name);
+    if (entry.isDirectory()) return links + validateDocumentation(file, root);
+    return links + (entry.isFile() && entry.name.endsWith(".md") ? validateLinks(file, root) : 0);
+  }, 0);
+}
+
 function validateFrontmatter(text, expectedName) {
   const match = /^---\r?\n([\s\S]*?)\r?\n---(?:\r?\n|$)/.exec(text);
   assert.ok(match, "Skill YAML frontmatter is required");
@@ -239,8 +247,9 @@ function validateRepository(root = repositoryRoot) {
   for (const name of ["commerce-backend-expert", "commerce-review"]) {
     assert.equal(fs.readFileSync(path.join(root, "skills", name, "LICENSE"), "utf8").replaceAll("\r\n", "\n"), license, `${name}: bundle the repository license`);
   }
-  const documents = ["README.md", "README.ko.md", "CONTRIBUTING.md", "CONTRIBUTING.ko.md", "tests/README.md", "benchmarks/scenarios.md", "benchmarks/README.md", "validation/0.3.1.md", "validation/followup-review.md", "validation/runtime/README.md", ".cursor/rules/commerce-backend.mdc"];
-  const documentationLinks = documents.reduce((sum, relative) => sum + validateLinks(path.join(root, relative), root), 0);
+  const documents = ["README.md", "README.ko.md", "CONTRIBUTING.md", "CONTRIBUTING.ko.md", ".cursor/rules/commerce-backend.mdc"];
+  const documentationLinks = documents.reduce((sum, relative) => sum + validateLinks(path.join(root, relative), root), 0) +
+    ["tests", "benchmarks", "validation"].reduce((sum, directory) => sum + validateDocumentation(path.join(root, directory), root), 0);
   const manifest = JSON.parse(fs.readFileSync(path.join(root, "plugin.json"), "utf8"));
   // The portable schema marker hides bundled hooks in Codex CLI 0.153.2.
   assert.ok(!manifest.$schema, "Codex CLI 0.153.2 hook discovery requires omitting the portable schema marker");

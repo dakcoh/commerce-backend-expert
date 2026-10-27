@@ -6,15 +6,23 @@ const {spawnSync} = require("node:child_process");
 const {validateRepository} = require("../scripts/validate-skills");
 const {skillRoot: root, repositoryFixture} = require("./helpers");
 
-test("repository rejects retired runtime paths and broken user documentation", t => {
+test("repository rejects retired paths and broken documentation, including new nested reports", t => {
   const isolated = repositoryFixture(t);
   assert.equal(validateRepository(isolated).rules.length, 70);
   for (const relative of ["src", "npm", "build.gradle.kts", ".mcp.json"]) {
     const file = path.join(isolated, relative); fs.writeFileSync(file, "legacy");
     assert.throws(() => validateRepository(isolated), /Removed runtime path returned/); fs.unlinkSync(file);
   }
+  const readme = fs.readFileSync(path.join(isolated, "README.md"), "utf8");
   fs.appendFileSync(path.join(isolated, "README.md"), "\n[missing](missing.md)\n");
   assert.throws(() => validateRepository(isolated), /ENOENT/);
+  fs.writeFileSync(path.join(isolated, "README.md"), readme);
+  const report = path.join(isolated, "validation/new-report/notes.md");
+  fs.mkdirSync(path.dirname(report));
+  fs.writeFileSync(report, "[missing](missing.json)\n");
+  assert.throws(() => validateRepository(isolated), /ENOENT/);
+  fs.writeFileSync(report, "[README](../../README.md)\n");
+  assert.equal(validateRepository(isolated).rules.length, 70);
 });
 
 test("clients share canonical skills and cannot silently enable developer hooks or YAML knowledge", t => {

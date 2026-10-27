@@ -46,8 +46,7 @@ function handleEvent(event, options = {}) {
     if (!fs.existsSync(entry) || !fs.existsSync(review)) throw Error("Missing skill entry");
     context += "\n결제·환불 코드 리뷰는 " + JSON.stringify(review) + "를 읽는다." +
       "\n그 외 한국 이커머스 설계·구현·리팩터링·장애 분석은 " + JSON.stringify(entry) + "를 읽는다." +
-      "\n호출 경로·계약·금액/수량·업무키·확정/미확정 상태를 근거로 판단하고 필요한 규칙만 조회한다. 현재 맥락의 문서는 중복 조회하지 않는다." +
-      "\n일반 화면 스타일·마케팅 작업에는 추가 커머스 문서를 읽지 않는다. 사용자 지시와 요청 범위를 우선한다.";
+      "\n관련 스킬만 읽고 문맥의 문서는 재조회하지 않는다. 일반 화면 스타일·마케팅에는 적용하지 않는다. 사용자 지시를 우선한다.";
   }
   context += "\n이 세션의 제어 명령은 일반 메시지 commerce on / commerce off / commerce status 이다.";
   if (Buffer.byteLength(context) > 8192) throw Error("Context exceeds limit");

@@ -51,6 +51,27 @@
     "prompt": "합성 부분 환불 정책을 검토해줘. 환불액은 저장된 라인별 실결제액으로 계산하고, 남은 상품의 할인액은 회수하지 않는 '혜택 유지' 정책이야. 별도 쿠폰 정책은 PG 환불 성공이 확정된 뒤 원 쿠폰을 한 번 재발급하도록 허용해. 사용 포인트와 적립 포인트는 없어. 현재 환불은 PG 응답 유실로 UNKNOWN이야. 혜택 유지이므로 쿠폰 재발급도 영구 금지해야 할까? 지금 보류할 일과 결과 확정 뒤 허용할 일을 구분해줘. 실제 운영 접근이나 코드 변경은 하지 마."
   },
   {
+    "id": "lua-partial-write",
+    "default": false,
+    "skill": "commerce-backend-expert",
+    "files": [],
+    "prompt": "합성 쿠폰 발급 장애를 검토해줘. Redis Lua에서 remaining=1인 키를 DECR해서 0으로 만든 뒤, 문자열 타입인 issued 키에 HSET을 호출해 WRONGTYPE 오류가 났어. 영속 발급 원장과 attempt 상태는 아직 대사하지 않았고 요청 결과는 미확정이야. 스크립트가 실패했으니 remaining은 자동으로 1로 돌아갔다고 보고 같은 요청을 바로 재실행해도 될까? 실제 코드는 수정하지 말고 남은 상태·안전한 복구·예방 방법을 구분해줘."
+  },
+  {
+    "id": "refund-no-defect",
+    "default": false,
+    "skill": "commerce-review",
+    "files": ["refund-safe.js"],
+    "prompt": "refund-safe.js의 주어진 입력 실행 경로를 리뷰해줘. 단일 인스턴스에서 await 없이 순차 실행하는 메모리 함수뿐이고 DB·PG·분산 실행은 없어. 외부에서 배열·반환 객체를 변경하지 않아. 기존 X-1 환불 6,669원은 UNKNOWN이며 새 키로 겹치지 않는 X-2 6,670원을 요청해. 이 경로의 확정된 결함과 운영 확장 시 추가 확인을 구분하고, 제공 코드에 없는 결함을 추정하거나 코드를 수정하지 마."
+  },
+  {
+    "id": "coupon-multi-grant",
+    "default": false,
+    "skill": "commerce-backend-expert",
+    "files": [],
+    "prompt": "합성 캠페인은 사용자 1명당 서로 다른 발급권을 최대 3개 허용해. grantId는 논리 발급 요청마다 고정되고 재전달에도 같아. A 사용자의 grant-1이 DB에 확정된 뒤 ack 전에 종료돼 재전달됐고, 같은 A의 정상 grant-2와 다른 사용자의 요청도 동시에 와. 전역 한도는 100개이고 grant-1을 포함한 원장은 99개야. UNIQUE(campaignId,userId)만 추가하면 될까? 재전달·사용자 한도·전역 한도를 함께 지키는 최소 변경과 검증 방법을 설명해줘. 코드·운영 접근은 없어."
+  },
+  {
     "id": "frontend-scope",
     "skill": "commerce-backend-expert",
     "files": [

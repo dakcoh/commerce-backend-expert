@@ -157,7 +157,7 @@ With an available Claude Code executable, repeat the actual hook checks separate
 node scripts/smoke-claude-hooks.js /absolute/path/to/claude
 ```
 
-This script uses a fresh configuration directory and plugin copy, disables model tools, and routes requests to a deterministic localhost Messages fixture with a dummy key. It copies no credentials and makes no remote model calls. It asserts client hook responses, a real compaction boundary, and delivered context; evidence goes under ignored `output/claude-hooks-*`. It is separate from the 37 offline tests and requires Claude Code 2.1.114's hook event output. Client binaries are not installed by the script.
+This script uses a fresh configuration directory and plugin copy, disables model tools, and routes requests to a deterministic localhost Messages fixture with a dummy key. It copies no credentials and makes no remote model calls. It asserts client hook responses, a real compaction boundary, and delivered context; evidence goes under ignored `output/claude-hooks-*`. It is separate from the offline tests and requires Claude Code 2.1.114's hook event output. Client binaries are not installed by the script.
 
 Repeat OpenClaw installation/discovery without login or model calls using an already installed client's `openclaw.mjs`:
 
@@ -167,7 +167,7 @@ node scripts/smoke-openclaw.js /absolute/path/to/openclaw/openclaw.mjs
 
 The script uses fresh state/configuration/work folders, checks individual and combined extraDirs discovery plus bundle link installation/removal, and writes evidence to `output/openclaw-discovery-*`. It copies the reviewed local bundle; `--force --accept-capabilities` provides the client's normal installation consent for that fixture. It starts no gateway, model, or session hooks and leaves normal settings unchanged. This tested OpenClaw version requires Node 24.22.1 or later, separately from the repository's Node 22 checks.
 
-Use the separate [native model probe](scripts/probe-openclaw-model.js) for actual local reads and exact output preservation. It uses an already-running loopback Ollama server and installed model, tests a control file without skills, then checks CSS with both skills. **The example is a reproduction command, not a passing configuration.** See [observed failures and criteria](validation/openclaw-model-2026-10-26.md).
+Use the separate [native model probe](scripts/probe-openclaw-model.js) with an already-running loopback Ollama server and installed model. It reads a control file without skills, then uses native `edit` to change only two CSS values in a disposable HTML file with both skills installed. It checks the complete output file and native tool target paths; user project files are untouched. Each model task has a 120-second deadline, and a failed control skips further inference. This requires Node.js 24.22.1 or later and the OpenClaw 2026.10.7 session database format. See [observed failures, fixes and scope](validation/openclaw-model-2026-10-26.md).
 
 ```bash
 node scripts/probe-openclaw-model.js /path/to/openclaw/openclaw.mjs http://127.0.0.1:11434 qwen3-coder:30b 0 off

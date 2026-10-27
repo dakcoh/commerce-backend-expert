@@ -1,0 +1,585 @@
+{
+  "date": "2026-10-27",
+  "scope": "User-scoped corrections to file-task completion and CSS artifact preservation; no certification of arbitrary models, automatic skill selection or commerce reasoning",
+  "changes": [
+    "Explicit task path and completion instructions",
+    "120-second model deadline and fail-fast control",
+    "CSS uses native edit in a disposable file; no regenerated full-document answer requirement",
+    "Exact output-file bytes and native read/edit target receipts; no post-generation repair",
+    "Native error-envelope preservation"
+  ],
+  "sourceSha256": "d87f1dbd9a01536bb2c4d25396721ee47b7d9452469475fd1dd5c1df7ebe0a7c",
+  "adoptedConfiguration": {
+    "model": "qwen3-coder:30b",
+    "temperature": 0,
+    "thinking": "off",
+    "openclaw": "2026.10.7",
+    "ollama": "0.40.10",
+    "deadlineSeconds": 120
+  },
+  "functionalRegression": {
+    "independentFixtureRuns": 2,
+    "taskRuns": 4,
+    "passed": 4,
+    "toolErrors": 0,
+    "uniqueInputHashes": 4
+  },
+  "taskAccounting": {
+    "earlierReadOnlyAttempts": 3,
+    "adoptedFileWorkflow": 4,
+    "totalStarted": 7,
+    "providerRequestCount": null
+  },
+  "attempts": [
+    {
+      "workflow": "read-only-output",
+      "plan": {
+        "scope": "Explicit file path, one-read completion and complete-HTML preservation contract; low thinking and deterministic temperature for file tasks; unchanged exact output and scope acceptance",
+        "maxTaskRuns": 2,
+        "deadlineSeconds": 120,
+        "stopAfterFailedControl": true,
+        "model": "gpt-oss:20b",
+        "thinking": "low",
+        "temperature": 0,
+        "seed": 42,
+        "probeSourceSha256": "6a4a2e9a3997cd246c203e1a866f52f4b75c4d4558e5003cc7c2ef64a69ab862"
+      },
+      "runtime": {
+        "node": "v24.22.1",
+        "platform": "win32",
+        "openclaw": "OpenClaw 2026.10.7 (157d8c2)",
+        "ollama": "0.40.10",
+        "model": "gpt-oss:20b",
+        "digest": "f38aa0c53da5f8c49d08c43a99df24ff53167fe68e24664a7777288e7656fdfe"
+      },
+      "requestedThinking": "low",
+      "requestedOptions": {
+        "temperature": 0,
+        "seed": 42,
+        "num_ctx": 32768,
+        "num_predict": 4096
+      },
+      "trials": [
+        {
+          "id": "read-control",
+          "skills": [],
+          "prompt": "Task file: \"<fixture>\\\\read-control\\\\work\\\\marker.txt\".\nRead this file once using read with only the path argument. After a successful read, answer immediately from that text. Do not reread it or look for AGENTS, configuration, documentation or other files. Do not modify files.\nReturn only the exact contents of the file, without explanation or Markdown fences.",
+          "inputSha256": "6e5a491e149f9099576cf86b337c748603ea3b943fcbb862ecf7366f3ac18b55",
+          "disabledSkillCount": 55,
+          "process": {
+            "exitCode": 0,
+            "stderr": "[agents/agent-command] [agent] run cc092982-a585-495b-b4ae-eab8a5632bff ended with stopReason=stop\n[state/agent-db] agent database clean-close receipt: active-leases\n[state/agent-db] agent database clean-close receipt: written\n"
+          },
+          "native": {
+            "ok": true,
+            "status": "ok",
+            "final": "probe-c9f1bcf1193d6a8294f2b223a97625f0",
+            "usage": {
+              "input": 2774,
+              "output": 634,
+              "cacheRead": 14498,
+              "cacheWrite": 0,
+              "total": 17906,
+              "cost": {
+                "total": 0
+              }
+            },
+            "codeModeEngaged": false,
+            "assistantTurns": 7,
+            "toolSummary": {
+              "calls": 6,
+              "tools": [
+                "read"
+              ],
+              "failures": 2
+            },
+            "model": "gpt-oss:20b",
+            "provider": "ollama"
+          },
+          "checks": {
+            "nativeOk": true,
+            "readReportedWithoutError": false,
+            "exactOutput": true,
+            "processExitedSuccessfully": true
+          },
+          "passed": false,
+          "commerceNonSelection": "not applicable",
+          "elapsedMs": 90776,
+          "input": "probe-c9f1bcf1193d6a8294f2b223a97625f0"
+        }
+      ],
+      "skipped": [
+        {
+          "id": "frontend-scope",
+          "reason": "Control file probe failed; diagnose the client/model before further inference"
+        }
+      ],
+      "cleanup": {
+        "loadedModelsAfterUnload": 0,
+        "portClosed": true
+      }
+    },
+    {
+      "workflow": "read-only-output",
+      "plan": {
+        "scope": "Explicit file path, one-read completion and complete-HTML preservation contract; low thinking and deterministic temperature for file tasks; unchanged exact output and scope acceptance",
+        "maxTaskRuns": 2,
+        "deadlineSeconds": 120,
+        "stopAfterFailedControl": true,
+        "model": "qwen3-coder:30b",
+        "thinking": "off",
+        "temperature": 0,
+        "seed": 42,
+        "probeSourceSha256": "6a4a2e9a3997cd246c203e1a866f52f4b75c4d4558e5003cc7c2ef64a69ab862"
+      },
+      "runtime": {
+        "node": "v24.22.1",
+        "platform": "win32",
+        "openclaw": "OpenClaw 2026.10.7 (157d8c2)",
+        "ollama": "0.40.10",
+        "model": "qwen3-coder:30b",
+        "digest": "06c1097efce0431c2045fe7b2e5108366e43bee1b4603a7aded8f21689e90bca"
+      },
+      "requestedThinking": "off",
+      "requestedOptions": {
+        "temperature": 0,
+        "seed": 42,
+        "num_ctx": 32768,
+        "num_predict": 4096
+      },
+      "trials": [
+        {
+          "id": "read-control",
+          "skills": [],
+          "prompt": "Task file: \"<fixture>\\\\read-control\\\\work\\\\marker.txt\".\nRead this file once using read with only the path argument. After a successful read, answer immediately from that text. Do not reread it or look for AGENTS, configuration, documentation or other files. Do not modify files.\nReturn only the exact contents of the file, without explanation or Markdown fences.",
+          "inputSha256": "13b016d9429dc064360ff93e749ff9419993777ea42d7d49433d7436ec2e6bb3",
+          "disabledSkillCount": 55,
+          "process": {
+            "exitCode": 0,
+            "stderr": "[agents/agent-command] [agent] run a3efd9eb-ed4e-4b27-8187-bbfc5cce6698 ended with stopReason=stop\n[state/agent-db] agent database clean-close receipt: active-leases\n[state/agent-db] agent database clean-close receipt: written\n"
+          },
+          "native": {
+            "ok": true,
+            "status": "ok",
+            "final": "probe-c5e8332a12649ef5eb9fcb384900b2c5",
+            "usage": {
+              "input": 2425,
+              "output": 81,
+              "cacheRead": 2330,
+              "cacheWrite": 0,
+              "total": 4836,
+              "cost": {
+                "total": 0
+              }
+            },
+            "codeModeEngaged": false,
+            "assistantTurns": 2,
+            "toolSummary": {
+              "calls": 1,
+              "tools": [
+                "read"
+              ],
+              "failures": 0
+            },
+            "model": "qwen3-coder:30b",
+            "provider": "ollama"
+          },
+          "checks": {
+            "nativeOk": true,
+            "readReportedWithoutError": true,
+            "exactOutput": true,
+            "processExitedSuccessfully": true
+          },
+          "passed": true,
+          "commerceNonSelection": "not applicable",
+          "elapsedMs": 73564,
+          "input": "probe-c5e8332a12649ef5eb9fcb384900b2c5"
+        },
+        {
+          "id": "frontend-scope",
+          "skills": [
+            "commerce-backend-expert",
+            "commerce-review"
+          ],
+          "prompt": "Task file: \"<fixture>\\\\frontend-scope\\\\work\\\\index.html\".\nRead this file once using read with only the path argument. After a successful read, answer immediately from that text. Do not reread it or look for AGENTS, configuration, documentation or other files. Do not modify files.\nReturn the complete HTML with only button padding changed to 12px and .buttons gap to 8px. Preserve every other character, including all comments, attributes, scripts and trailing text. Do not summarize or omit any part.",
+          "inputSha256": "dd82e091a4c2865952c9d8aecb20e872b1e378e11a53bbab1e5a5f0013258efd",
+          "disabledSkillCount": 55,
+          "process": {
+            "exitCode": 0,
+            "stderr": "[agents/agent-command] [agent] run 032e9399-cecb-4e67-b1b7-f629a01ff8de ended with stopReason=stop\n[state/agent-db] agent database clean-close receipt: active-leases\n[state/agent-db] agent database clean-close receipt: written\n"
+          },
+          "native": {
+            "ok": true,
+            "status": "ok",
+            "final": "```html\n<!doctype html>\n<html lang=\"ko\">\n<head><meta charset=\"utf-8\"><title>버튼</title><style>button { padding: 12px; color: navy; } .buttons { display: flex; gap: 8px; }</style></head>\n<body><div class=\"buttons\"><button id=\"buy\">구매</button><button id=\"cancel\">취소</button></div><script>document.querySelector('#buy').addEventListener('click', () => console.log('buy'));</script></body>\n</html>\n```",
+            "usage": {
+              "input": 3489,
+              "output": 272,
+              "cacheRead": 9403,
+              "cacheWrite": 0,
+              "total": 13164,
+              "cost": {
+                "total": 0
+              }
+            },
+            "codeModeEngaged": false,
+            "assistantTurns": 4,
+            "toolSummary": {
+              "calls": 3,
+              "tools": [
+                "read"
+              ],
+              "failures": 0
+            },
+            "model": "qwen3-coder:30b",
+            "provider": "ollama"
+          },
+          "checks": {
+            "nativeOk": true,
+            "readReportedWithoutError": true,
+            "exactOutput": false,
+            "singleReadScope": false,
+            "processExitedSuccessfully": true
+          },
+          "passed": false,
+          "commerceNonSelection": "unverified; tool paths require transcript review",
+          "elapsedMs": 76344,
+          "input": "<!doctype html>\n<html lang=\"ko\">\n<head><meta charset=\"utf-8\"><title>버튼</title><style>button { padding: 0; color: navy; } .buttons { display: flex; gap: 0; }</style></head>\n<body><div class=\"buttons\"><button id=\"buy\">구매</button><button id=\"cancel\">취소</button></div><script>document.querySelector('#buy').addEventListener('click', () => console.log('buy'));</script></body>\n</html>\n<!-- probe-2708fa0269a56e69480fa80ea800bf1c -->\n",
+          "expectedFile": "<!doctype html>\n<html lang=\"ko\">\n<head><meta charset=\"utf-8\"><title>버튼</title><style>button { padding: 12px; color: navy; } .buttons { display: flex; gap: 8px; }</style></head>\n<body><div class=\"buttons\"><button id=\"buy\">구매</button><button id=\"cancel\">취소</button></div><script>document.querySelector('#buy').addEventListener('click', () => console.log('buy'));</script></body>\n</html>\n<!-- probe-2708fa0269a56e69480fa80ea800bf1c -->\n",
+          "skillHashes": {
+            "commerce-backend-expert": "df752e47635508b1f9e444a9ef0403a3f3b0136455953a1fba17a433d7853a93",
+            "commerce-review": "daee540f06f2481c237049222b36ecfc1a5839e224bc570e59d9823751ca3dc2"
+          }
+        }
+      ],
+      "skipped": [],
+      "cleanup": {
+        "loadedModelsAfterUnload": 0,
+        "portClosed": true
+      }
+    },
+    {
+      "workflow": "file-edit",
+      "plan": {
+        "scope": "Actual production probe, control read then CSS edits in disposable files; real native tool-path receipts and exact output-file bytes; not full-HTML response generation",
+        "model": "qwen3-coder:30b",
+        "temperature": 0,
+        "thinking": "off",
+        "seed": 42,
+        "deadlineSeconds": 120,
+        "maxTaskRuns": 2,
+        "probeSourceSha256": "259750e555c2c435d773e7786916f4e90c69527a42a838b957daf401c7e8773a"
+      },
+      "runtime": {
+        "node": "v24.22.1",
+        "platform": "win32",
+        "openclaw": "OpenClaw 2026.10.7 (157d8c2)",
+        "ollama": "0.40.10",
+        "model": "qwen3-coder:30b",
+        "digest": "06c1097efce0431c2045fe7b2e5108366e43bee1b4603a7aded8f21689e90bca"
+      },
+      "requestedThinking": "off",
+      "requestedOptions": {
+        "temperature": 0,
+        "seed": 42,
+        "num_ctx": 32768,
+        "num_predict": 4096
+      },
+      "trials": [
+        {
+          "id": "read-control",
+          "skills": [],
+          "prompt": "Task file: \"<fixture>\\\\read-control\\\\work\\\\marker.txt\".\nRead this file once using read with only the path argument. Do not reread it or look for configuration, documentation or other files. Complete the task immediately from the returned text.\nDo not modify files. Return only the exact contents of the file, without explanation or Markdown fences.",
+          "inputSha256": "9f382222110d5c8dc2f22f0f81eea92aac08742eae437ba563581e3da0f89765",
+          "disabledSkillCount": 55,
+          "process": {
+            "exitCode": 0,
+            "stderr": "[agents/agent-command] [agent] run 2cafef5c-6b1c-442e-9caa-c6ae6d2374e1 ended with stopReason=stop\n[state/agent-db] agent database clean-close receipt: active-leases\n[state/agent-db] agent database clean-close receipt: written\n"
+          },
+          "native": {
+            "ok": true,
+            "status": "ok",
+            "final": "probe-f2f81f11bfb1fc9ab8bb2ef35f892fd8",
+            "usage": {
+              "input": 2412,
+              "output": 77,
+              "cacheRead": 2321,
+              "cacheWrite": 0,
+              "total": 4810,
+              "cost": {
+                "total": 0
+              }
+            },
+            "codeModeEngaged": false,
+            "assistantTurns": 2,
+            "toolSummary": {
+              "calls": 1,
+              "tools": [
+                "read"
+              ],
+              "failures": 0
+            },
+            "model": "qwen3-coder:30b",
+            "provider": "ollama"
+          },
+          "checks": {
+            "nativeOk": true,
+            "readReportedWithoutError": true,
+            "exactOutput": true,
+            "processExitedSuccessfully": true
+          },
+          "passed": true,
+          "commerceNonSelection": "not applicable",
+          "elapsedMs": 69375,
+          "input": "probe-f2f81f11bfb1fc9ab8bb2ef35f892fd8"
+        },
+        {
+          "id": "frontend-scope",
+          "skills": [
+            "commerce-backend-expert",
+            "commerce-review"
+          ],
+          "prompt": "Task file: \"<fixture>\\\\frontend-scope\\\\work\\\\index.html\".\nRead this file once using read with only the path argument. Do not reread it or look for configuration, documentation or other files. Complete the task immediately from the returned text.\nUse edit to change only button padding to 12px and .buttons gap to 8px in the file. Preserve every other byte, including all comments, attributes, scripts and trailing text. Do not regenerate the HTML. When the two edits are complete, stop and briefly report the changed values.",
+          "inputSha256": "d19160377d12169cd891df0611962344093ab42a136b766106268d9737368708",
+          "disabledSkillCount": 55,
+          "process": {
+            "exitCode": 0,
+            "stderr": "[agents/agent-command] [agent] run 5ebdba0a-7c4f-46f7-9e89-10b8b1692678 ended with stopReason=stop\n[state/agent-db] agent database clean-close receipt: active-leases\n[state/agent-db] agent database clean-close receipt: written\n"
+          },
+          "native": {
+            "ok": true,
+            "status": "ok",
+            "final": "button padding이 12px로, .buttons gap이 8px로 변경되었습니다.",
+            "usage": {
+              "input": 3456,
+              "output": 201,
+              "cacheRead": 6473,
+              "cacheWrite": 0,
+              "total": 10130,
+              "cost": {
+                "total": 0
+              }
+            },
+            "codeModeEngaged": false,
+            "assistantTurns": 3,
+            "toolSummary": {
+              "calls": 2,
+              "tools": [
+                "read",
+                "edit"
+              ],
+              "failures": 0
+            },
+            "model": "qwen3-coder:30b",
+            "provider": "ollama"
+          },
+          "fileCalls": [
+            {
+              "name": "read",
+              "path": "<fixture>\\frontend-scope\\work/index.html",
+              "completed": true,
+              "isError": false
+            },
+            {
+              "name": "edit",
+              "path": "<fixture>\\frontend-scope\\work/index.html",
+              "completed": true,
+              "isError": false
+            }
+          ],
+          "output": "<!doctype html>\n<html lang=\"ko\">\n<head><meta charset=\"utf-8\"><title>버튼</title><style>button { padding: 12px; color: navy; } .buttons { display: flex; gap: 8px; }</style></head>\n<body><div class=\"buttons\"><button id=\"buy\">구매</button><button id=\"cancel\">취소</button></div><script>document.querySelector('#buy').addEventListener('click', () => console.log('buy'));</script></body>\n</html>\n<!-- probe-b3e8a8b660484ed78998322330d04bc4 -->\n",
+          "outputSha256": "69014756280ceedd9f6a3e70870cbb3977a2d20182c172f587536d9460e88454",
+          "checks": {
+            "nativeOk": true,
+            "editReportedWithoutError": true,
+            "exactFile": true,
+            "taskFileScope": true,
+            "processExitedSuccessfully": true
+          },
+          "passed": true,
+          "commerceNonSelection": "native read/edit targets restricted to the task file and bootstrap AGENTS; no commerce documents",
+          "elapsedMs": 71952,
+          "input": "<!doctype html>\n<html lang=\"ko\">\n<head><meta charset=\"utf-8\"><title>버튼</title><style>button { padding: 0; color: navy; } .buttons { display: flex; gap: 0; }</style></head>\n<body><div class=\"buttons\"><button id=\"buy\">구매</button><button id=\"cancel\">취소</button></div><script>document.querySelector('#buy').addEventListener('click', () => console.log('buy'));</script></body>\n</html>\n<!-- probe-b3e8a8b660484ed78998322330d04bc4 -->\n",
+          "expectedFile": "<!doctype html>\n<html lang=\"ko\">\n<head><meta charset=\"utf-8\"><title>버튼</title><style>button { padding: 12px; color: navy; } .buttons { display: flex; gap: 8px; }</style></head>\n<body><div class=\"buttons\"><button id=\"buy\">구매</button><button id=\"cancel\">취소</button></div><script>document.querySelector('#buy').addEventListener('click', () => console.log('buy'));</script></body>\n</html>\n<!-- probe-b3e8a8b660484ed78998322330d04bc4 -->\n",
+          "skillHashes": {
+            "commerce-backend-expert": "df752e47635508b1f9e444a9ef0403a3f3b0136455953a1fba17a433d7853a93",
+            "commerce-review": "daee540f06f2481c237049222b36ecfc1a5839e224bc570e59d9823751ca3dc2"
+          }
+        }
+      ],
+      "skipped": [],
+      "cleanup": {
+        "loadedModelsAfterUnload": 0,
+        "portClosed": true
+      }
+    },
+    {
+      "workflow": "file-edit",
+      "plan": {
+        "scope": "Actual production probe, control read then CSS edits in disposable files; real native tool-path receipts and exact output-file bytes; not full-HTML response generation",
+        "model": "qwen3-coder:30b",
+        "temperature": 0,
+        "thinking": "off",
+        "seed": 42,
+        "deadlineSeconds": 120,
+        "maxTaskRuns": 2,
+        "probeSourceSha256": "d87f1dbd9a01536bb2c4d25396721ee47b7d9452469475fd1dd5c1df7ebe0a7c"
+      },
+      "runtime": {
+        "node": "v24.22.1",
+        "platform": "win32",
+        "openclaw": "OpenClaw 2026.10.7 (157d8c2)",
+        "ollama": "0.40.10",
+        "model": "qwen3-coder:30b",
+        "digest": "06c1097efce0431c2045fe7b2e5108366e43bee1b4603a7aded8f21689e90bca"
+      },
+      "requestedThinking": "off",
+      "requestedOptions": {
+        "temperature": 0,
+        "seed": 42,
+        "num_ctx": 32768,
+        "num_predict": 4096
+      },
+      "trials": [
+        {
+          "id": "read-control",
+          "skills": [],
+          "prompt": "Task file: \"<fixture>\\\\read-control\\\\work\\\\marker.txt\".\nRead this file once using read with only the path argument. Do not reread it or look for configuration, documentation or other files. Complete the task immediately from the returned text.\nDo not modify files. Return only the exact contents of the file, without explanation or Markdown fences.",
+          "inputSha256": "ab6dc62780eb0ca879dbe31fd71f733ff451a4ac0e615179deee9fc04c40789b",
+          "disabledSkillCount": 55,
+          "process": {
+            "exitCode": 0,
+            "stderr": "[agents/agent-command] [agent] run f12f3788-712d-4ddf-b456-86c6eaaef546 ended with stopReason=stop\n[state/agent-db] agent database clean-close receipt: active-leases\n[state/agent-db] agent database clean-close receipt: written\n"
+          },
+          "native": {
+            "ok": true,
+            "status": "ok",
+            "final": "probe-b1cff0683298739ea6145cd7170bc6da",
+            "usage": {
+              "input": 2413,
+              "output": 77,
+              "cacheRead": 2322,
+              "cacheWrite": 0,
+              "total": 4812,
+              "cost": {
+                "total": 0
+              }
+            },
+            "codeModeEngaged": false,
+            "assistantTurns": 2,
+            "toolSummary": {
+              "calls": 1,
+              "tools": [
+                "read"
+              ],
+              "failures": 0
+            },
+            "model": "qwen3-coder:30b",
+            "provider": "ollama"
+          },
+          "checks": {
+            "nativeOk": true,
+            "readReportedWithoutError": true,
+            "exactOutput": true,
+            "processExitedSuccessfully": true
+          },
+          "passed": true,
+          "commerceNonSelection": "not applicable",
+          "elapsedMs": 69279,
+          "input": "probe-b1cff0683298739ea6145cd7170bc6da"
+        },
+        {
+          "id": "frontend-scope",
+          "skills": [
+            "commerce-backend-expert",
+            "commerce-review"
+          ],
+          "prompt": "Task file: \"<fixture>\\\\frontend-scope\\\\work\\\\index.html\".\nRead this file once using read with only the path argument. Do not reread it or look for configuration, documentation or other files. Complete the task immediately from the returned text.\nUse edit to change only button padding to 12px and .buttons gap to 8px in the file. Preserve every other byte, including all comments, attributes, scripts and trailing text. Do not regenerate the HTML. When the two edits are complete, stop and briefly report the changed values.",
+          "inputSha256": "31c0abbb9bba3b7b9c4fdb82394b8700f595bbcc49165c71f8ab19f35a22fe68",
+          "disabledSkillCount": 55,
+          "process": {
+            "exitCode": 0,
+            "stderr": "[agents/agent-command] [agent] run 940e3e36-7dba-424f-aa29-59f57a0fcb8d ended with stopReason=stop\n[state/agent-db] agent database clean-close receipt: active-leases\n[state/agent-db] agent database clean-close receipt: written\n"
+          },
+          "native": {
+            "ok": true,
+            "status": "ok",
+            "final": "Changed button padding to 12px and .buttons gap to 8px.",
+            "usage": {
+              "input": 3458,
+              "output": 205,
+              "cacheRead": 6473,
+              "cacheWrite": 0,
+              "total": 10136,
+              "cost": {
+                "total": 0
+              }
+            },
+            "codeModeEngaged": false,
+            "assistantTurns": 3,
+            "toolSummary": {
+              "calls": 2,
+              "tools": [
+                "read",
+                "edit"
+              ],
+              "failures": 0
+            },
+            "model": "qwen3-coder:30b",
+            "provider": "ollama"
+          },
+          "fileCalls": [
+            {
+              "name": "read",
+              "path": "<fixture>\\frontend-scope\\work\\index.html",
+              "completed": true,
+              "isError": false
+            },
+            {
+              "name": "edit",
+              "path": "<fixture>\\frontend-scope\\work\\index.html",
+              "completed": true,
+              "isError": false
+            }
+          ],
+          "output": "<!doctype html>\n<html lang=\"ko\">\n<head><meta charset=\"utf-8\"><title>버튼</title><style>button { padding: 12px; color: navy; } .buttons { display: flex; gap: 8px; }</style></head>\n<body><div class=\"buttons\"><button id=\"buy\">구매</button><button id=\"cancel\">취소</button></div><script>document.querySelector('#buy').addEventListener('click', () => console.log('buy'));</script></body>\n</html>\n<!-- probe-570d7eb4ad507749158118640e85c38b -->\n",
+          "outputSha256": "bebef4423012d16787e249599e3d074400c2d435efab11c4b00a3f8659db94c4",
+          "checks": {
+            "nativeOk": true,
+            "editReportedWithoutError": true,
+            "exactFile": true,
+            "taskFileScope": true,
+            "processExitedSuccessfully": true
+          },
+          "passed": true,
+          "commerceNonSelection": "native read/edit targets restricted to the task file and bootstrap AGENTS; no commerce documents",
+          "elapsedMs": 71470,
+          "input": "<!doctype html>\n<html lang=\"ko\">\n<head><meta charset=\"utf-8\"><title>버튼</title><style>button { padding: 0; color: navy; } .buttons { display: flex; gap: 0; }</style></head>\n<body><div class=\"buttons\"><button id=\"buy\">구매</button><button id=\"cancel\">취소</button></div><script>document.querySelector('#buy').addEventListener('click', () => console.log('buy'));</script></body>\n</html>\n<!-- probe-570d7eb4ad507749158118640e85c38b -->\n",
+          "expectedFile": "<!doctype html>\n<html lang=\"ko\">\n<head><meta charset=\"utf-8\"><title>버튼</title><style>button { padding: 12px; color: navy; } .buttons { display: flex; gap: 8px; }</style></head>\n<body><div class=\"buttons\"><button id=\"buy\">구매</button><button id=\"cancel\">취소</button></div><script>document.querySelector('#buy').addEventListener('click', () => console.log('buy'));</script></body>\n</html>\n<!-- probe-570d7eb4ad507749158118640e85c38b -->\n",
+          "skillHashes": {
+            "commerce-backend-expert": "df752e47635508b1f9e444a9ef0403a3f3b0136455953a1fba17a433d7853a93",
+            "commerce-review": "daee540f06f2481c237049222b36ecfc1a5839e224bc570e59d9823751ca3dc2"
+          }
+        }
+      ],
+      "skipped": [],
+      "cleanup": {
+        "loadedModelsAfterUnload": 0,
+        "portClosed": true
+      }
+    }
+  ],
+  "localTests": 54,
+  "limitations": [
+    "The old read-only whole-HTML response still failed and is retained; the adopted contract validates actual edited artifacts.",
+    "No general performance or accuracy claim.",
+    "Gpt-oss recovered the control output but retained tool errors and was not adopted.",
+    "Actual PG/company validation is a deployment condition outside defect issue tracking; needs-review rules are unchanged."
+  ],
+  "committed": false,
+  "pushed": false,
+  "issueDisposition": {
+    "issue22": "closed-completed within the user-scoped file-workflow corrections",
+    "issue23": "closed-not-planned; deployment validation outside defect tracking"
+  }
+}

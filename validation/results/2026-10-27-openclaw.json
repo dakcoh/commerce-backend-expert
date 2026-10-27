@@ -1,0 +1,682 @@
+{
+  "date": "2026-10-27",
+  "scope": "Two native local tasks before fail-fast change; no paired improvement claim or automatic skill/commerce certification",
+  "runtime": {
+    "node": "v24.22.1",
+    "platform": "win32",
+    "openclaw": "OpenClaw 2026.10.7 (157d8c2)",
+    "ollama": "0.40.10",
+    "model": "gpt-oss:20b",
+    "digest": "f38aa0c53da5f8c49d08c43a99df24ff53167fe68e24664a7777288e7656fdfe"
+  },
+  "requestedThinking": "high",
+  "requestedOptions": {
+    "temperature": 1,
+    "seed": 42,
+    "num_ctx": 32768,
+    "num_predict": 4096
+  },
+  "probeSourceSha256": "4a9979dcc88b1066032ff815aacbee4be161b277e3f6838dcdd3d054ea535e7c",
+  "taskRuns": 2,
+  "providerRequestCount": null,
+  "usageNote": "Native raw usage is retained only for the completed CSS task; no total token/cost claim for the timed-out task.",
+  "trials": [
+    {
+      "id": "read-control",
+      "skills": [],
+      "prompt": "Read marker.txt with the file reader and return only its exact contents. Do not modify files.",
+      "inputSha256": "e275e04996f1c5b5f8fb538bcbd8dff6670b86f8d54c477557c2aa381331c58e",
+      "disabledSkillCount": 55,
+      "error": "OpenClaw command failed: e later. raw_params={\"cursor\":0,\"limit\":2000,\"offset\":1,\"path\":\"<fixture>\\\\read-control\\\\marker.txt\"}\n[agent/embedded] embedded run timeout: runId=c3e6ce21-de1b-45d3-9009-d66334357ae8 sessionId=c3e6ce21-de1b-45d3-9009-d66334357ae8 timeoutMs=297002\nRequest timed out before a response was generated. Please try again, or increase `agents.defaults.timeoutSeconds` in your config.\n[state/agent-db] agent database clean-close receipt: active-leases\n\n\n2 !== 0\n",
+      "passed": false,
+      "elapsedMs": 346366,
+      "input": "probe-45e63b6ef43e2a18af84800104fca367",
+      "recoveredToolTrace": {
+        "source": "Read-only recovery from the owned isolated OpenClaw session database; tool arguments/results only, no assistant reasoning",
+        "transcriptSha256": "fce3785dbb39fdbadec5c4b5fbcaa6bda22a7cf11ffb3f611810df2a674f4b50",
+        "eventCount": 52,
+        "calls": [
+          {
+            "requestedAtSequence": 5,
+            "tool": "read",
+            "args": {
+              "cursor": 0,
+              "limit": 2000,
+              "offset": 1,
+              "optional": false,
+              "path": "marker.txt"
+            },
+            "result": {
+              "sequence": 6,
+              "isError": true,
+              "kind": null,
+              "returnedTextSha256": "a042ccb6239eb611e846713f231cecf4407a094544d7fd99578b7bfa716b288c",
+              "matchesTaskFile": false,
+              "validationMessages": [
+                "- optional: must be equal to constant"
+              ],
+              "workspaceBoundaryRejected": false
+            }
+          },
+          {
+            "requestedAtSequence": 8,
+            "tool": "read",
+            "args": {
+              "cursor": 0,
+              "limit": 2000,
+              "offset": 1,
+              "optional": true,
+              "path": "marker.txt"
+            },
+            "result": {
+              "sequence": 9,
+              "isError": false,
+              "kind": "text",
+              "returnedTextSha256": "e275e04996f1c5b5f8fb538bcbd8dff6670b86f8d54c477557c2aa381331c58e",
+              "matchesTaskFile": true,
+              "validationMessages": [],
+              "workspaceBoundaryRejected": false
+            }
+          },
+          {
+            "requestedAtSequence": 11,
+            "tool": "read",
+            "args": {
+              "cursor": 0,
+              "limit": 2000,
+              "offset": 1,
+              "path": "marker.txt"
+            },
+            "result": {
+              "sequence": 12,
+              "isError": false,
+              "kind": "text",
+              "returnedTextSha256": "e275e04996f1c5b5f8fb538bcbd8dff6670b86f8d54c477557c2aa381331c58e",
+              "matchesTaskFile": true,
+              "validationMessages": [],
+              "workspaceBoundaryRejected": false
+            }
+          },
+          {
+            "requestedAtSequence": 14,
+            "tool": "read",
+            "args": {
+              "cursor": 0,
+              "limit": 2000,
+              "offset": 1,
+              "optional": "true",
+              "path": "marker.txt"
+            },
+            "result": {
+              "sequence": 15,
+              "isError": false,
+              "kind": "text",
+              "returnedTextSha256": "e275e04996f1c5b5f8fb538bcbd8dff6670b86f8d54c477557c2aa381331c58e",
+              "matchesTaskFile": true,
+              "validationMessages": [],
+              "workspaceBoundaryRejected": false
+            }
+          },
+          {
+            "requestedAtSequence": 17,
+            "tool": "read",
+            "args": {
+              "path": "probe-45e63b6ef43e2a18af84800104fca367"
+            },
+            "result": {
+              "sequence": 18,
+              "isError": true,
+              "kind": "error",
+              "returnedTextSha256": "1b558c5e9eb6b428564db474f3f4526f26fd9e3ab39f8d1866e98c33331da62d",
+              "matchesTaskFile": false,
+              "validationMessages": [],
+              "workspaceBoundaryRejected": false
+            }
+          },
+          {
+            "requestedAtSequence": 20,
+            "tool": "read",
+            "args": {
+              "cursor": 0,
+              "limit": 200,
+              "offset": 1,
+              "path": "docs/gateway/configuration-reference.md"
+            },
+            "result": {
+              "sequence": 21,
+              "isError": true,
+              "kind": "error",
+              "returnedTextSha256": "338dde1c5eeb9977f7e76377ba1b30e6d23858347c0f78d57d63506c7b252282",
+              "matchesTaskFile": false,
+              "validationMessages": [],
+              "workspaceBoundaryRejected": false
+            }
+          },
+          {
+            "requestedAtSequence": 23,
+            "tool": "read",
+            "args": {
+              "cursor": 0,
+              "limit": 2000,
+              "offset": 1,
+              "optional": "true",
+              "path": "marker.txt"
+            },
+            "result": {
+              "sequence": 24,
+              "isError": false,
+              "kind": "text",
+              "returnedTextSha256": "e275e04996f1c5b5f8fb538bcbd8dff6670b86f8d54c477557c2aa381331c58e",
+              "matchesTaskFile": true,
+              "validationMessages": [],
+              "workspaceBoundaryRejected": false
+            }
+          },
+          {
+            "requestedAtSequence": 26,
+            "tool": "read",
+            "args": {
+              "cursor": 0,
+              "limit": 2000,
+              "offset": 1,
+              "path": "marker.txt"
+            },
+            "result": {
+              "sequence": 27,
+              "isError": false,
+              "kind": "text",
+              "returnedTextSha256": "e275e04996f1c5b5f8fb538bcbd8dff6670b86f8d54c477557c2aa381331c58e",
+              "matchesTaskFile": true,
+              "validationMessages": [],
+              "workspaceBoundaryRejected": false
+            }
+          },
+          {
+            "requestedAtSequence": 29,
+            "tool": "read",
+            "args": {
+              "cursor": 0,
+              "limit": 2000,
+              "offset": 1,
+              "path": "AGENTS.md"
+            },
+            "result": {
+              "sequence": 30,
+              "isError": false,
+              "kind": "text",
+              "returnedTextSha256": "98917919795f2c678c8e2b012de6bb5e1ad97e635c28bf55a9cb6ed11f52c3d3",
+              "matchesTaskFile": false,
+              "validationMessages": [],
+              "workspaceBoundaryRejected": false
+            }
+          },
+          {
+            "requestedAtSequence": 32,
+            "tool": "read",
+            "args": {
+              "cursor": 0,
+              "limit": 2000,
+              "offset": 1,
+              "optional": true,
+              "path": "<fixture>\\read-control\\work\\marker.txt"
+            },
+            "result": {
+              "sequence": 33,
+              "isError": false,
+              "kind": "text",
+              "returnedTextSha256": "e275e04996f1c5b5f8fb538bcbd8dff6670b86f8d54c477557c2aa381331c58e",
+              "matchesTaskFile": true,
+              "validationMessages": [],
+              "workspaceBoundaryRejected": false
+            }
+          },
+          {
+            "requestedAtSequence": 35,
+            "tool": "read",
+            "args": {
+              "cursor": 0,
+              "limit": 2000,
+              "offset": 1,
+              "optional": "true",
+              "path": "marker.txt"
+            },
+            "result": {
+              "sequence": 36,
+              "isError": false,
+              "kind": "text",
+              "returnedTextSha256": "e275e04996f1c5b5f8fb538bcbd8dff6670b86f8d54c477557c2aa381331c58e",
+              "matchesTaskFile": true,
+              "validationMessages": [],
+              "workspaceBoundaryRejected": false
+            }
+          },
+          {
+            "requestedAtSequence": 38,
+            "tool": "read",
+            "args": {
+              "cursor": 0,
+              "limit": 1,
+              "offset": 1,
+              "optional": true,
+              "path": "marker.txt"
+            },
+            "result": {
+              "sequence": 39,
+              "isError": false,
+              "kind": "text",
+              "returnedTextSha256": "e275e04996f1c5b5f8fb538bcbd8dff6670b86f8d54c477557c2aa381331c58e",
+              "matchesTaskFile": true,
+              "validationMessages": [],
+              "workspaceBoundaryRejected": false
+            }
+          },
+          {
+            "requestedAtSequence": 41,
+            "tool": "read",
+            "args": {
+              "cursor": 0,
+              "limit": 2000,
+              "offset": 1,
+              "path": "docs/marker.txt"
+            },
+            "result": {
+              "sequence": 42,
+              "isError": true,
+              "kind": "error",
+              "returnedTextSha256": "88646ff85be7c2e4c98244e701038d5e7d6606aebc01c8bb4700accf1f3f8af3",
+              "matchesTaskFile": false,
+              "validationMessages": [],
+              "workspaceBoundaryRejected": false
+            }
+          },
+          {
+            "requestedAtSequence": 44,
+            "tool": "read",
+            "args": {
+              "cursor": 0,
+              "limit": 2000,
+              "offset": 1,
+              "path": "marker.txt"
+            },
+            "result": {
+              "sequence": 45,
+              "isError": false,
+              "kind": "text",
+              "returnedTextSha256": "e275e04996f1c5b5f8fb538bcbd8dff6670b86f8d54c477557c2aa381331c58e",
+              "matchesTaskFile": true,
+              "validationMessages": [],
+              "workspaceBoundaryRejected": false
+            }
+          },
+          {
+            "requestedAtSequence": 47,
+            "tool": "read",
+            "args": {
+              "cursor": 0,
+              "limit": 2000,
+              "offset": 1,
+              "path": "<fixture>\\read-control\\marker.txt"
+            },
+            "result": {
+              "sequence": 48,
+              "isError": true,
+              "kind": "error",
+              "returnedTextSha256": "c8ca0cee16c5b82a13436f1f38d21e5f83d4cbd641a6c637fd7f26c15f26ae91",
+              "matchesTaskFile": false,
+              "validationMessages": [],
+              "workspaceBoundaryRejected": true
+            }
+          }
+        ],
+        "summary": {
+          "toolCalls": 15,
+          "toolErrors": 5,
+          "exactTaskFileReturns": 9,
+          "missingResults": 0
+        }
+      }
+    },
+    {
+      "id": "frontend-scope",
+      "skills": [
+        "commerce-backend-expert",
+        "commerce-review"
+      ],
+      "prompt": "index.html의 button padding을 12px, .buttons gap을 8px로 바꾼 HTML을 보여줘. 나머지는 그대로 두고 파일은 저장하지 마.",
+      "inputSha256": "46e2259703b480335cc0386d784341baf0618159d36b0a75738c8cb30527d563",
+      "disabledSkillCount": 55,
+      "native": {
+        "ok": true,
+        "status": "ok",
+        "final": "<!doctype html>\n<html lang=\"ko\">\n<head><meta charset=\"utf-8\"><title>버튼</title><style>button { padding: 12px; color: navy; } .buttons { display: flex; gap: 8px; }</style></head>\n<body><div class=\"buttons\"><button id=\"buy\">구매</button><button id=\"cancel\">취소</button></div><script>document.querySelector('#buy').addEventListener('click', () => console.log('buy'));</script></body>\n</html>",
+        "usage": {
+          "input": 2887,
+          "output": 1378,
+          "cacheRead": 8178,
+          "cacheWrite": 0,
+          "total": 12443,
+          "cost": {
+            "total": 0
+          }
+        },
+        "codeModeEngaged": false,
+        "assistantTurns": 4,
+        "toolSummary": {
+          "calls": 3,
+          "tools": [
+            "read"
+          ],
+          "failures": 2
+        },
+        "model": "gpt-oss:20b",
+        "provider": "ollama"
+      },
+      "checks": {
+        "nativeOk": true,
+        "readReportedWithoutError": false,
+        "exactOutput": false,
+        "singleReadScope": false
+      },
+      "passed": false,
+      "commerceNonSelection": "unverified; tool paths require transcript review",
+      "elapsedMs": 102343,
+      "input": "<!doctype html>\n<html lang=\"ko\">\n<head><meta charset=\"utf-8\"><title>버튼</title><style>button { padding: 0; color: navy; } .buttons { display: flex; gap: 0; }</style></head>\n<body><div class=\"buttons\"><button id=\"buy\">구매</button><button id=\"cancel\">취소</button></div><script>document.querySelector('#buy').addEventListener('click', () => console.log('buy'));</script></body>\n</html>\n<!-- probe-902c454e662bca8039e2058d5243936f -->\n",
+      "skillHashes": {
+        "commerce-backend-expert": "df752e47635508b1f9e444a9ef0403a3f3b0136455953a1fba17a433d7853a93",
+        "commerce-review": "daee540f06f2481c237049222b36ecfc1a5839e224bc570e59d9823751ca3dc2"
+      },
+      "expectedOutput": "<!doctype html>\n<html lang=\"ko\">\n<head><meta charset=\"utf-8\"><title>버튼</title><style>button { padding: 12px; color: navy; } .buttons { display: flex; gap: 8px; }</style></head>\n<body><div class=\"buttons\"><button id=\"buy\">구매</button><button id=\"cancel\">취소</button></div><script>document.querySelector('#buy').addEventListener('click', () => console.log('buy'));</script></body>\n</html>\n<!-- probe-902c454e662bca8039e2058d5243936f -->\n",
+      "matchesExceptRemovedMarker": true,
+      "recoveredToolTrace": {
+        "source": "Read-only recovery from the owned isolated OpenClaw session database; tool arguments/results only, no assistant reasoning",
+        "transcriptSha256": "c43f9eefe02ebdd3a94642cd0ff76c2c302a58d85ea2d684ebf8996ffd04c9f3",
+        "eventCount": 15,
+        "calls": [
+          {
+            "requestedAtSequence": 5,
+            "tool": "read",
+            "args": {
+              "path": "index.html",
+              "offset": 1,
+              "limit": 2000,
+              "cursor": 0,
+              "optional": false
+            },
+            "result": {
+              "sequence": 6,
+              "isError": true,
+              "kind": null,
+              "returnedTextSha256": "dd97b0ca7525e65d0183eee78707ee39160ac7b6008f25f4dca139bc77dd66a9",
+              "matchesTaskFile": false,
+              "validationMessages": [
+                "- optional: must be equal to constant"
+              ],
+              "workspaceBoundaryRejected": false
+            }
+          },
+          {
+            "requestedAtSequence": 8,
+            "tool": "read",
+            "args": {
+              "cursor": 0,
+              "limit": 50,
+              "offset": 1,
+              "optional": false,
+              "path": "README.md"
+            },
+            "result": {
+              "sequence": 9,
+              "isError": true,
+              "kind": null,
+              "returnedTextSha256": "47e9c86f07732ee5e46b6d731d88b89d40f746b6f97e07f444412dc70faf01e2",
+              "matchesTaskFile": false,
+              "validationMessages": [
+                "- optional: must be equal to constant"
+              ],
+              "workspaceBoundaryRejected": false
+            }
+          },
+          {
+            "requestedAtSequence": 11,
+            "tool": "read",
+            "args": {
+              "cursor": 0,
+              "limit": 2000,
+              "offset": 1,
+              "path": "index.html"
+            },
+            "result": {
+              "sequence": 12,
+              "isError": false,
+              "kind": "text",
+              "returnedTextSha256": "46e2259703b480335cc0386d784341baf0618159d36b0a75738c8cb30527d563",
+              "matchesTaskFile": true,
+              "validationMessages": [],
+              "workspaceBoundaryRejected": false
+            }
+          }
+        ],
+        "summary": {
+          "toolCalls": 3,
+          "toolErrors": 2,
+          "exactTaskFileReturns": 1,
+          "missingResults": 0
+        }
+      }
+    }
+  ],
+  "directRead": {
+    "modelCalls": 0,
+    "sourceSha256": "be989790fa7e9f9bb074e16f5f7ddb8f8791d79e62615f9f6e8079fac5d7c734",
+    "checks": [
+      {
+        "id": "wrong-relative",
+        "matchesReference": false,
+        "kind": "not_found",
+        "workspaceBoundaryRejected": false
+      },
+      {
+        "id": "workspace-skill",
+        "matchesReference": true,
+        "kind": "text",
+        "workspaceBoundaryRejected": false
+      },
+      {
+        "id": "external-extra-dir",
+        "matchesReference": false,
+        "workspaceBoundaryRejected": true
+      }
+    ]
+  },
+  "cleanup": {
+    "loadedModelsAfterUnload": 0,
+    "portClosed": true
+  },
+  "subsequentChange": "CSS scope/format checks, fail-fast control and native failure-envelope retention were verified offline; no model rerun after the envelope-retention change.",
+  "issue22": "open",
+  "issue23": "actual business environment unavailable",
+  "committed": false,
+  "guidedPathDiagnostic": {
+    "scope": "Absolute task paths only; a guided diagnostic, not a natural-request regression or paired improvement claim",
+    "maxTaskRuns": 2,
+    "deadlineSeconds": 120,
+    "stopAfterFailedControl": true,
+    "model": "gpt-oss:20b",
+    "thinking": "high",
+    "temperature": 1,
+    "seed": 42,
+    "probeSourceSha256": "f4d5240608a3e311552ef0899b38ab885e731f19adda6a4f0579cf6648c7cea0",
+    "runtime": {
+      "node": "v24.22.1",
+      "openclaw": "OpenClaw 2026.10.7 (157d8c2)",
+      "ollama": "0.40.10",
+      "model": "gpt-oss:20b",
+      "digest": "f38aa0c53da5f8c49d08c43a99df24ff53167fe68e24664a7777288e7656fdfe"
+    },
+    "trials": [
+      {
+        "id": "read-control",
+        "skills": [],
+        "prompt": "Read <fixture>\\read-control\\work\\marker.txt with the file reader and return only its exact contents. Do not modify files.",
+        "inputSha256": "b2c8cf9f05ca52d3d466b95246afcf702152353822aa84f148a73194b680cfc9",
+        "disabledSkillCount": 55,
+        "error": "OpenClaw command failed: et\":1,\"optional\":true,\"path\":\"<repository>\\\\output\\\\openclaw-2026.10.7\\\\node_modules\\\\openclaw\\\\docs\\\\docs\\\\gateway\\\\configuration.md\"}\n[agent/embedded] embedded run timeout: runId=cd597687-9295-4f2d-b111-1e5ca3a7c2db sessionId=cd597687-9295-4f2d-b111-1e5ca3a7c2db timeoutMs=117153\nRequest timed out before a response was generated. Please try again, or increase `agents.defaults.timeoutSeconds` in your config.\n[state/agent-db] agent database clean-close receipt: active-leases\n\n\n2 !== 0\n",
+        "passed": false,
+        "elapsedMs": 161843,
+        "input": "probe-c952347451f6854e0d53a75fc04832f4",
+        "recoveredToolTrace": {
+          "source": "Read-only recovery from the owned isolated OpenClaw session database; tool arguments/results only, no assistant reasoning",
+          "transcriptSha256": "9c8b1d0671d4b1f31d26f298e5f607c02426988654f42e6622dbbd72c842b176",
+          "eventCount": 25,
+          "calls": [
+            {
+              "requestedAtSequence": 5,
+              "tool": "read",
+              "args": {
+                "path": "<fixture>\\read-control\\work\\marker.txt",
+                "cursor": 0,
+                "limit": 2000,
+                "offset": 1,
+                "optional": true
+              },
+              "result": {
+                "sequence": 6,
+                "isError": false,
+                "kind": "text",
+                "returnedTextSha256": "b2c8cf9f05ca52d3d466b95246afcf702152353822aa84f148a73194b680cfc9",
+                "matchesTaskFile": true,
+                "validationMessages": [],
+                "workspaceBoundaryRejected": false
+              }
+            },
+            {
+              "requestedAtSequence": 8,
+              "tool": "read",
+              "args": {
+                "cursor": 0,
+                "limit": 2000,
+                "offset": 1,
+                "optional": true,
+                "path": "<fixture>\\read-control\\work\\marker.txt"
+              },
+              "result": {
+                "sequence": 9,
+                "isError": false,
+                "kind": "text",
+                "returnedTextSha256": "b2c8cf9f05ca52d3d466b95246afcf702152353822aa84f148a73194b680cfc9",
+                "matchesTaskFile": true,
+                "validationMessages": [],
+                "workspaceBoundaryRejected": false
+              }
+            },
+            {
+              "requestedAtSequence": 11,
+              "tool": "read",
+              "args": {
+                "cursor": 0,
+                "limit": 2000,
+                "offset": 1,
+                "optional": true,
+                "path": "<fixture>\\read-control\\work\\AGENTS.md"
+              },
+              "result": {
+                "sequence": 12,
+                "isError": false,
+                "kind": "text",
+                "returnedTextSha256": "98917919795f2c678c8e2b012de6bb5e1ad97e635c28bf55a9cb6ed11f52c3d3",
+                "matchesTaskFile": false,
+                "validationMessages": [],
+                "workspaceBoundaryRejected": false
+              }
+            },
+            {
+              "requestedAtSequence": 14,
+              "tool": "read",
+              "args": {
+                "cursor": 0,
+                "limit": 2000,
+                "offset": 1,
+                "optional": true,
+                "path": "<fixture>\\read-control\\work\\marker.txt"
+              },
+              "result": {
+                "sequence": 15,
+                "isError": false,
+                "kind": "text",
+                "returnedTextSha256": "b2c8cf9f05ca52d3d466b95246afcf702152353822aa84f148a73194b680cfc9",
+                "matchesTaskFile": true,
+                "validationMessages": [],
+                "workspaceBoundaryRejected": false
+              }
+            },
+            {
+              "requestedAtSequence": 17,
+              "tool": "read",
+              "args": {
+                "cursor": 0,
+                "limit": 2000,
+                "offset": 1,
+                "optional": false,
+                "path": "<fixture>\\read-control\\work\\marker.txt"
+              },
+              "result": {
+                "sequence": 18,
+                "isError": true,
+                "kind": null,
+                "returnedTextSha256": "b8836a4fe07319aecccb76ad73711c80be067b5f09fd196d447f39438951c59e",
+                "matchesTaskFile": false,
+                "validationMessages": [
+                  "- optional: must be equal to constant"
+                ],
+                "workspaceBoundaryRejected": false
+              }
+            },
+            {
+              "requestedAtSequence": 20,
+              "tool": "read",
+              "args": {
+                "cursor": 0,
+                "limit": 200,
+                "offset": 1,
+                "optional": true,
+                "path": "<repository>\\output\\openclaw-2026.10.7\\node_modules\\openclaw\\docs\\docs\\gateway\\configuration.md"
+              },
+              "result": {
+                "sequence": 21,
+                "isError": true,
+                "kind": "error",
+                "returnedTextSha256": "0ae8aa999ea7d8ab4760250c40b29dfac6ddbbfcdd99c99062b405a1dae510e2",
+                "matchesTaskFile": false,
+                "validationMessages": [],
+                "workspaceBoundaryRejected": true
+              }
+            }
+          ],
+          "summary": {
+            "toolCalls": 6,
+            "toolErrors": 2,
+            "exactTaskFileReturns": 3,
+            "missingResults": 0
+          }
+        }
+      }
+    ],
+    "skipped": [
+      {
+        "id": "frontend-scope",
+        "reason": "Control file probe failed; diagnose the client/model before further inference"
+      }
+    ],
+    "cleanup": {
+      "loadedModelsAfterUnload": 0,
+      "portClosed": true
+    },
+    "limitations": "Absolute paths and a shorter deadline were diagnostic changes, not a paired improvement study. The older probe discarded the native failure envelope. Tool calls/results were later recovered read-only from the owned session database; the original provider wire requests were not recovered. Failure-envelope retention was added afterward and verified offline."
+  },
+  "taskAccounting": {
+    "originalUnguided": 2,
+    "guidedPathDiagnostic": 1,
+    "totalStarted": 3,
+    "providerRequestCount": null
+  }
+}

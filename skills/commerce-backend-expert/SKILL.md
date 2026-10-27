@@ -9,47 +9,29 @@ metadata:
 
 # 이커머스 백엔드 개발
 
-실제 코드와 업무 조건을 근거로 요청한 작업을 완성한다. 사용자 지시와 기존 계약을 우선하고 금액·수량·상태, 동시성, 실패 후 복구를 함께 판단한다.
+사용자 지시와 기존 계약을 우선한다. 실제 코드·업무 조건으로 설계·구현·리팩터링·리뷰·장애 분석을 수행하며 리뷰 요청을 코드 수정이나 운영 결제·환불 실행으로 확대하지 않는다.
 
-## 업무와 코드의 연결부터 확인
+## 코드와 필요한 근거만 확인
 
-- 구현 요청은 변경으로 완성하고, 리뷰를 코드 수정으로 확대하지 않는다.
-- 호출자 → 서비스 → 저장소/SQL·제약 → 외부 연동·이벤트·배치와 관련 테스트를 추적한다. 한 메서드에 보이지 않는 검증·트랜잭션·멱등 처리를 누락으로 단정하지 않는다.
-- 설명·소스에서 확인한 사실·실행 결과·미확인 조건을 구분한다. 결론을 바꾸는 PG 계약·정책·제약만 질문하고 독립적인 확인은 계속한다.
-- 업무 단위·식별 범위·허용 전이·성공 확정 시점·금액/수량 정의를 정리한다. 주문 전체, 라인·수량, 개별 결제·환불 시도를 구별한다.
+- 호출자 → 실제 분기·조기 반환 → 서비스·SQL/제약 → 외부 연동·이벤트·관련 테스트를 필요한 범위까지 추적한다. 다른 경로에 있는 검증·트랜잭션·멱등 처리를 누락으로 단정하지 않는다.
+- 주문·라인/수량·개별 시도와 업무키/요청 지문, 금액·허용 전이·확정/미확정 상태를 구분한다. 미제공 계약·정책은 추정하지 말고 결론을 바꾸는 조건만 확인한다.
+- 주제가 아래 직접 링크와 맞으면 해당 규칙부터 읽는다. 경로를 모를 때만 색인에서 선택한다. 조건·예외·전제·실패 복구와 근거를 읽고 적용하며, 이미 문맥에 있는 내용은 다시 읽지 않는다. 추가 조회는 판단에 필요한 경계만 확장하고 전체 파트를 로딩하지 않는다.
 
-## 관련 파트와 규칙만 읽기
+OpenClaw: use the skill directory supplied as `{baseDir}` for file reads. For example, read `{baseDir}/references/coupon/INDEX.md`, never `references/coupon/INDEX.md` relative to the project workspace. In other clients, resolve links against the directory containing this SKILL.md.
 
-현재 개발 환경의 도구로 함께 제공된 Markdown을 읽는다. MCP·Java·npm 실행은 필요 없다.
-
-Before answering from this skill, open the matching index below and the selected rule's conditions and failure/recovery guidance with the file reader. Resolve links relative to this SKILL.md. Use a known rule path directly and reuse content already in context. If a read fails or no rule applies, state that limit instead of claiming verified guidance.
-
-| 작업의 중심 | 먼저 읽을 색인 |
+| 주제 | 직접 읽을 규칙 |
 |---|---|
-| 상품·가격·주문·배송·회원·포인트·권한 | [상품·주문·회원·배송](references/commerce/INDEX.md) |
-| 가용 수량·동시 차감·예약·복구 | [재고·동시성](references/inventory/INDEX.md) |
-| 승인·웹훅·중복 결제·응답 유실·부분 환불 | [결제·환불](references/payment/INDEX.md) |
-| 발급 한도·할인 배부·쿠폰 사용·복원 | [쿠폰·프로모션](references/coupon/INDEX.md) |
-| 명세·기준일·공제·보류·지급·대사 | [정산·지급](references/settlement/INDEX.md) |
-| 트랜잭션·JPA·이벤트·배치·재시도·배포 | [Java/Spring 구현](references/spring-commerce/INDEX.md) |
+| 승인 응답 유실·미확정 결제 | [조회·대사](references/payment/network-cancellation.md) |
+| 부분 환불·수량 점유 | [부분 환불](references/payment/partial-refund.md) |
+| 웹훅 응답·내구성 | [웹훅](references/payment/webhook-handling.md) |
+| 쿠폰 발급·재전달·한도 | [발급 정합성](references/coupon/coupon-issuance.md) |
+| 락·업무키·저장소 방어 | [동시성·멱등성](references/spring-commerce/spring-commerce-locking-idempotency.md) |
+| 트랜잭션 실패 뒤 재시도 | [재시도 경계](references/spring-commerce/spring-resilience-retry-timeout.md) |
 
-정확한 규칙 경로를 이미 알면 색인을 생략한다. 그 외에는 관련 색인에서 필요한 규칙만 골라 조건·예외·전제·실패 흐름을 읽는다. 현재 맥락에 있는 같은 문서를 중복 조회하거나 전체 파트를 일괄 로딩하지 않는다. 여러 파트는 실제 상태·금액·수량에 영향을 주는 경계만 연결한다.
+그 밖의 색인: [상품·주문·회원·배송](references/commerce/INDEX.md) · [재고](references/inventory/INDEX.md) · [결제](references/payment/INDEX.md) · [쿠폰](references/coupon/INDEX.md) · [정산](references/settlement/INDEX.md) · [Java/Spring](references/spring-commerce/INDEX.md).
 
-색인·제목·키워드 일치만으로 결함을 판정하지 않는다. 코드·계약과의 충돌은 적용 범위와 함께 설명한다. 규칙이 없거나 읽지 못했으면 그 한계를 밝히고 확인했다고 쓰지 않는다.
+## 적용과 결과
 
-## 지침의 근거와 검토 상태
-
-`status`, `evidenceLevel`, `verifiedBy`, `lastReviewedAt`과 출처의 범위·날짜를 확인한다. `active`는 정확성 인증이 아니다. `needs-review`·`not-recorded`를 검토 완료로 설명하거나 검토자·날짜·정책을 추측하지 않는다. 외부 근거의 조건문·부정 표현을 보존하고 특정 PG·법률·세무에 적용되는지 확인한다.
-
-v0.2.2의 YAML 경로는 과거 출처 기록이다. Markdown 이관이 새 내용 검토를 뜻하지 않는다.
-
-## 요청한 개발 작업을 완성
-
-- **설계:** 업무 불변식·상태 전이·영속 제약·재처리/보상 경계를 정하고 기술을 선택한다.
-- **구현·리팩터링:** 기존 스택과 공통 처리를 활용한다. 호출자·SQL·제약·이벤트·테스트까지 확인하고 금액 산식·업무키·락/트랜잭션·부수 효과 순서를 보존한다. 동작 변경은 명시하며 스킬 때문에 Java 버전을 올리지 않는다.
-- **장애 분석:** 로그·업무키·상태 이력과 읽기 전용 조회로 가설을 확인한다. 미확정 원 거래를 재승인·중복 보상으로 덮지 않는다. 검토 요청을 운영 데이터 수정·외부 결제/환불 실행의 허가로 해석하지 않는다.
-- **검증:** 중복·동시 요청, 경계 금액/수량, 응답 유실·부분 성공·롤백·재시작·재처리를 업무에 맞게 확인한다. 단위 테스트를 실제 DB 동시성·PG 운영 검증으로 확대하지 않는다.
-
-## 결과 전달
-
-결론·완료한 변경부터 설명한다. 리뷰는 확인된 문제와 추가 확인을 구분하고 코드 위치·업무 조건·ruleId/근거·확인 방법을 연결한다. 테스트 결과와 미검증 운영·계약 범위를 밝힌다. 제외 후보는 오판을 막을 때만 설명하며 단순 질문에 긴 보고서·역할 소개를 붙이지 않는다.
+- `status`·`evidenceLevel`·검토자/날짜와 출처 범위를 확인한다. `active`는 인증이 아니며 `needs-review`·`not-recorded`는 완료로 바꾸지 않는다. 과거 YAML 경로는 이관 출처다. 읽기 실패·미확인 조건을 검증된 근거로 쓰지 않는다.
+- 기존 스택과 공통 처리를 활용하고 금액 산식·업무키·트랜잭션·부수 효과 순서를 보존한다. 구현 요청은 변경과 필요한 검증으로 완성한다. 미확정 거래를 새 승인·중복 보상으로 덮지 않으며 스킬 때문에 Java 버전을 올리지 않는다.
+- 결과는 확인된 변경/결함부터 코드 위치·발생 조건·영향·근거·최소 수정 방향으로 전달한다. 사실·추가 확인과 실행한 검사·미검증 범위를 구분한다. 요약·체크리스트를 반복하지 말고 단위/합성 시험을 실제 DB·PG·사업 승인으로 확대하지 않는다.

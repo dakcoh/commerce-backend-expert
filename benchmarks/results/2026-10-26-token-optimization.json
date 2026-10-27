@@ -1,0 +1,4049 @@
+{
+  "recordedDate": "2026-10-26",
+  "study": "corrected task inventory",
+  "scope": "Original versus compressed explicit skill, not no-skill, native auto-selection or full plugin performance",
+  "plan": {
+    "date": "2026-10-26",
+    "baseline": "pre-optimization uncommitted source snapshot, including OpenClaw path fix",
+    "model": "gpt-5.6-sol",
+    "effort": "medium",
+    "comparison": "baseline original skill vs compressed candidate, both explicit; fresh thread/workspace, counterbalanced order",
+    "pilot": [
+      "webhook-async"
+    ],
+    "expanded": [
+      "refund-overlap",
+      "webhook-sync",
+      "lock-watchdog",
+      "payment-uncertain",
+      "coupon-redelivery",
+      "retry-rollback-only",
+      "benefit-policy",
+      "lua-partial-write",
+      "refund-no-defect",
+      "coupon-multi-grant",
+      "frontend-scope"
+    ],
+    "repeats": 1,
+    "gate": "Review pilot before expanded calls; all four frozen case criteria and no critical contradiction required. Preserve failures; do not treat a read as semantic success.",
+    "rubricVersion": 3,
+    "rubricSha256": "895ca27eea05ab19d894711bd47132c9e1fb24e87cef583163c97d3ff5b795d8",
+    "casesSha256": "e2514810b5fee7dfa29f7d65c76870cf706961426731ee4a53e29c1a4a000bf3",
+    "sizes": [
+      {
+        "name": "commerce-backend-expert",
+        "beforeBytes": 5533,
+        "afterBytes": 3859,
+        "byteReductionPct": 30.254834628592082,
+        "baselineSha256": "7dd8d9ecea51feed7b0f135bb3776877ee41713b0cb612fa976228f12c38efa9",
+        "candidateSha256": "df752e47635508b1f9e444a9ef0403a3f3b0136455953a1fba17a433d7853a93"
+      },
+      {
+        "name": "commerce-review",
+        "beforeBytes": 5669,
+        "afterBytes": 3910,
+        "byteReductionPct": 31.028400070559183,
+        "baselineSha256": "daee540f06f2481c237049222b36ecfc1a5839e224bc570e59d9823751ca3dc2",
+        "candidateSha256": "3a931dc5ed84973c1feba53299a19b65133def31b13958a36308dbab0a631010"
+      }
+    ],
+    "hookBytes": {
+      "before": 785,
+      "after": 620
+    },
+    "limitations": [
+      "One run per arm/case; no general statistical accuracy/latency/billing claim",
+      "Implementing AI semantic review, not independent or blinded",
+      "Existing 48-run benchmark remains unchanged"
+    ],
+    "plannedTaskRuns": 24,
+    "budgetUnit": "Task turns; each can contain multiple provider requests. Provider request count is not established.",
+    "taskInventoryCorrected": true
+  },
+  "sources": [
+    {
+      "name": "commerce-backend-expert",
+      "beforeBytes": 5533,
+      "afterBytes": 3859,
+      "byteReductionPct": 30.254834628592082,
+      "baselineSha256": "7dd8d9ecea51feed7b0f135bb3776877ee41713b0cb612fa976228f12c38efa9",
+      "candidateSha256": "df752e47635508b1f9e444a9ef0403a3f3b0136455953a1fba17a433d7853a93",
+      "baselineText": "---\nname: commerce-backend-expert\ndescription: 한국 이커머스 백엔드의 설계·구현·리팩터링·리뷰·장애 분석. 주문·재고·결제·환불·쿠폰·정산·회원·배송의 정합성과 Java/Spring 구현에 사용한다. 일반 코딩·화면 스타일·마케팅·MCP 설치 문의에는 적용하지 않는다.\nlicense: MIT\nmetadata:\n  author: dakcoh\n  tags: ecommerce, korean-commerce, backend, java, spring, payments, inventory, settlement\n---\n\n# 이커머스 백엔드 개발\n\n실제 코드와 업무 조건을 근거로 요청한 작업을 완성한다. 사용자 지시와 기존 계약을 우선하고 금액·수량·상태, 동시성, 실패 후 복구를 함께 판단한다.\n\n## 업무와 코드의 연결부터 확인\n\n- 구현 요청은 변경으로 완성하고, 리뷰를 코드 수정으로 확대하지 않는다.\n- 호출자 → 서비스 → 저장소/SQL·제약 → 외부 연동·이벤트·배치와 관련 테스트를 추적한다. 한 메서드에 보이지 않는 검증·트랜잭션·멱등 처리를 누락으로 단정하지 않는다.\n- 설명·소스에서 확인한 사실·실행 결과·미확인 조건을 구분한다. 결론을 바꾸는 PG 계약·정책·제약만 질문하고 독립적인 확인은 계속한다.\n- 업무 단위·식별 범위·허용 전이·성공 확정 시점·금액/수량 정의를 정리한다. 주문 전체, 라인·수량, 개별 결제·환불 시도를 구별한다.\n\n## 관련 파트와 규칙만 읽기\n\n현재 개발 환경의 도구로 함께 제공된 Markdown을 읽는다. MCP·Java·npm 실행은 필요 없다.\n\nOpenClaw: use the skill directory supplied as `{baseDir}` for file reads. For example, read `{baseDir}/references/coupon/INDEX.md`, never `references/coupon/INDEX.md` relative to the project workspace. In other clients, resolve links against the directory containing this SKILL.md.\n\nBefore answering from this skill, open the matching index below and the selected rule's conditions and failure/recovery guidance with the file reader. Resolve links relative to this SKILL.md. Use a known rule path directly and reuse content already in context. If a read fails or no rule applies, state that limit instead of claiming verified guidance.\n\n| 작업의 중심 | 먼저 읽을 색인 |\n|---|---|\n| 상품·가격·주문·배송·회원·포인트·권한 | [상품·주문·회원·배송](references/commerce/INDEX.md) |\n| 가용 수량·동시 차감·예약·복구 | [재고·동시성](references/inventory/INDEX.md) |\n| 승인·웹훅·중복 결제·응답 유실·부분 환불 | [결제·환불](references/payment/INDEX.md) |\n| 발급 한도·할인 배부·쿠폰 사용·복원 | [쿠폰·프로모션](references/coupon/INDEX.md) |\n| 명세·기준일·공제·보류·지급·대사 | [정산·지급](references/settlement/INDEX.md) |\n| 트랜잭션·JPA·이벤트·배치·재시도·배포 | [Java/Spring 구현](references/spring-commerce/INDEX.md) |\n\n정확한 규칙 경로를 이미 알면 색인을 생략한다. 그 외에는 관련 색인에서 필요한 규칙만 골라 조건·예외·전제·실패 흐름을 읽는다. 현재 맥락에 있는 같은 문서를 중복 조회하거나 전체 파트를 일괄 로딩하지 않는다. 여러 파트는 실제 상태·금액·수량에 영향을 주는 경계만 연결한다.\n\n색인·제목·키워드 일치만으로 결함을 판정하지 않는다. 코드·계약과의 충돌은 적용 범위와 함께 설명한다. 규칙이 없거나 읽지 못했으면 그 한계를 밝히고 확인했다고 쓰지 않는다.\n\n## 지침의 근거와 검토 상태\n\n`status`, `evidenceLevel`, `verifiedBy`, `lastReviewedAt`과 출처의 범위·날짜를 확인한다. `active`는 정확성 인증이 아니다. `needs-review`·`not-recorded`를 검토 완료로 설명하거나 검토자·날짜·정책을 추측하지 않는다. 외부 근거의 조건문·부정 표현을 보존하고 특정 PG·법률·세무에 적용되는지 확인한다.\n\nv0.2.2의 YAML 경로는 과거 출처 기록이다. Markdown 이관이 새 내용 검토를 뜻하지 않는다.\n\n## 요청한 개발 작업을 완성\n\n- **설계:** 업무 불변식·상태 전이·영속 제약·재처리/보상 경계를 정하고 기술을 선택한다.\n- **구현·리팩터링:** 기존 스택과 공통 처리를 활용한다. 호출자·SQL·제약·이벤트·테스트까지 확인하고 금액 산식·업무키·락/트랜잭션·부수 효과 순서를 보존한다. 동작 변경은 명시하며 스킬 때문에 Java 버전을 올리지 않는다.\n- **장애 분석:** 로그·업무키·상태 이력과 읽기 전용 조회로 가설을 확인한다. 미확정 원 거래를 재승인·중복 보상으로 덮지 않는다. 검토 요청을 운영 데이터 수정·외부 결제/환불 실행의 허가로 해석하지 않는다.\n- **검증:** 중복·동시 요청, 경계 금액/수량, 응답 유실·부분 성공·롤백·재시작·재처리를 업무에 맞게 확인한다. 단위 테스트를 실제 DB 동시성·PG 운영 검증으로 확대하지 않는다.\n\n## 결과 전달\n\n결론·완료한 변경부터 설명한다. 리뷰는 확인된 문제와 추가 확인을 구분하고 코드 위치·업무 조건·ruleId/근거·확인 방법을 연결한다. 테스트 결과와 미검증 운영·계약 범위를 밝힌다. 제외 후보는 오판을 막을 때만 설명하며 단순 질문에 긴 보고서·역할 소개를 붙이지 않는다.\n",
+      "candidateText": "---\nname: commerce-backend-expert\ndescription: 한국 이커머스 백엔드의 설계·구현·리팩터링·리뷰·장애 분석. 주문·재고·결제·환불·쿠폰·정산·회원·배송의 정합성과 Java/Spring 구현에 사용한다. 일반 코딩·화면 스타일·마케팅·MCP 설치 문의에는 적용하지 않는다.\nlicense: MIT\nmetadata:\n  author: dakcoh\n  tags: ecommerce, korean-commerce, backend, java, spring, payments, inventory, settlement\n---\n\n# 이커머스 백엔드 개발\n\n사용자 지시와 기존 계약을 우선한다. 실제 코드·업무 조건으로 설계·구현·리팩터링·리뷰·장애 분석을 수행하며 리뷰 요청을 코드 수정이나 운영 결제·환불 실행으로 확대하지 않는다.\n\n## 코드와 필요한 근거만 확인\n\n- 호출자 → 실제 분기·조기 반환 → 서비스·SQL/제약 → 외부 연동·이벤트·관련 테스트를 필요한 범위까지 추적한다. 다른 경로에 있는 검증·트랜잭션·멱등 처리를 누락으로 단정하지 않는다.\n- 주문·라인/수량·개별 시도와 업무키/요청 지문, 금액·허용 전이·확정/미확정 상태를 구분한다. 미제공 계약·정책은 추정하지 말고 결론을 바꾸는 조건만 확인한다.\n- 주제가 아래 직접 링크와 맞으면 해당 규칙부터 읽는다. 경로를 모를 때만 색인에서 선택한다. 조건·예외·전제·실패 복구와 근거를 읽고 적용하며, 이미 문맥에 있는 내용은 다시 읽지 않는다. 추가 조회는 판단에 필요한 경계만 확장하고 전체 파트를 로딩하지 않는다.\n\nOpenClaw: use the skill directory supplied as `{baseDir}` for file reads. For example, read `{baseDir}/references/coupon/INDEX.md`, never `references/coupon/INDEX.md` relative to the project workspace. In other clients, resolve links against the directory containing this SKILL.md.\n\n| 주제 | 직접 읽을 규칙 |\n|---|---|\n| 승인 응답 유실·미확정 결제 | [조회·대사](references/payment/network-cancellation.md) |\n| 부분 환불·수량 점유 | [부분 환불](references/payment/partial-refund.md) |\n| 웹훅 응답·내구성 | [웹훅](references/payment/webhook-handling.md) |\n| 쿠폰 발급·재전달·한도 | [발급 정합성](references/coupon/coupon-issuance.md) |\n| 락·업무키·저장소 방어 | [동시성·멱등성](references/spring-commerce/spring-commerce-locking-idempotency.md) |\n| 트랜잭션 실패 뒤 재시도 | [재시도 경계](references/spring-commerce/spring-resilience-retry-timeout.md) |\n\n그 밖의 색인: [상품·주문·회원·배송](references/commerce/INDEX.md) · [재고](references/inventory/INDEX.md) · [결제](references/payment/INDEX.md) · [쿠폰](references/coupon/INDEX.md) · [정산](references/settlement/INDEX.md) · [Java/Spring](references/spring-commerce/INDEX.md).\n\n## 적용과 결과\n\n- `status`·`evidenceLevel`·검토자/날짜와 출처 범위를 확인한다. `active`는 인증이 아니며 `needs-review`·`not-recorded`는 완료로 바꾸지 않는다. 과거 YAML 경로는 이관 출처다. 읽기 실패·미확인 조건을 검증된 근거로 쓰지 않는다.\n- 기존 스택과 공통 처리를 활용하고 금액 산식·업무키·트랜잭션·부수 효과 순서를 보존한다. 구현 요청은 변경과 필요한 검증으로 완성한다. 미확정 거래를 새 승인·중복 보상으로 덮지 않으며 스킬 때문에 Java 버전을 올리지 않는다.\n- 결과는 확인된 변경/결함부터 코드 위치·발생 조건·영향·근거·최소 수정 방향으로 전달한다. 사실·추가 확인과 실행한 검사·미검증 범위를 구분한다. 요약·체크리스트를 반복하지 말고 단위/합성 시험을 실제 DB·PG·사업 승인으로 확대하지 않는다.\n"
+    },
+    {
+      "name": "commerce-review",
+      "beforeBytes": 5669,
+      "afterBytes": 3910,
+      "byteReductionPct": 31.028400070559183,
+      "baselineSha256": "daee540f06f2481c237049222b36ecfc1a5839e224bc570e59d9823751ca3dc2",
+      "candidateSha256": "3a931dc5ed84973c1feba53299a19b65133def31b13958a36308dbab0a631010",
+      "baselineText": "---\nname: commerce-review\ndescription: 한국 이커머스 결제·환불 코드와 변경 사항을 리뷰한다. 웹훅, 멱등성, 미확정 거래, 할인 배부와 재고 보상의 정합성을 호출 경로까지 추적할 때 사용한다. 구현 요청·일반 화면 수정에는 적용하지 않는다.\nlicense: MIT\nmetadata:\n  author: dakcoh\n  tags: ecommerce, korean-commerce, code-review, payments, refunds, idempotency\n---\n\n# 결제·환불 코드 리뷰\n\n요청한 코드·diff의 범위를 확인하고 실제 결함과 추가 확인 조건을 구분한다. 리뷰 요청만으로 코드를 수정하거나 운영 결제·환불을 실행하지 않는다.\n\nBefore claiming a defect, trace the supplied input through the actual predicates, early returns and state writes. Distinguish same-key retries, different-key requests and overlapping business units. Compute totals before claiming that an amount limit is exceeded.\n\nFor refunds, both amount and line/unit/quantity limits include succeeded refunds and reservations held by processing or unknown attempts. Pending/unknown status never permits an overlapping claim and is not proof of success. Release a reservation only after definitive failure; reconcile an unknown outcome before replacing its attempt. An unchanged retry preserves the original key and request fingerprint.\n\n## 코드와 계약을 함께 추적\n\n1. 변경 코드에서 호출자 → 서비스 → SQL·제약 → PG 연동·이벤트·워커와 테스트를 필요한 범위까지 읽는다. 상위 경로의 검증·영속 수신·트랜잭션을 확인하기 전에 누락으로 판정하지 않는다.\n2. 업무키의 고유 범위와 요청 지문, 처리 단위, 허용 상태 전이, 성공 확정 근거를 확인한다. 타임아웃·응답 유실을 실패로 확정하지 않는다.\n3. 금액·통화·수량의 한도를 주문 전체와 라인·개별 단위에서 확인한다. 동시 요청과 처리 중·미확정 금액의 점유, 원자적 확보, 실패 확정 후 해제를 함께 검토한다.\n4. 외부 승인·환불과 로컬 저장 사이의 실패 구간을 추적한다. 원 거래 조회·통지·대사, 같은 시도의 키 유지, 재고·쿠폰·포인트의 중복 복원 방어를 확인한다. 실제 계약이 없는 보장이나 기술을 가정하지 않는다.\n\n## 업무 경계에서 확인할 것\n\n- **부분 환불:** 주문 전체 한도 안에서도 같은 라인·수량이 두 번 환불될 수 있다. 확정·처리 중·미확정 환불이 점유한 금액과 대상을 함께 확인한다. 할인 배부·반올림 잔차·혜택 유지/회수는 주문 당시 스냅샷과 정책으로 재현하며 새 정책으로 소급 계산하지 않는다. 환불액에서 할인을 유지한다는 조건만으로 쿠폰 재발급·사용 포인트 복원을 금지하거나 의무화하지 않는다. 제공되지 않은 혜택 종류나 권리 복원 정책은 별도로 확인한다.\n- **웹훅:** PG·이벤트별 인증, 허용된 성공 응답, 응답 전 내구성 있는 반영, 중복·역순 처리를 확인한다. 짧은 DB 트랜잭션으로 안전하게 끝나는 동기 처리는 허용한다. 느린 외부 호출·긴 후처리만 응답 경계에서 분리하며 큐·워커의 존재 자체를 필수로 판단하지 않는다.\n- **재고·혜택 복원:** 미확정 결제를 실패로 보고 먼저 복구하지 않는다. 확정된 취소·환불의 대상과 원 업무를 연결해 한 번 반영하고, 반품 검수 전 재고와 출고 전 확보 수량의 해제를 구별한다.\n- **Spring·저장소:** 원자적 선점·한도 검증·업무키 제약의 커밋 경계를 확인한다. 외부 PG 효과가 로컬 롤백으로 취소된다고 가정하지 않으며, 락은 실제 범위·획득 성공·해제·만료 후 쓰기까지 검토한다.\n\n이 스킬은 단독 설치로 위 절차를 수행하며 상세 규칙 파일을 포함하지 않는다. 단독 설치에서는 이 파일과 제공된 코드로 리뷰한다. 환경에 `commerce-backend-expert`가 실제로 제공된 경우에만 필요한 상세 규칙을 해당 스킬의 색인에서 고른다. 형제 폴더의 존재를 가정하거나 문서를 자동 다운로드하지 않는다.\n\nThis skill works alone and bundles no detailed-rule files. A planned, failed, or unavailable read is not evidence that a rule was verified.\n\n현재 맥락의 문서를 중복 조회하거나 모든 파트를 로딩하지 않는다. 규칙의 조건·예외·전제와 출처 범위를 읽고 실제 코드·PG 계약에 적용되는지 판단한다. `active`는 정확성 인증이 아니며 `needs-review`·검토자/검토일 미기록을 검토 완료로 설명하지 않는다.\n\n## 결론과 확인 방법\n\n- 확인된 결함부터 영향도 순으로 설명한다. 코드 위치, 발생 조건·입력 또는 동시 실행 순서, 잘못되는 금액·상태·효과, 최소 수정 방향과 검증 방법을 연결한다.\n- 결함마다 코드·계약에서 확인한 근거를 제시하고, 실제로 읽은 상세 규칙이 있으면 함께 연결한다. 읽지 않은 규칙 ID를 꾸미거나 키워드 일치만으로 결함을 만들지 않는다.\n- 근거가 부족한 위험은 추가 확인으로 분리한다. 정상인 계약상 응답 코드나 제공된 상위 검증을 결함으로 바꾸지 않는다. 확정 결함이 없으면 그렇게 설명한다.\n- 허용된 로컬 테스트로 확인할 수 있으면 실행하고, 실행하지 않았거나 대역으로만 확인한 범위를 밝힌다. 단위 테스트를 실제 DB 동시성·PG 검증으로 확대하지 않는다.\n",
+      "candidateText": "---\nname: commerce-review\ndescription: 한국 이커머스 결제·환불 코드와 변경 사항을 리뷰한다. 웹훅, 멱등성, 미확정 거래, 할인 배부와 재고 보상의 정합성을 호출 경로까지 추적할 때 사용한다. 구현 요청·일반 화면 수정에는 적용하지 않는다.\nlicense: MIT\nmetadata:\n  author: dakcoh\n  tags: ecommerce, korean-commerce, code-review, payments, refunds, idempotency\n---\n\n# 결제·환불 코드 리뷰\n\n사용자 지시와 리뷰 범위를 우선한다. 호출자 → 실제 분기·조기 반환·상태 쓰기 → 서비스·SQL/제약 → PG·이벤트·테스트를 필요한 범위까지 읽는다. 상위의 검증·영속 수신·트랜잭션을 확인하기 전에 누락으로 단정하지 않는다. 리뷰만 요청받았다면 코드 수정·운영 결제/환불을 실행하지 않는다.\n\n## 핵심 판단\n\n- **업무키:** 동일 키 재시도·다른 키 요청·겹치는 업무 단위를 구분한다. 같은 키라도 요청 지문(원 거래·대상·금액·통화 등)이 다르면 기존 결과를 반환하지 않는다. 같은 시도의 재전송은 원래 키·지문을 유지한다.\n- **미확정 거래:** 타임아웃·응답 유실·UNKNOWN은 성공도 확정 실패도 아니다. 원 거래 조회·검증된 통지·대사로 확인하고, 먼저 점유를 해제하거나 새 시도로 교체하지 않는다.\n- **부분 환불:** 확정 성공과 처리 중/미확정 시도가 점유한 금액·라인·개별 수량을 함께 원자적으로 검증한다. 주문 합계를 계산한 뒤 한도 초과를 판단하며, 총액 이내의 같은 단위 중복도 확인한다. 성공은 점유를 확정으로 옮기고 확정 실패만 해제한다.\n- **혜택·재고:** 할인 배부·잔차·혜택 유지/회수는 주문 시점 스냅샷과 제공 정책으로 판단한다. 할인 유지만으로 쿠폰 재발급·포인트 복원을 금지/의무화하지 않는다. 미제공 혜택·권리 정책은 확인한다. 확정 취소/환불은 원 업무와 연결해 한 번 복원하며 출고 전 해제와 반품 검수 뒤 재고를 구분한다.\n- **웹훅:** PG별 인증·성공 응답 계약, 응답 전 내구성 있는 반영, 중복·역순 처리를 확인한다. 제공된 상위 검증과 안전한 짧은 동기 처리를 인정하고 큐/워커를 일괄 요구하지 않는다. 느린 외부 호출·후처리만 응답 경계에서 분리한다.\n- **저장소·외부 효과:** 선점·한도·업무키 제약의 커밋과 PG 호출 사이의 실패 구간을 확인한다. 로컬 롤백이 PG 효과를 취소한다고 가정하지 않는다. 락의 획득 실패·해제·만료 후 쓰기와 저장소 방어를 함께 본다.\n\n## 근거와 결과\n\n이 스킬은 단독 설치로 위 절차를 수행하며 상세 규칙을 포함하지 않는다. 제공 코드와 이 본문으로 검토하고, `commerce-backend-expert`가 실제 제공되며 추가 근거가 필요할 때만 관련 규칙을 선택한다. 형제 폴더를 추정하거나 자동 다운로드하지 않는다. 이미 문맥에 있는 문서는 다시 읽지 않는다.\n\n규칙을 읽었다면 조건·예외·전제·출처와 검토 상태를 확인한다. `active`는 인증이 아니며 `needs-review`·검토자/날짜 미기록을 완료로 설명하지 않는다. 실패한 조회·미제공 계약·읽지 않은 규칙 ID를 근거로 꾸미지 않는다.\n\n확인된 결함부터 코드 위치·발생 조건·영향·최소 수정·검증 방법을 제시하고, 불확실한 위험은 추가 확인으로 분리한다. 결함이 없으면 그렇게 설명한다. 검사 결과와 미검증 범위는 한 번만 정리하며 반복 요약·체크리스트를 붙이지 않는다. 허용된 로컬 검사만 실행하고 단위/합성 시험을 실제 DB·PG 운영 검증으로 확대하지 않는다.\n"
+    }
+  ],
+  "unchangedReferenceFiles": [
+    {
+      "path": "skills/commerce-backend-expert/references/commerce/commerce-cart-checkout.md",
+      "sha256": "0cf690dd0807d56c411835473a035c36cdbe23daef02d9f0530c3568ea395bb4",
+      "bytes": 2989
+    },
+    {
+      "path": "skills/commerce-backend-expert/references/commerce/commerce-catalog-model.md",
+      "sha256": "6d9557a8535be0c021337cac1b6c6b5eaa77765ede4caeca586f4f95c07e8f35",
+      "bytes": 2859
+    },
+    {
+      "path": "skills/commerce-backend-expert/references/commerce/commerce-channel-seller-distribution.md",
+      "sha256": "aefa288211e8d649b4739388835a0af7f13f08807b4eb0b548b6fab5e56c1ce7",
+      "bytes": 2790
+    },
+    {
+      "path": "skills/commerce-backend-expert/references/commerce/commerce-claim-cs.md",
+      "sha256": "e21b575588769e8c501690169f45ddad92b440b9bebf56271683625496ab0af4",
+      "bytes": 2866
+    },
+    {
+      "path": "skills/commerce-backend-expert/references/commerce/commerce-customer-identity.md",
+      "sha256": "6525a8379b9e1df0189f610470e176502812d8ddeaedf8f71a7a99edac3c357f",
+      "bytes": 3182
+    },
+    {
+      "path": "skills/commerce-backend-expert/references/commerce/commerce-fulfillment-reverse-logistics.md",
+      "sha256": "bcc907c9707dbc799e7c46ff77800f52c64b6bad682183303f71d5fd939e30c5",
+      "bytes": 2844
+    },
+    {
+      "path": "skills/commerce-backend-expert/references/commerce/commerce-inventory-availability.md",
+      "sha256": "4bda23880434392835dee134c3a6e5cb4881f5ab43556af743ff84065a3cfbee",
+      "bytes": 3446
+    },
+    {
+      "path": "skills/commerce-backend-expert/references/commerce/commerce-loyalty-point-ledger.md",
+      "sha256": "5fbbf60531364fc48dc427668f851414e4550ddfa7e1adba716b573582574335",
+      "bytes": 5053
+    },
+    {
+      "path": "skills/commerce-backend-expert/references/commerce/commerce-membership-tier-benefits.md",
+      "sha256": "5c25cfa5a6159dccc23cdc4e326ce344ea309ec560c8711ebe563c4b198cd6c5",
+      "bytes": 2918
+    },
+    {
+      "path": "skills/commerce-backend-expert/references/commerce/commerce-operational-integrity.md",
+      "sha256": "8a1e71dfdcc0d6951b86f751a90c1ea2cc7b2cdb616ac580324da02460e840cd",
+      "bytes": 2774
+    },
+    {
+      "path": "skills/commerce-backend-expert/references/commerce/commerce-ops-slo-incident.md",
+      "sha256": "e2c66ba6c0746ef30633ae7c209e1b07b8cba35d518af43b7050e731983acb93",
+      "bytes": 2877
+    },
+    {
+      "path": "skills/commerce-backend-expert/references/commerce/commerce-order-lifecycle.md",
+      "sha256": "de354fc96ddbdcc4398c7a1fa8c973b7e294f2abe2531f69ee8d9026b61d315a",
+      "bytes": 3021
+    },
+    {
+      "path": "skills/commerce-backend-expert/references/commerce/commerce-payment-ledger.md",
+      "sha256": "3da8b411a93130f8ddeec0f7f0da56f96695f9c9222b823710579223fbcc014c",
+      "bytes": 3747
+    },
+    {
+      "path": "skills/commerce-backend-expert/references/commerce/commerce-pricing-money.md",
+      "sha256": "6538a396813aae354ea97ed804b3021f70fc2f937bb74ca80b999f218062108a",
+      "bytes": 3226
+    },
+    {
+      "path": "skills/commerce-backend-expert/references/commerce/commerce-promotion-allocation.md",
+      "sha256": "fd91d8c13012173c077fd2ecd72d571b1ef8649ae303c61d3ede0a55abcf0803",
+      "bytes": 3209
+    },
+    {
+      "path": "skills/commerce-backend-expert/references/commerce/commerce-review-ugc-moderation.md",
+      "sha256": "af857d018fbd724c2b98874fe713bbaf9ca4e2caf45453007dc41f269e14277d",
+      "bytes": 3314
+    },
+    {
+      "path": "skills/commerce-backend-expert/references/commerce/commerce-search-discovery.md",
+      "sha256": "29a728a65327281bad0cfdc179fc69f60711b518fb9c1f6a0dfd3e8a75301917",
+      "bytes": 2905
+    },
+    {
+      "path": "skills/commerce-backend-expert/references/commerce/commerce-security-privacy.md",
+      "sha256": "82601e3e8318e32660486875d6492237272f7c54d37ecfd4112cb0b4a39ce59c",
+      "bytes": 4302
+    },
+    {
+      "path": "skills/commerce-backend-expert/references/commerce/commerce-settlement-reconciliation.md",
+      "sha256": "62bcfe2610757addee6c6cb521b7859c5e4ab4cabfdd4738e1c21b35872aa0ce",
+      "bytes": 3307
+    },
+    {
+      "path": "skills/commerce-backend-expert/references/commerce/commerce-subscription-recurring-order.md",
+      "sha256": "6b09338e9c62bf9536eca98f64ef629f2228b8cfa9dcfec95792bd0ca4562170",
+      "bytes": 3694
+    },
+    {
+      "path": "skills/commerce-backend-expert/references/commerce/INDEX.md",
+      "sha256": "1fb6374a1a3f08625c8dc9ed4abb74df15efd2b0b2a490c8cfb7e2ddc2b51229",
+      "bytes": 5072
+    },
+    {
+      "path": "skills/commerce-backend-expert/references/coupon/coupon-ai-pitfalls-checklist.md",
+      "sha256": "813a8133182a2ec562cce90c132d929895a11ca4504d7b111f828074d1d36222",
+      "bytes": 2426
+    },
+    {
+      "path": "skills/commerce-backend-expert/references/coupon/coupon-discount-calculation.md",
+      "sha256": "7e4b1783cef727222820a5006e2b0197131b1af11288ef3faf9a7f867ef9d910",
+      "bytes": 2923
+    },
+    {
+      "path": "skills/commerce-backend-expert/references/coupon/coupon-issuance-compensation.md",
+      "sha256": "5abf03ae9543bd64e7c5aa2989b723976017e811119a48c60cc981174daec912",
+      "bytes": 6074
+    },
+    {
+      "path": "skills/commerce-backend-expert/references/coupon/coupon-issuance.md",
+      "sha256": "c3f75c395b1f2ab1bc29512cf7cd847ab16f908619e11bbc84e2d68b44663e99",
+      "bytes": 4842
+    },
+    {
+      "path": "skills/commerce-backend-expert/references/coupon/coupon-validation.md",
+      "sha256": "7f867b1c211dad5e972f500f58e510d35e297b13599c4caeab87ff792418c727",
+      "bytes": 2511
+    },
+    {
+      "path": "skills/commerce-backend-expert/references/coupon/INDEX.md",
+      "sha256": "be989790fa7e9f9bb074e16f5f7ddb8f8791d79e62615f9f6e8079fac5d7c734",
+      "bytes": 1742
+    },
+    {
+      "path": "skills/commerce-backend-expert/references/coupon/promotion-rules.md",
+      "sha256": "e92c780e331ccdc4f55138e4ab869ca1a9cd5c64e731c1fe3802c12e73e8e604",
+      "bytes": 2251
+    },
+    {
+      "path": "skills/commerce-backend-expert/references/inventory/ai-pitfalls-checklist.md",
+      "sha256": "b04d35b1933dd888b9ef59d8509171a818429c6df5bbe497df4d62eb1629ee53",
+      "bytes": 2049
+    },
+    {
+      "path": "skills/commerce-backend-expert/references/inventory/available-stock-query.md",
+      "sha256": "da18c48690def7ef058664cc2a26ed5d70d3a0d5c2219b1f4923e2b9b6432032",
+      "bytes": 3301
+    },
+    {
+      "path": "skills/commerce-backend-expert/references/inventory/concurrency-distributed.md",
+      "sha256": "def158437fe17f61456231ade93ca6d495c44be91df878a623ae043d1fcfbda8",
+      "bytes": 4687
+    },
+    {
+      "path": "skills/commerce-backend-expert/references/inventory/concurrency-optimistic.md",
+      "sha256": "b0975d9fd80438f17d84de248e667614c3ebae9a598cee01ae6add691cccd609",
+      "bytes": 3323
+    },
+    {
+      "path": "skills/commerce-backend-expert/references/inventory/concurrency-pessimistic.md",
+      "sha256": "dfbb10195541824bc88e72c782b6889e5d89003f8c7072d527b61e26778ddee3",
+      "bytes": 3558
+    },
+    {
+      "path": "skills/commerce-backend-expert/references/inventory/idempotency.md",
+      "sha256": "937e5c4a31ff2daec75180f1ee83f5d1c6fa7a951e420497a3c4bb194dd49db5",
+      "bytes": 2347
+    },
+    {
+      "path": "skills/commerce-backend-expert/references/inventory/INDEX.md",
+      "sha256": "67a3a3193dc63160f945ccab7dcf21353296dad510e89db36f5437804ccb8835",
+      "bytes": 1869
+    },
+    {
+      "path": "skills/commerce-backend-expert/references/inventory/saga-pattern.md",
+      "sha256": "706e75d229649ef2d44a6f2b514909a889346e3ea2cbbc05dd897384c8199fb0",
+      "bytes": 2670
+    },
+    {
+      "path": "skills/commerce-backend-expert/references/inventory/stock-reservation.md",
+      "sha256": "18a0eaf65a3f6b0c0a7add37bbaf6acfb0412df238254e22b87e2cda7bd34265",
+      "bytes": 3157
+    },
+    {
+      "path": "skills/commerce-backend-expert/references/payment/duplicate-payment-guard.md",
+      "sha256": "759a9b6f548a2451c6ce019bc04e5430d46c15480fe18f1f89cc9f1634618844",
+      "bytes": 5183
+    },
+    {
+      "path": "skills/commerce-backend-expert/references/payment/INDEX.md",
+      "sha256": "bf39a474edfa687faedbfd2ca8446ce0e190c99ad2f7ecbff564f111a87c1607",
+      "bytes": 1860
+    },
+    {
+      "path": "skills/commerce-backend-expert/references/payment/network-cancellation.md",
+      "sha256": "83cbf711a20e1f959de5f5ff62f13f11aff3567b4d592dd59097aa10df0ee38b",
+      "bytes": 4652
+    },
+    {
+      "path": "skills/commerce-backend-expert/references/payment/partial-refund.md",
+      "sha256": "04da54963a660acb794a503381976078983da8abd4cd5c0c5cb57b04be475adc",
+      "bytes": 6677
+    },
+    {
+      "path": "skills/commerce-backend-expert/references/payment/payment-ai-pitfalls-checklist.md",
+      "sha256": "557c2131161a6d7e24e44077b8e5ee4974718a9801abc0bb2f7ad6be3f3f19b9",
+      "bytes": 2795
+    },
+    {
+      "path": "skills/commerce-backend-expert/references/payment/payment-idempotency.md",
+      "sha256": "696d318e096ef800fe1337c45781fb047114d725ddfffbe56096188548e6e014",
+      "bytes": 5067
+    },
+    {
+      "path": "skills/commerce-backend-expert/references/payment/payment-status-machine.md",
+      "sha256": "bea62c1977292458a49ed069b2ce5bf9b4192d08acd739eabe0e1258e5cfbf5e",
+      "bytes": 4620
+    },
+    {
+      "path": "skills/commerce-backend-expert/references/payment/webhook-handling.md",
+      "sha256": "edbe106ef1ccaf690415c8aef82db8a85c3accc04bd31089469ae645f2c81d69",
+      "bytes": 5153
+    },
+    {
+      "path": "skills/commerce-backend-expert/references/settlement/INDEX.md",
+      "sha256": "9f3562839e483366f4bd44af60d5b684fd3cf5283647657d66bddaef330fdc7a",
+      "bytes": 2243
+    },
+    {
+      "path": "skills/commerce-backend-expert/references/settlement/settlement-ai-pitfalls-checklist.md",
+      "sha256": "b58525efcb0fcb27611671c578627723aabb0eb4c47f96d0978e760419a88e88",
+      "bytes": 2845
+    },
+    {
+      "path": "skills/commerce-backend-expert/references/settlement/settlement-cycle.md",
+      "sha256": "76f138b79dc58be413ad8d0e75a4265bcd380350d2e6465bba42fb85cceb14f7",
+      "bytes": 4324
+    },
+    {
+      "path": "skills/commerce-backend-expert/references/settlement/settlement-deduction.md",
+      "sha256": "b210a3f93f68430a181c9faf4b6d4494f4224371cca8073ebe599e06eea21605",
+      "bytes": 2713
+    },
+    {
+      "path": "skills/commerce-backend-expert/references/settlement/settlement-hold.md",
+      "sha256": "c9c04e8e9747c81cb92168c273f4c6a6b1420282e64e82991c1f610d31b0d08d",
+      "bytes": 2762
+    },
+    {
+      "path": "skills/commerce-backend-expert/references/settlement/settlement-integrity.md",
+      "sha256": "0dc5749eb359e3964a7e76852d89845e6595e2f50facc3c9502b13671e3a985e",
+      "bytes": 3912
+    },
+    {
+      "path": "skills/commerce-backend-expert/references/settlement/settlement-payout.md",
+      "sha256": "253b77f920c2b8bb75427895844c552bf4982878199e2288560282837de419eb",
+      "bytes": 5356
+    },
+    {
+      "path": "skills/commerce-backend-expert/references/settlement/settlement-statement.md",
+      "sha256": "651cacb7ac8fbe4d4ac15dc319034cd8435bf85d61feb921b5cb921b0190310a",
+      "bytes": 3295
+    },
+    {
+      "path": "skills/commerce-backend-expert/references/settlement/settlement-tax.md",
+      "sha256": "9f8cfd76c9a6abede3c67bbca7b2ff4a017c674b3822f880b323689d04ca7c62",
+      "bytes": 4579
+    },
+    {
+      "path": "skills/commerce-backend-expert/references/settlement/settlement-timing.md",
+      "sha256": "ab0b90b18f88096154c261c3cac2f1bf285ccd33cd511fd45c6d26d2d5bc3248",
+      "bytes": 2444
+    },
+    {
+      "path": "skills/commerce-backend-expert/references/spring-commerce/INDEX.md",
+      "sha256": "aaf71251da59bd2ab5844863a5eb6e11bf225573779ae294b7f8a28b0250ef20",
+      "bytes": 5198
+    },
+    {
+      "path": "skills/commerce-backend-expert/references/spring-commerce/java-collections-streams.md",
+      "sha256": "72635ffafba98a7cc593a39f8c47265aa6119e6d11de66d004e23a782ef509f8",
+      "bytes": 2375
+    },
+    {
+      "path": "skills/commerce-backend-expert/references/spring-commerce/java-concurrency-executor-completablefuture.md",
+      "sha256": "07460cf78c4bdd343508201a3ce38ff0c7662562fe1b33c85a4067a6709bf900",
+      "bytes": 2534
+    },
+    {
+      "path": "skills/commerce-backend-expert/references/spring-commerce/java-domain-modeling.md",
+      "sha256": "33fcde43827de57be0f2d11b591809eaf4f175745a927d272f67a54495997778",
+      "bytes": 2466
+    },
+    {
+      "path": "skills/commerce-backend-expert/references/spring-commerce/java-null-exception-boundary.md",
+      "sha256": "5552e1c9df193fa1f8d93897f40c337f5272d6cf8810acdf2d9c5fc5a972ec99",
+      "bytes": 2433
+    },
+    {
+      "path": "skills/commerce-backend-expert/references/spring-commerce/spring-api-pagination-idempotent-post.md",
+      "sha256": "14f0d67697720dae6a4887f2f4cd70ab0e70532b5d038aaccc2ead63e79431ce",
+      "bytes": 2922
+    },
+    {
+      "path": "skills/commerce-backend-expert/references/spring-commerce/spring-commerce-cache-boundary.md",
+      "sha256": "d1fea54ae2ec82459126b17deac782127abfd4bdb99003e1d619f13da8eac8ff",
+      "bytes": 2380
+    },
+    {
+      "path": "skills/commerce-backend-expert/references/spring-commerce/spring-commerce-events-outbox.md",
+      "sha256": "920fad17ece8441d0f60df1dd0e8fd65025c096bd5e5543d0ed7cd7a8e46d561",
+      "bytes": 2253
+    },
+    {
+      "path": "skills/commerce-backend-expert/references/spring-commerce/spring-commerce-jpa-consistency.md",
+      "sha256": "6291a4c123abfa9bcd4c06df7bd69e236ec82a70aa841465266e6f0edc72d0f4",
+      "bytes": 2278
+    },
+    {
+      "path": "skills/commerce-backend-expert/references/spring-commerce/spring-commerce-locking-idempotency.md",
+      "sha256": "d180b4a2ba5a9908f8fd8ef46649f027adfe577694ea8d4c5b22250838ad511d",
+      "bytes": 4327
+    },
+    {
+      "path": "skills/commerce-backend-expert/references/spring-commerce/spring-commerce-modular-monolith.md",
+      "sha256": "dd9f780794a3cdc27c8bca6deda5ae4213e32e2356aca2381fb0aadf3908ddac",
+      "bytes": 2441
+    },
+    {
+      "path": "skills/commerce-backend-expert/references/spring-commerce/spring-commerce-scheduler-batch.md",
+      "sha256": "e949fc97d2ffb19a7ceedc6788ea80147cb9cef67acc1f3622dabb900a7945e5",
+      "bytes": 2553
+    },
+    {
+      "path": "skills/commerce-backend-expert/references/spring-commerce/spring-commerce-testing-observability.md",
+      "sha256": "2c2562d1feea61c633afffd50007863a7c9d724a48ba22bf0916e8d405bb1c61",
+      "bytes": 2785
+    },
+    {
+      "path": "skills/commerce-backend-expert/references/spring-commerce/spring-commerce-transaction-boundary.md",
+      "sha256": "fd7e60ef356911a32c260b350572a8a254afeacbb5330395e9bda75c7e07b2de",
+      "bytes": 2516
+    },
+    {
+      "path": "skills/commerce-backend-expert/references/spring-commerce/spring-commerce-validation-errors.md",
+      "sha256": "590995fe5ed3017ea420feb6c196fd12dae1f6b1f19287454e9150fdd214b65b",
+      "bytes": 2385
+    },
+    {
+      "path": "skills/commerce-backend-expert/references/spring-commerce/spring-configuration-secrets.md",
+      "sha256": "9b845995e9ade35e43f9df41c506de3b1f8b3554aa5a8ad8f0a0cda47f626bc6",
+      "bytes": 2443
+    },
+    {
+      "path": "skills/commerce-backend-expert/references/spring-commerce/spring-database-index-isolation.md",
+      "sha256": "656b1c136bb2da841859f17c6a8cf79fd1c1ca80caf8a34dcdc8957cd3e9b707",
+      "bytes": 2416
+    },
+    {
+      "path": "skills/commerce-backend-expert/references/spring-commerce/spring-deployment-health-rollout.md",
+      "sha256": "2bbe5a2d6ceb2b4de6fcb53f7584fa6b27b45e652d6a23eb917fe2e33dcd5c51",
+      "bytes": 2440
+    },
+    {
+      "path": "skills/commerce-backend-expert/references/spring-commerce/spring-resilience-retry-timeout.md",
+      "sha256": "097fcea8e52725cd770665f72b13fee97aec8dfb565acb1d42004f7becee26b8",
+      "bytes": 2974
+    },
+    {
+      "path": "skills/commerce-backend-expert/references/spring-commerce/spring-schema-migration.md",
+      "sha256": "40253784160e0f5b52a4d9a5c1ef9b177cb07310561462c746750677ce8e253c",
+      "bytes": 2464
+    },
+    {
+      "path": "skills/commerce-backend-expert/references/spring-commerce/spring-security-authz.md",
+      "sha256": "5e756e22705c1fb9e9f2a9a90da98c4006568ff954888c714c1abe7fc8e86dbe",
+      "bytes": 4104
+    }
+  ],
+  "executions": [
+    {
+      "cohort": "inventory-pilot",
+      "order": [
+        {
+          "id": "webhook-async",
+          "arm": "baseline",
+          "repeat": 1
+        },
+        {
+          "id": "webhook-async",
+          "arm": "skill",
+          "repeat": 1
+        }
+      ],
+      "orderOffset": 0,
+      "taskFileInventory": "Same complete filename inventory supplied to both arms; absent project files are not discovery targets",
+      "unavailableCallLimit": 8,
+      "baselineDelivery": "explicit SKILL.md from --against snapshot",
+      "pluginIsolation": "features.plugins=false and features.remote_plugin=false; process overrides checked by features list",
+      "rubricSha256": "895ca27eea05ab19d894711bd47132c9e1fb24e87cef583163c97d3ff5b795d8",
+      "casesSha256": "e2514810b5fee7dfa29f7d65c76870cf706961426731ee4a53e29c1a4a000bf3",
+      "sourceCommit": "af62b8d6df2fd50a2edc47830f6c570920aed1fa",
+      "workingTreeDirty": true
+    },
+    {
+      "cohort": "inventory-expanded",
+      "order": [
+        {
+          "id": "refund-overlap",
+          "arm": "skill",
+          "repeat": 1
+        },
+        {
+          "id": "refund-overlap",
+          "arm": "baseline",
+          "repeat": 1
+        },
+        {
+          "id": "webhook-sync",
+          "arm": "baseline",
+          "repeat": 1
+        },
+        {
+          "id": "webhook-sync",
+          "arm": "skill",
+          "repeat": 1
+        },
+        {
+          "id": "lock-watchdog",
+          "arm": "skill",
+          "repeat": 1
+        },
+        {
+          "id": "lock-watchdog",
+          "arm": "baseline",
+          "repeat": 1
+        },
+        {
+          "id": "payment-uncertain",
+          "arm": "baseline",
+          "repeat": 1
+        },
+        {
+          "id": "payment-uncertain",
+          "arm": "skill",
+          "repeat": 1
+        },
+        {
+          "id": "coupon-redelivery",
+          "arm": "skill",
+          "repeat": 1
+        },
+        {
+          "id": "coupon-redelivery",
+          "arm": "baseline",
+          "repeat": 1
+        },
+        {
+          "id": "retry-rollback-only",
+          "arm": "baseline",
+          "repeat": 1
+        },
+        {
+          "id": "retry-rollback-only",
+          "arm": "skill",
+          "repeat": 1
+        },
+        {
+          "id": "benefit-policy",
+          "arm": "skill",
+          "repeat": 1
+        },
+        {
+          "id": "benefit-policy",
+          "arm": "baseline",
+          "repeat": 1
+        },
+        {
+          "id": "lua-partial-write",
+          "arm": "baseline",
+          "repeat": 1
+        },
+        {
+          "id": "lua-partial-write",
+          "arm": "skill",
+          "repeat": 1
+        },
+        {
+          "id": "refund-no-defect",
+          "arm": "skill",
+          "repeat": 1
+        },
+        {
+          "id": "refund-no-defect",
+          "arm": "baseline",
+          "repeat": 1
+        },
+        {
+          "id": "coupon-multi-grant",
+          "arm": "baseline",
+          "repeat": 1
+        },
+        {
+          "id": "coupon-multi-grant",
+          "arm": "skill",
+          "repeat": 1
+        },
+        {
+          "id": "frontend-scope",
+          "arm": "skill",
+          "repeat": 1
+        },
+        {
+          "id": "frontend-scope",
+          "arm": "baseline",
+          "repeat": 1
+        }
+      ],
+      "orderOffset": 1,
+      "taskFileInventory": "Same complete filename inventory supplied to both arms; absent project files are not discovery targets",
+      "unavailableCallLimit": 8,
+      "baselineDelivery": "explicit SKILL.md from --against snapshot",
+      "pluginIsolation": "features.plugins=false and features.remote_plugin=false; process overrides checked by features list",
+      "rubricSha256": "895ca27eea05ab19d894711bd47132c9e1fb24e87cef583163c97d3ff5b795d8",
+      "casesSha256": "e2514810b5fee7dfa29f7d65c76870cf706961426731ee4a53e29c1a4a000bf3",
+      "sourceCommit": "af62b8d6df2fd50a2edc47830f6c570920aed1fa",
+      "workingTreeDirty": true
+    }
+  ],
+  "measurements": {
+    "baseline": {
+      "attempted": 12,
+      "completed": 12,
+      "medianTurnMs": 32731.5,
+      "medianInputTokens": 19270.5,
+      "medianCachedInputTokens": 12480,
+      "medianOutputTokens": 1902.5,
+      "inputTokenMeasurements": 12,
+      "cachedInputTokenMeasurements": 12,
+      "outputTokenMeasurements": 12,
+      "totalInputTokens": 261605,
+      "totalCachedInputTokens": 158336,
+      "totalUncachedInputTokens": 103269,
+      "totalOutputTokens": 24087,
+      "successfulReads": 33
+    },
+    "skill": {
+      "attempted": 12,
+      "completed": 12,
+      "medianTurnMs": 32765.5,
+      "medianInputTokens": 14293.5,
+      "medianCachedInputTokens": 10176,
+      "medianOutputTokens": 1696,
+      "inputTokenMeasurements": 12,
+      "cachedInputTokenMeasurements": 12,
+      "outputTokenMeasurements": 12,
+      "totalInputTokens": 184201,
+      "totalCachedInputTokens": 115840,
+      "totalUncachedInputTokens": 68361,
+      "totalOutputTokens": 18626,
+      "successfulReads": 16
+    }
+  },
+  "quality": {
+    "baseline": {
+      "attempted": 12,
+      "criteriaMet": 48,
+      "criticalFindings": 0,
+      "allPassed": 12,
+      "blockedReads": 0
+    },
+    "skill": {
+      "attempted": 12,
+      "criteriaMet": 48,
+      "criticalFindings": 1,
+      "allPassed": 11,
+      "blockedReads": 0
+    }
+  },
+  "comparison": {
+    "totalInputDeltaPct": -29.588119493128954,
+    "uncachedInputDeltaPct": -33.8029805653197,
+    "outputDeltaPct": -22.671980736496867,
+    "medianPairedInputDeltaPct": -12.110400877702585,
+    "medianPairedUncachedDeltaPct": -37.14188117330101,
+    "candidateLowerInputPairs": 12,
+    "candidateLowerUncachedPairs": 11,
+    "baselineFirst": 6,
+    "candidateFirst": 6
+  },
+  "perSkill": {
+    "commerce-backend-expert": {
+      "measurements": {
+        "baseline": {
+          "attempted": 7,
+          "completed": 7,
+          "medianTurnMs": 44480,
+          "medianInputTokens": 32123,
+          "medianCachedInputTokens": 19584,
+          "medianOutputTokens": 2392,
+          "inputTokenMeasurements": 7,
+          "cachedInputTokenMeasurements": 7,
+          "outputTokenMeasurements": 7,
+          "totalInputTokens": 211634,
+          "totalCachedInputTokens": 133504,
+          "totalUncachedInputTokens": 78130,
+          "totalOutputTokens": 17889,
+          "successfulReads": 31
+        },
+        "skill": {
+          "attempted": 7,
+          "completed": 7,
+          "medianTurnMs": 36573,
+          "medianInputTokens": 16300,
+          "medianCachedInputTokens": 10240,
+          "medianOutputTokens": 2054,
+          "inputTokenMeasurements": 7,
+          "cachedInputTokenMeasurements": 7,
+          "outputTokenMeasurements": 7,
+          "totalInputTokens": 136615,
+          "totalCachedInputTokens": 84352,
+          "totalUncachedInputTokens": 52263,
+          "totalOutputTokens": 13129,
+          "successfulReads": 14
+        }
+      },
+      "totalInputDeltaPct": -35.44751788464991,
+      "uncachedInputDeltaPct": -33.1076411109689,
+      "acceptanceHolds": 0
+    },
+    "commerce-review": {
+      "measurements": {
+        "baseline": {
+          "attempted": 5,
+          "completed": 5,
+          "medianTurnMs": 23581,
+          "medianInputTokens": 7072,
+          "medianCachedInputTokens": 3712,
+          "medianOutputTokens": 1217,
+          "inputTokenMeasurements": 5,
+          "cachedInputTokenMeasurements": 5,
+          "outputTokenMeasurements": 5,
+          "totalInputTokens": 49971,
+          "totalCachedInputTokens": 24832,
+          "totalUncachedInputTokens": 25139,
+          "totalOutputTokens": 6198,
+          "successfulReads": 2
+        },
+        "skill": {
+          "attempted": 5,
+          "completed": 5,
+          "medianTurnMs": 18515,
+          "medianInputTokens": 6732,
+          "medianCachedInputTokens": 3712,
+          "medianOutputTokens": 957,
+          "inputTokenMeasurements": 5,
+          "cachedInputTokenMeasurements": 5,
+          "outputTokenMeasurements": 5,
+          "totalInputTokens": 47586,
+          "totalCachedInputTokens": 31488,
+          "totalUncachedInputTokens": 16098,
+          "totalOutputTokens": 5497,
+          "successfulReads": 2
+        }
+      },
+      "totalInputDeltaPct": -4.772768205559224,
+      "uncachedInputDeltaPct": -35.964039937945024,
+      "acceptanceHolds": 1
+    }
+  },
+  "pairs": [
+    {
+      "id": "webhook-async",
+      "baselineInput": 7001,
+      "candidateInput": 6661,
+      "inputDeltaPct": -4.856449078703043,
+      "baselineUncached": 7001,
+      "candidateUncached": 2949,
+      "uncachedDeltaPct": -57.87744607913155,
+      "baselineReads": 0,
+      "candidateReads": 0,
+      "baselineBlocked": 0,
+      "candidateBlocked": 0,
+      "baselineTimeMs": 25793,
+      "candidateTimeMs": 23544
+    },
+    {
+      "id": "refund-overlap",
+      "baselineInput": 14278,
+      "candidateInput": 13596,
+      "inputDeltaPct": -4.776579352850539,
+      "baselineUncached": 3782,
+      "candidateUncached": 3484,
+      "uncachedDeltaPct": -7.879428873611846,
+      "baselineReads": 1,
+      "candidateReads": 1,
+      "baselineBlocked": 0,
+      "candidateBlocked": 0,
+      "baselineTimeMs": 38667,
+      "candidateTimeMs": 39230
+    },
+    {
+      "id": "webhook-sync",
+      "baselineInput": 7072,
+      "candidateInput": 6732,
+      "inputDeltaPct": -4.8076923076923075,
+      "baselineUncached": 3360,
+      "candidateUncached": 3020,
+      "uncachedDeltaPct": -10.119047619047619,
+      "baselineReads": 0,
+      "candidateReads": 0,
+      "baselineBlocked": 0,
+      "candidateBlocked": 0,
+      "baselineTimeMs": 19092,
+      "candidateTimeMs": 13801
+    },
+    {
+      "id": "lock-watchdog",
+      "baselineInput": 25034,
+      "candidateInput": 14699,
+      "inputDeltaPct": -41.283853958616284,
+      "baselineUncached": 10570,
+      "candidateUncached": 8171,
+      "uncachedDeltaPct": -22.696310312204353,
+      "baselineReads": 3,
+      "candidateReads": 1,
+      "baselineBlocked": 0,
+      "candidateBlocked": 0,
+      "baselineTimeMs": 33108,
+      "candidateTimeMs": 33921
+    },
+    {
+      "id": "payment-uncertain",
+      "baselineInput": 34785,
+      "candidateInput": 25403,
+      "inputDeltaPct": -26.97139571654449,
+      "baselineUncached": 14561,
+      "candidateUncached": 7355,
+      "uncachedDeltaPct": -49.48835931598104,
+      "baselineReads": 10,
+      "candidateReads": 3,
+      "baselineBlocked": 0,
+      "candidateBlocked": 0,
+      "baselineTimeMs": 45277,
+      "candidateTimeMs": 31610
+    },
+    {
+      "id": "coupon-redelivery",
+      "baselineInput": 46335,
+      "candidateInput": 16270,
+      "inputDeltaPct": -64.88615517427431,
+      "baselineUncached": 16383,
+      "candidateUncached": 6030,
+      "uncachedDeltaPct": -63.19355429408533,
+      "baselineReads": 4,
+      "candidateReads": 2,
+      "baselineBlocked": 0,
+      "candidateBlocked": 0,
+      "baselineTimeMs": 79770,
+      "candidateTimeMs": 50337
+    },
+    {
+      "id": "retry-rollback-only",
+      "baselineInput": 32123,
+      "candidateInput": 26259,
+      "inputDeltaPct": -18.25483298571117,
+      "baselineUncached": 12539,
+      "candidateUncached": 7315,
+      "uncachedDeltaPct": -41.662014514714095,
+      "baselineReads": 8,
+      "candidateReads": 3,
+      "baselineBlocked": 0,
+      "candidateBlocked": 0,
+      "baselineTimeMs": 32355,
+      "candidateTimeMs": 36573
+    },
+    {
+      "id": "benefit-policy",
+      "baselineInput": 7049,
+      "candidateInput": 6709,
+      "inputDeltaPct": -4.823379202723791,
+      "baselineUncached": 3337,
+      "candidateUncached": 2997,
+      "uncachedDeltaPct": -10.188792328438717,
+      "baselineReads": 0,
+      "candidateReads": 0,
+      "baselineBlocked": 0,
+      "candidateBlocked": 0,
+      "baselineTimeMs": 14432,
+      "candidateTimeMs": 15222
+    },
+    {
+      "id": "lua-partial-write",
+      "baselineInput": 35106,
+      "candidateInput": 24255,
+      "inputDeltaPct": -30.90924628268672,
+      "baselineUncached": 7714,
+      "candidateUncached": 14015,
+      "uncachedDeltaPct": 81.68265491314493,
+      "baselineReads": 3,
+      "candidateReads": 2,
+      "baselineBlocked": 0,
+      "candidateBlocked": 0,
+      "baselineTimeMs": 44480,
+      "candidateTimeMs": 43080
+    },
+    {
+      "id": "refund-no-defect",
+      "baselineInput": 14571,
+      "candidateInput": 13888,
+      "inputDeltaPct": -4.6873927664539154,
+      "baselineUncached": 7659,
+      "candidateUncached": 3648,
+      "uncachedDeltaPct": -52.369761065413236,
+      "baselineReads": 1,
+      "candidateReads": 1,
+      "baselineBlocked": 0,
+      "candidateBlocked": 0,
+      "baselineTimeMs": 23581,
+      "candidateTimeMs": 18515
+    },
+    {
+      "id": "coupon-multi-grant",
+      "baselineInput": 23970,
+      "candidateInput": 16300,
+      "inputDeltaPct": -31.998331247392574,
+      "baselineUncached": 8994,
+      "candidateUncached": 6060,
+      "uncachedDeltaPct": -32.62174783188792,
+      "baselineReads": 2,
+      "candidateReads": 2,
+      "baselineBlocked": 0,
+      "candidateBlocked": 0,
+      "baselineTimeMs": 81856,
+      "candidateTimeMs": 42281
+    },
+    {
+      "id": "frontend-scope",
+      "baselineInput": 14281,
+      "candidateInput": 13429,
+      "inputDeltaPct": -5.965968769693999,
+      "baselineUncached": 7369,
+      "candidateUncached": 3317,
+      "uncachedDeltaPct": -54.98710815578776,
+      "baselineReads": 1,
+      "candidateReads": 1,
+      "baselineBlocked": 0,
+      "candidateBlocked": 0,
+      "baselineTimeMs": 5260,
+      "candidateTimeMs": 5527
+    }
+  ],
+  "reviewer": "Implementing Codex session; semantic grading not independent/blinded. HTML and supplied refund oracle checked programmatically.",
+  "preflightFailures": [
+    {
+      "phase": "CLI preflight before version/catalog checks completed",
+      "reason": "Timed out before plan/inference startup. A separate catalog-list invocation was slow; switched to verified process-only plugin feature flags.",
+      "taskRuns": 0,
+      "normalSettingsChanged": false
+    }
+  ],
+  "records": [
+    {
+      "runId": "001",
+      "id": "webhook-async",
+      "arm": "baseline",
+      "repeat": 1,
+      "prompt": "제공하는 구조만 기준으로 결제 웹훅을 검토해줘. PG 계약은 HTTP 202를 성공으로 인정해. 상위 경로가 서명·상점·주문·금액을 검증하고 이벤트 종류/외부 거래 ID의 UNIQUE를 가진 영속 inbox를 커밋한 뒤 응답해. 워커는 상태 가드와 멱등 처리를 수행해. 확인된 결함과 추가 확인 조건을 구분해줘.",
+      "skill": "commerce-review",
+      "skillSha256": "daee540f06f2481c237049222b36ecfc1a5839e224bc570e59d9823751ca3dc2",
+      "cli": "codex-cli 0.153.2",
+      "effort": "medium",
+      "explicitSkill": true,
+      "skillDelivery": "exact SKILL.md in developerInstructions",
+      "skillEntryBytes": 5669,
+      "pluginIsolation": "process feature overrides; plugins and remote_plugin verified false",
+      "blockedReads": 0,
+      "failedCallSamples": [],
+      "reads": [],
+      "messages": [
+        "## 검토 결론\n\n제공된 구조만으로는 **확인된 결함이 없습니다.**\n\n다음 항목은 정상적인 설계로 판단됩니다.\n\n- PG 계약이 `HTTP 202`를 성공 응답으로 인정하므로, `202 Accepted` 반환 자체는 결함이 아닙니다.\n- 서명·상점·주문·금액을 상위 경로에서 검증하므로 워커 내부에 동일 검증이 보이지 않는다는 이유만으로 누락이라 판단할 수 없습니다.\n- 이벤트 종류와 외부 거래 ID에 UNIQUE 제약이 있는 영속 inbox를 **커밋한 뒤** 응답하므로, 응답 유실이나 PG 재시도에도 이벤트를 내구성 있게 수신할 수 있습니다.\n- 워커의 상태 가드와 멱등 처리는 중복 및 역순 이벤트에 대한 기본 방어가 됩니다.\n- 수신 단계가 짧은 DB 트랜잭션으로 끝난다면 별도의 추가 큐 계층은 필수 조건이 아닙니다.\n\n## 추가 확인 조건\n\n코드와 PG 계약이 제공되지 않아 아래 사항은 결함이 아니라 확인 조건입니다.\n\n1. **UNIQUE 키의 범위**\n   - 외부 거래 ID가 PG 전체에서 전역 고유한지 확인해야 합니다.\n   - 상점이나 PG별로만 고유하다면 `(PG, 상점, 이벤트 종류, 외부 거래 ID)`처럼 실제 고유 범위를 반영해야 합니다.\n   - 중복 insert 충돌 시 이미 저장된 동일 이벤트로 처리하고 PG에는 성공 응답을 반환해야 합니다.\n\n2. **커밋과 응답 순서**\n   - 실제 트랜잭션 커밋 완료 후에만 `202`를 반환하는지 확인해야 합니다.\n   - inbox 저장 실패나 커밋 실패에도 `202`가 반환된다면 이벤트가 유실될 수 있습니다.\n\n3. **동일 키의 내용 불일치**\n   - 같은 이벤트 종류·외부 거래 ID로 금액, 주문 또는 상태가 다른 payload가 도착할 때 단순 중복으로 무시하지 않고 경고·격리하는지 확인이 필요합니다.\n   - 최초 요청의 원문 또는 요청 지문을 보관하면 검증할 수 있습니다.\n\n4. **상태 가드의 구체적인 전이**\n   - 성공 이후 실패, 취소 이후 승인 같은 역순 이벤트가 상태를 퇴행시키지 않아야 합니다.\n   - `processing` 또는 결과 미확정 상태를 실패로 간주해 재고·쿠폰·포인트를 먼저 복원하면 안 됩니다.\n   - 상태 변경과 후속 효과의 멱등 기록이 같은 원자적 경계에 있는지 확인해야 합니다.\n\n5. **워커 실패와 재처리**\n   - inbox의 처리 선점이 원자적인지, 워커 장애 후 lease 만료 또는 재처리가 가능한지 확인해야 합니다.\n   - 업무 상태 반영에는 성공했지만 inbox 완료 표시 전에 장애가 난 경우에도 재고·혜택·알림 등이 중복 적용되지 않아야 합니다.\n   - 영구 실패와 재시도 가능 실패가 구분되어야 합니다.\n\n6. **인증 입력과 응답 경로**\n   - 서명 검증이 PG가 정의한 원본 바이트와 헤더를 기준으로 수행되는지 확인해야 합니다.\n   - 서명·상점·주문·금액 검증 실패나 DB 저장 실패에 대해서도 무조건 `202`를 반환하지 않는지 확인이 필요합니다. 정확한 실패 응답은 PG 계약을 따라야 합니다.\n\n## 권장 검증 시나리오\n\n- 동일 이벤트를 동시에 여러 번 수신해 inbox가 한 건만 생성되는지\n- 첫 요청의 커밋 직후 응답이 유실되어 재전송된 경우 `202`가 반환되는지\n- 동일 키에 서로 다른 payload가 도착하면 탐지되는지\n- 성공/실패/취소 이벤트가 역순으로 처리되어도 상태가 퇴행하지 않는지\n- 업무 반영 직후 워커가 중단되어도 후속 효과가 중복되지 않는지\n- inbox 커밋 실패 시 성공 응답이 나가지 않는지\n\n프로젝트 코드와 테스트가 제공되지 않았으므로 실제 조건문, 트랜잭션 경계, UNIQUE 정의 및 동시성 동작은 실행하거나 검증하지 못했습니다."
+      ],
+      "unexpectedTools": [],
+      "tokenUsageUpdates": [
+        {
+          "elapsedMs": 27518,
+          "total": {
+            "totalTokens": 8230,
+            "inputTokens": 7001,
+            "cachedInputTokens": 0,
+            "cacheWriteInputTokens": 0,
+            "outputTokens": 1229,
+            "reasoningOutputTokens": 272
+          },
+          "last": {
+            "totalTokens": 8230,
+            "inputTokens": 7001,
+            "cachedInputTokens": 0,
+            "cacheWriteInputTokens": 0,
+            "outputTokens": 1229,
+            "reasoningOutputTokens": 272
+          },
+          "modelContextWindow": 258400
+        }
+      ],
+      "startedAt": "2026-10-26T10:08:24.787Z",
+      "model": "gpt-5.6-sol",
+      "provider": "openai",
+      "otherInstructionSourceCount": 0,
+      "turnStartedAt": "2026-10-26T10:08:26.531Z",
+      "tokenUsage": {
+        "total": {
+          "totalTokens": 8230,
+          "inputTokens": 7001,
+          "cachedInputTokens": 0,
+          "cacheWriteInputTokens": 0,
+          "outputTokens": 1229,
+          "reasoningOutputTokens": 272
+        },
+        "last": {
+          "totalTokens": 8230,
+          "inputTokens": 7001,
+          "cachedInputTokens": 0,
+          "cacheWriteInputTokens": 0,
+          "outputTokens": 1229,
+          "reasoningOutputTokens": 272
+        },
+        "modelContextWindow": 258400
+      },
+      "status": "completed",
+      "error": null,
+      "elapsedMs": 27535,
+      "turnElapsedMs": 25793,
+      "cohort": "inventory-pilot",
+      "review": {
+        "cohort": "inventory-pilot",
+        "runId": "001",
+        "id": "webhook-async",
+        "arm": "baseline",
+        "criteria": [
+          true,
+          true,
+          true,
+          true
+        ],
+        "criticalFindings": [],
+        "blockedReads": 0,
+        "notes": "Supplied 202/upstream validation/committed inbox are recognized; no confirmed defect or mandatory queue. Additional implementation checks are conditional; no guessed files or runtime claims.",
+        "sourceResultSha256": "f0def41906e57d2a3b0e3e349a219044882af67f3faf82158292aa857e8f0fb2"
+      }
+    },
+    {
+      "runId": "002",
+      "id": "webhook-async",
+      "arm": "skill",
+      "repeat": 1,
+      "prompt": "제공하는 구조만 기준으로 결제 웹훅을 검토해줘. PG 계약은 HTTP 202를 성공으로 인정해. 상위 경로가 서명·상점·주문·금액을 검증하고 이벤트 종류/외부 거래 ID의 UNIQUE를 가진 영속 inbox를 커밋한 뒤 응답해. 워커는 상태 가드와 멱등 처리를 수행해. 확인된 결함과 추가 확인 조건을 구분해줘.",
+      "skill": "commerce-review",
+      "skillSha256": "3a931dc5ed84973c1feba53299a19b65133def31b13958a36308dbab0a631010",
+      "cli": "codex-cli 0.153.2",
+      "effort": "medium",
+      "explicitSkill": true,
+      "skillDelivery": "exact SKILL.md in developerInstructions",
+      "skillEntryBytes": 3910,
+      "pluginIsolation": "process feature overrides; plugins and remote_plugin verified false",
+      "blockedReads": 0,
+      "failedCallSamples": [],
+      "reads": [],
+      "messages": [
+        "## 확인된 결함\n\n제공된 구조만으로는 **확인된 결함이 없습니다.**\n\n- PG가 HTTP `202`를 성공으로 인정하므로 해당 응답은 계약 위반이 아닙니다.\n- 서명·상점·주문·금액을 상위 경로에서 검증합니다.\n- `inbox`를 커밋한 뒤 응답하므로 응답 유실이나 워커 장애에도 이벤트가 보존됩니다.\n- 워커가 상태 가드와 멱등 처리를 수행하므로 중복 전달의 기본 방어도 갖춰져 있습니다.\n- 따라서 동기 처리나 별도 큐 도입을 일괄 요구할 근거는 없습니다.\n\n## 추가 확인 조건\n\n다음은 코드·스키마가 제공되지 않아 결함으로 단정할 수 없는 항목입니다.\n\n1. **UNIQUE 키의 범위**\n   - `(이벤트 종류, 외부 거래 ID)`에서 외부 거래 ID가 PG 전체에서 전역 유일한지 확인해야 합니다.\n   - PG나 상점별로만 유일하다면 `(PG, 상점, 이벤트 종류, 외부 거래 ID)` 등으로 범위를 넓혀야 충돌로 인한 정상 이벤트 유실을 막을 수 있습니다.\n\n2. **같은 키의 다른 요청 지문**\n   - 같은 UNIQUE 키로 금액·주문·통화·대상 거래가 다른 이벤트가 오면 단순 중복 성공 처리하지 않고 충돌로 기록·경보하는지 확인이 필요합니다.\n\n3. **실제 커밋 경계**\n   - `202`가 트랜잭션 커밋 완료 후에만 반환되는지 확인해야 합니다.\n   - 비동기 커밋 예약이나 롤백 가능한 상위 트랜잭션 내부에서 먼저 응답한다면 이벤트 유실 구간이 생깁니다.\n\n4. **중복·역순 이벤트**\n   - 워커의 상태 가드가 이미 완료된 결제를 이전 상태로 되돌리지 않는지, 환불·취소가 승인 이벤트보다 먼저 도착해도 보류 후 재처리하거나 안전하게 수렴하는지 확인해야 합니다.\n\n5. **워커 원자성**\n   - 상태 변경과 inbox 처리 완료 표시가 같은 트랜잭션인지 확인해야 합니다.\n   - 외부 후처리가 있다면 재시도 시 중복 효과를 막을 별도 업무키나 outbox가 필요합니다.\n\n6. **실패 및 재처리 정책**\n   - 일시 실패 재시도, 영구 실패 격리, 처리 중 워커 종료 후 lease 회수, 최대 재시도 이후 경보가 있는지 확인해야 합니다.\n   - 미확정 PG 상태를 확정 실패로 간주해 결제·재고 점유를 해제하면 안 됩니다.\n\n7. **검증 기준**\n   - 금액·통화·주문 식별자는 현재 상품 정보가 아니라 주문 시점 스냅샷 및 실제 승인 대상과 대조하는지 확인해야 합니다.\n\n프로젝트 코드와 스키마가 제공되지 않아 실제 응답 분기, DB 제약, 트랜잭션 경계 및 워커 구현은 검증하지 못했습니다."
+      ],
+      "unexpectedTools": [],
+      "tokenUsageUpdates": [
+        {
+          "elapsedMs": 23747,
+          "total": {
+            "totalTokens": 7645,
+            "inputTokens": 6661,
+            "cachedInputTokens": 3712,
+            "cacheWriteInputTokens": 0,
+            "outputTokens": 984,
+            "reasoningOutputTokens": 284
+          },
+          "last": {
+            "totalTokens": 7645,
+            "inputTokens": 6661,
+            "cachedInputTokens": 3712,
+            "cacheWriteInputTokens": 0,
+            "outputTokens": 984,
+            "reasoningOutputTokens": 284
+          },
+          "modelContextWindow": 258400
+        }
+      ],
+      "startedAt": "2026-10-26T10:08:52.339Z",
+      "model": "gpt-5.6-sol",
+      "provider": "openai",
+      "otherInstructionSourceCount": 0,
+      "turnStartedAt": "2026-10-26T10:08:52.558Z",
+      "tokenUsage": {
+        "total": {
+          "totalTokens": 7645,
+          "inputTokens": 6661,
+          "cachedInputTokens": 3712,
+          "cacheWriteInputTokens": 0,
+          "outputTokens": 984,
+          "reasoningOutputTokens": 284
+        },
+        "last": {
+          "totalTokens": 7645,
+          "inputTokens": 6661,
+          "cachedInputTokens": 3712,
+          "cacheWriteInputTokens": 0,
+          "outputTokens": 984,
+          "reasoningOutputTokens": 284
+        },
+        "modelContextWindow": 258400
+      },
+      "status": "completed",
+      "error": null,
+      "elapsedMs": 23763,
+      "turnElapsedMs": 23544,
+      "cohort": "inventory-pilot",
+      "review": {
+        "cohort": "inventory-pilot",
+        "runId": "002",
+        "id": "webhook-async",
+        "arm": "skill",
+        "criteria": [
+          true,
+          true,
+          true,
+          true
+        ],
+        "criticalFindings": [],
+        "blockedReads": 0,
+        "notes": "Supplied 202/upstream validation/committed inbox are recognized; no confirmed defect or mandatory queue. Additional implementation checks are conditional; no guessed files or runtime claims.",
+        "sourceResultSha256": "d98396b41b1c795f675768e99a110eda4fd6b24ad03022d0b831b6269556a7c2"
+      }
+    },
+    {
+      "runId": "001",
+      "id": "refund-overlap",
+      "arm": "skill",
+      "repeat": 1,
+      "prompt": "refund.js의 부분 환불 코드를 리뷰해줘. 기존 X 첫째 환불의 PG 응답이 유실되어 UNKNOWN이며 새 업무키로 X 전체 환불을 요청하는 상황이야. 출고 전이며 혜택은 유지돼. 코드를 수정하지 말고 실제 문제와 근거, 추가 확인 사항을 구분해줘.",
+      "skill": "commerce-review",
+      "skillSha256": "3a931dc5ed84973c1feba53299a19b65133def31b13958a36308dbab0a631010",
+      "cli": "codex-cli 0.153.2",
+      "effort": "medium",
+      "explicitSkill": true,
+      "skillDelivery": "exact SKILL.md in developerInstructions",
+      "skillEntryBytes": 3910,
+      "pluginIsolation": "process feature overrides; plugins and remote_plugin verified false",
+      "blockedReads": 0,
+      "failedCallSamples": [],
+      "reads": [
+        {
+          "path": "workspace/refund.js",
+          "sha256": "e0c05ba4f7907abb66272e1cc5c279b41d735821fdc3c6c570eb7bf3b7af93f7",
+          "bytes": 843
+        }
+      ],
+      "messages": [
+        "## 확인된 문제\n\n### 1. `UNKNOWN` 환불이 점유한 개별 단위를 무시해 `X-1` 중복 환불이 가능함 — 심각\n\n- 위치: `refund.js:5-6`\n- 코드는 `SUCCEEDED` 금액만 합산하고 `UNKNOWN`은 한도 및 대상 점유에서 제외합니다.\n- 현재 상태:\n  - `refund-1`: `X-1`, 6,669원, `UNKNOWN`\n  - `refund-2`: `X-1`, `X-2`, 13,339원\n- 새 요청은 `0 + 13,339 <= 20,009`라서 승인됩니다. 기존 시도까지 합쳐도 20,008원이므로 결제 총액 한도만으로는 문제를 발견할 수 없습니다.\n- 첫 환불이 PG에서는 성공했지만 응답만 유실된 경우, 새 요청을 PG로 보내면 `X-1`이 두 번 환불될 수 있습니다. 그 금액이 `Y-1`의 환불 가능액을 잠식하는데도 주문 총액 이내이므로 통과합니다.\n\n**최소 수정 방향:** `UNKNOWN`·`REQUESTED` 등 미확정 시도가 점유한 금액과 `units`를 함께 검사하고, 겹치는 `X-1`이 있으면 새 업무키 요청을 진행하지 않아야 합니다. 먼저 원 PG 거래를 조회하거나 검증된 통지·대사로 `refund-1`을 확정한 뒤, 확정 실패일 때만 점유를 해제해야 합니다.\n\n**검증:** 첫 시도의 실제 PG 결과를 성공·실패·계속 미확정으로 나눠, 새 요청이 각각 중복 방지·재시도 허용·보류되는지 시험해야 합니다.\n\n### 2. 업무키가 같아도 요청 지문을 검증하지 않음\n\n- 위치: `refund.js:3-4`\n- 같은 `key`가 존재하면 원 거래, 대상 단위, 금액 등의 일치 여부 없이 기존 결과를 반환합니다.\n- 따라서 같은 키로 다른 `units`나 `amount`가 들어와도 성공적인 멱등 재시도로 오인됩니다.\n\n현재 사례는 새 키라서 이 분기가 직접 작동하지 않지만, 멱등 처리 자체의 확정된 결함입니다. 키에는 적어도 결제 식별자, 대상 단위, 금액·통화로 구성한 요청 지문을 결합하고 불일치 요청은 충돌로 거부해야 합니다.\n\n### 3. 요청 금액과 대상 단위 금액의 정합성을 검사하지 않음\n\n- 위치: `refund.js:5-7`\n- 현재 `X-1 + X-2 = 6,669 + 6,670 = 13,339`이므로 입력값 자체는 맞습니다.\n- 그러나 함수는 `request.amount`가 `request.units`의 주문 시점 금액과 일치하는지, 단위가 실제 결제에 속하는지, 중복 단위가 있는지를 검증하지 않습니다. 다른 입력에서는 대상과 무관한 금액으로 점유·환불될 수 있습니다.\n\n## 추가 확인 사항\n\n- 이 파일에는 PG 호출, 원 거래 조회, 웹훅/대사, 상태 전이 코드가 없습니다. `UNKNOWN`을 실제로 어떻게 확정하는지와 새 요청이 PG에 전송되기 전 차단되는지는 확인할 수 없습니다.\n- 상태가 메모리 배열에만 기록됩니다. 실제 저장소에서 업무키·요청 지문·단위 점유가 유일 제약과 트랜잭션으로 보호되는지 확인해야 합니다.\n- 출고 전이므로 환불/취소가 **확정된 뒤** 원 업무와 연결하여 재고를 정확히 한 번 해제해야 합니다. 이 파일에는 재고 처리가 없어 구현 여부를 판단할 수 없습니다. `UNKNOWN` 단계에서 먼저 재고를 해제해서는 안 됩니다.\n- “혜택 유지” 정책과 충돌하는 혜택 회수·쿠폰 재발급·포인트 복원 코드는 이 파일에 없습니다. 따라서 여기서 혜택 복원을 추가해야 한다고 볼 근거도 없으며, 후속 처리에서 혜택을 건드리지 않는지만 확인하면 됩니다."
+      ],
+      "unexpectedTools": [],
+      "tokenUsageUpdates": [
+        {
+          "elapsedMs": 3119,
+          "total": {
+            "totalTokens": 6702,
+            "inputTokens": 6635,
+            "cachedInputTokens": 3712,
+            "cacheWriteInputTokens": 0,
+            "outputTokens": 67,
+            "reasoningOutputTokens": 10
+          },
+          "last": {
+            "totalTokens": 6702,
+            "inputTokens": 6635,
+            "cachedInputTokens": 3712,
+            "cacheWriteInputTokens": 0,
+            "outputTokens": 67,
+            "reasoningOutputTokens": 10
+          },
+          "modelContextWindow": 258400
+        },
+        {
+          "elapsedMs": 39854,
+          "total": {
+            "totalTokens": 15621,
+            "inputTokens": 13596,
+            "cachedInputTokens": 10112,
+            "cacheWriteInputTokens": 0,
+            "outputTokens": 2025,
+            "reasoningOutputTokens": 1025
+          },
+          "last": {
+            "totalTokens": 8919,
+            "inputTokens": 6961,
+            "cachedInputTokens": 6400,
+            "cacheWriteInputTokens": 0,
+            "outputTokens": 1958,
+            "reasoningOutputTokens": 1015
+          },
+          "modelContextWindow": 258400
+        }
+      ],
+      "startedAt": "2026-10-26T10:13:24.315Z",
+      "model": "gpt-5.6-sol",
+      "provider": "openai",
+      "otherInstructionSourceCount": 0,
+      "turnStartedAt": "2026-10-26T10:13:24.958Z",
+      "tokenUsage": {
+        "total": {
+          "totalTokens": 15621,
+          "inputTokens": 13596,
+          "cachedInputTokens": 10112,
+          "cacheWriteInputTokens": 0,
+          "outputTokens": 2025,
+          "reasoningOutputTokens": 1025
+        },
+        "last": {
+          "totalTokens": 8919,
+          "inputTokens": 6961,
+          "cachedInputTokens": 6400,
+          "cacheWriteInputTokens": 0,
+          "outputTokens": 1958,
+          "reasoningOutputTokens": 1015
+        },
+        "modelContextWindow": 258400
+      },
+      "status": "completed",
+      "error": null,
+      "elapsedMs": 39871,
+      "turnElapsedMs": 39230,
+      "cohort": "inventory-expanded",
+      "review": {
+        "cohort": "inventory-expanded",
+        "runId": "001",
+        "id": "refund-overlap",
+        "arm": "skill",
+        "criteria": [
+          true,
+          true,
+          true,
+          true
+        ],
+        "criticalFindings": [
+          {
+            "type": "policy-boundary-ambiguous",
+            "disposition": "hold candidate acceptance",
+            "evidence": "후속 처리에서 혜택을 건드리지 않는지만 확인하면 됩니다",
+            "note": "The surrounding sentence groups coupon reissue/points restoration with benefit-retention conflicts. This is an unresolved wording risk, not proof of an explicit permanent ban."
+          }
+        ],
+        "blockedReads": 0,
+        "notes": "Four refund criteria met: overlapping X-1 within order cap, UNKNOWN held, different key and fingerprint separated. Final benefit wording is ambiguous about coupon/points restoration; hold acceptance of the compressed review skill pending a clearer policy boundary.",
+        "sourceResultSha256": "2f3ad519ad2a8813155a3d8f4afb4f1b2a5eac05f7368d8600098f59e09023f4"
+      }
+    },
+    {
+      "runId": "002",
+      "id": "refund-overlap",
+      "arm": "baseline",
+      "repeat": 1,
+      "prompt": "refund.js의 부분 환불 코드를 리뷰해줘. 기존 X 첫째 환불의 PG 응답이 유실되어 UNKNOWN이며 새 업무키로 X 전체 환불을 요청하는 상황이야. 출고 전이며 혜택은 유지돼. 코드를 수정하지 말고 실제 문제와 근거, 추가 확인 사항을 구분해줘.",
+      "skill": "commerce-review",
+      "skillSha256": "daee540f06f2481c237049222b36ecfc1a5839e224bc570e59d9823751ca3dc2",
+      "cli": "codex-cli 0.153.2",
+      "effort": "medium",
+      "explicitSkill": true,
+      "skillDelivery": "exact SKILL.md in developerInstructions",
+      "skillEntryBytes": 5669,
+      "pluginIsolation": "process feature overrides; plugins and remote_plugin verified false",
+      "blockedReads": 0,
+      "failedCallSamples": [],
+      "reads": [
+        {
+          "path": "workspace/refund.js",
+          "sha256": "e0c05ba4f7907abb66272e1cc5c279b41d735821fdc3c6c570eb7bf3b7af93f7",
+          "bytes": 843
+        }
+      ],
+      "messages": [
+        "## 확인된 결함\n\n### 1. **높음 — `UNKNOWN`인 X-1을 점유로 보지 않아 중복 부분 환불을 허용함**\n\n근거: `refund.js:3-7`\n\n실제 입력의 실행 경로는 다음과 같습니다.\n\n1. 기존 환불 키는 `refund-1`, 신규 키는 `refund-2`이므로 멱등성 조기 반환을 통과합니다.\n2. 한도 계산은 `SUCCEEDED`만 합산합니다.\n   - 기존 `refund-1`은 `UNKNOWN`이므로 `completed = 0`\n3. 주문 한도 검사는 `0 + 13339 > 20009`가 거짓이므로 통과합니다.\n4. X-1과 X-2를 포함한 신규 환불이 `REQUESTED`로 추가됩니다.\n\n이때 점유 상태는 다음과 같습니다.\n\n- 기존 미확정 X-1: 6,669원\n- 신규 X 전체: X-1 6,669원 + X-2 6,670원 = 13,339원\n- X에 대한 총 환불·예약: 20,008원\n- X의 실제 결제액: 13,339원\n\n따라서 X-1이 6,669원만큼 중복 점유됩니다. 기존 `UNKNOWN`이 나중에 성공으로 확인되고 신규 요청도 처리되면 X-1이 두 번 환불될 수 있습니다.\n\n전체 주문 기준 합계는 20,008원으로 결제액 20,009원을 넘지 않습니다. 따라서 **주문 전체 환불 한도 초과 문제라고 주장할 수는 없고**, 문제는 라인/개별 단위 한도가 전혀 검사되지 않는다는 점입니다.\n\n최소 수정 방향:\n\n- `SUCCEEDED`뿐 아니라 `REQUESTED`, 처리 중, `UNKNOWN`이 점유한 금액·수량·unit을 한도 계산에 포함해야 합니다.\n- 특히 `UNKNOWN`인 `refund-1`을 원 PG에서 대사하여 확정 실패로 판명하기 전에는 X-1을 새 업무키로 다시 확보하면 안 됩니다.\n- 확정 실패일 때만 기존 점유를 해제해야 합니다.\n- 단순 주문 총액 검사 외에 `request.units`별 `payment.unitPaid` 한도를 검사해야 합니다.\n\n검증 방법:\n\n- 현재 입력으로 호출 후 `refund-2`가 생성되지 않고 X-1 중복 오류 또는 미확정 거래 오류가 발생하는지 확인합니다.\n- 기존 UNKNOWN이 성공으로 대사되면 X-2만 환불 가능해야 합니다.\n- 기존 UNKNOWN이 확정 실패한 뒤 점유를 해제하면 X-1, X-2 요청이 가능해야 합니다.\n\n### 2. **중간 — 같은 키의 요청 지문을 검증하지 않음**\n\n근거: `refund.js:2-3`\n\n동일한 키가 있으면 금액과 units가 달라도 기존 객체를 그대로 반환합니다.\n\n```js\nconst existing = refunds.find(refund => refund.key === request.key);\nif (existing) return existing;\n```\n\n따라서 같은 키로 내용이 변경된 요청을 정상 재시도로 오인합니다. 멱등 재시도는 원 요청의 금액, 대상 units 등 요청 지문이 같아야 하며, 다르면 충돌로 거절해야 합니다.\n\n이는 질문의 신규 키 경로에서 직접 발생한 문제는 아니지만 코드상 확인되는 별도 결함입니다.\n\n## 추가 확인 사항\n\n제공된 파일만으로는 다음을 확정할 수 없습니다.\n\n- `REQUESTED`가 실제 PG 환불로 전달되는 호출자·워커와 UNKNOWN 대사 절차\n- 실서비스 저장소에서 unit 점유를 원자적으로 확보하는 트랜잭션이나 고유 제약 존재 여부\n- 출고 전 취소 시 재고를 “입고 복원”하는지, 출고 예약 수량만 해제하는지와 중복 보상 방지\n- 혜택 유지 정책 및 주문 당시 할인 배부 스냅샷 사용 여부\n\n이 코드에는 재고·혜택 처리 자체가 없으므로, 출고 전이라는 이유만으로 재고 처리 결함을 확정하거나 “혜택 유지”를 근거로 쿠폰·포인트 복원 여부를 단정할 수 없습니다.\n\n별도 테스트는 실행하지 않았으며, 위 결과는 제공된 단일 인메모리 코드의 분기와 금액을 직접 추적한 결과입니다. 외부 PG 호출이나 실제 DB 동시성은 이 파일로 검증할 수 없습니다."
+      ],
+      "unexpectedTools": [],
+      "tokenUsageUpdates": [
+        {
+          "elapsedMs": 2826,
+          "total": {
+            "totalTokens": 7044,
+            "inputTokens": 6975,
+            "cachedInputTokens": 3712,
+            "cacheWriteInputTokens": 0,
+            "outputTokens": 69,
+            "reasoningOutputTokens": 12
+          },
+          "last": {
+            "totalTokens": 7044,
+            "inputTokens": 6975,
+            "cachedInputTokens": 3712,
+            "cacheWriteInputTokens": 0,
+            "outputTokens": 69,
+            "reasoningOutputTokens": 12
+          },
+          "modelContextWindow": 258400
+        },
+        {
+          "elapsedMs": 38875,
+          "total": {
+            "totalTokens": 16376,
+            "inputTokens": 14278,
+            "cachedInputTokens": 10496,
+            "cacheWriteInputTokens": 0,
+            "outputTokens": 2098,
+            "reasoningOutputTokens": 1046
+          },
+          "last": {
+            "totalTokens": 9332,
+            "inputTokens": 7303,
+            "cachedInputTokens": 6784,
+            "cacheWriteInputTokens": 0,
+            "outputTokens": 2029,
+            "reasoningOutputTokens": 1034
+          },
+          "modelContextWindow": 258400
+        }
+      ],
+      "startedAt": "2026-10-26T10:14:04.205Z",
+      "model": "gpt-5.6-sol",
+      "provider": "openai",
+      "otherInstructionSourceCount": 0,
+      "turnStartedAt": "2026-10-26T10:14:04.428Z",
+      "tokenUsage": {
+        "total": {
+          "totalTokens": 16376,
+          "inputTokens": 14278,
+          "cachedInputTokens": 10496,
+          "cacheWriteInputTokens": 0,
+          "outputTokens": 2098,
+          "reasoningOutputTokens": 1046
+        },
+        "last": {
+          "totalTokens": 9332,
+          "inputTokens": 7303,
+          "cachedInputTokens": 6784,
+          "cacheWriteInputTokens": 0,
+          "outputTokens": 2029,
+          "reasoningOutputTokens": 1034
+        },
+        "modelContextWindow": 258400
+      },
+      "status": "completed",
+      "error": null,
+      "elapsedMs": 38890,
+      "turnElapsedMs": 38667,
+      "cohort": "inventory-expanded",
+      "review": {
+        "cohort": "inventory-expanded",
+        "runId": "002",
+        "id": "refund-overlap",
+        "arm": "baseline",
+        "criteria": [
+          true,
+          true,
+          true,
+          true
+        ],
+        "criticalFindings": [],
+        "blockedReads": 0,
+        "notes": "Traces different-key branch, calculates unit/order limits, retains UNKNOWN and separates fingerprint and unprovided coupon/points policy without declaring operations tested.",
+        "sourceResultSha256": "af966eb0705a6205b64f01d5ec71fdd348061c312fa1d5a411ca408bcda6939a"
+      }
+    },
+    {
+      "runId": "003",
+      "id": "webhook-sync",
+      "arm": "baseline",
+      "repeat": 1,
+      "prompt": "결제 웹훅 설계를 리뷰해줘. PG 계약은 10초 안의 200을 성공 응답으로 인정해. 상위에서 진위·상점·주문·금액을 검증해. 단일 DB 트랜잭션에서 거래 업무키 UNIQUE와 조건부 상태 변경을 커밋한 뒤 200을 응답하며 중복 수신은 같은 결과를 반환해. 역순 이벤트는 현재 거래 조회와 상태 가드로 대사하고 과거 상태로 덮지 않아. 외부 호출·긴 후처리가 없고 검증을 포함한 최악 응답은 100ms로 부하 시험했어. 큐와 별도 워커는 없어. 제공 사실에 근거한 결함과 추가 확인을 구분하고 구현은 변경하지 마.",
+      "skill": "commerce-review",
+      "skillSha256": "daee540f06f2481c237049222b36ecfc1a5839e224bc570e59d9823751ca3dc2",
+      "cli": "codex-cli 0.153.2",
+      "effort": "medium",
+      "explicitSkill": true,
+      "skillDelivery": "exact SKILL.md in developerInstructions",
+      "skillEntryBytes": 5669,
+      "pluginIsolation": "process feature overrides; plugins and remote_plugin verified false",
+      "blockedReads": 0,
+      "failedCallSamples": [],
+      "reads": [],
+      "messages": [
+        "## 결론\n\n**제공된 사실만으로 확인되는 결함은 없습니다.** 특히 큐·별도 워커가 없다는 점은 결함이 아닙니다.\n\n- PG 요구인 **10초 이내 200**에 대해 최악 100ms로 검증됨\n- 진위·상점·주문·금액 검증이 상위 경로에 존재함\n- 응답 전에 단일 트랜잭션이 커밋되어 내구성이 확보됨\n- 업무키 `UNIQUE`와 조건부 상태 변경으로 동시·중복 처리를 방어함\n- 중복 수신은 동일 결과를 반환함\n- 역순 이벤트가 과거 상태를 덮지 않도록 현재 상태 조회와 전이 가드를 적용함\n- 응답 전에 분리해야 할 외부 호출이나 긴 후처리가 없음\n\n따라서 동기 DB 처리만으로 완료하는 현재 구조는 주어진 PG 계약과 모순되지 않습니다.\n\n## 추가 확인 사항\n\n다음은 결함 판정이 아니라, 실제 코드·스키마·테스트가 제공되면 확인할 항목입니다.\n\n1. **업무키의 고유 범위**\n   - PG사·상점·거래 또는 이벤트 종류를 포함하여 서로 다른 정상 거래가 충돌하지 않는지\n   - 동일 키지만 주문·금액·이벤트 내용이 다른 요청을 단순 중복으로 승인하지 않고 불일치로 탐지하는지\n\n2. **트랜잭션 실패 응답**\n   - 커밋 실패, 타임아웃, DB 연결 단절 시 200을 반환하지 않는지\n   - `UNIQUE` 경합 발생 시 기존 레코드를 다시 읽어 실제 저장 결과와 같은 응답을 만드는지\n\n3. **조건부 변경 결과 확인**\n   - 조건부 `UPDATE`의 영향 행 수가 0일 때 이를 성공적인 신규 전이로 오인하지 않는지\n   - 허용 상태 전이표가 결제 성공뿐 아니라 취소·실패·환불 등 실제 PG 이벤트 전체를 포괄하는지\n\n4. **중복·역순 응답 의미**\n   - 이미 더 최신 상태라서 무시한 이벤트에도 PG 재전송을 멈추게 하는 계약상 올바른 200 응답을 주는지\n   - 같은 이벤트의 재시도에는 최초 처리 결과가 안정적으로 유지되는지\n\n5. **부하 시험 범위**\n   - 100ms 수치가 애플리케이션 처리만이 아니라 실제 DB 락 경합, 중복 폭주, 커넥션 풀 고갈까지 포함한 것인지\n   - 장애 시 PG 재시도로 회복되는 운영 모니터링·대사 절차가 있는지\n\n프로젝트 코드와 스키마가 제공되지 않아 호출 경로·SQL·제약의 실제 구현 확인이나 테스트 실행은 하지 못했습니다."
+      ],
+      "unexpectedTools": [],
+      "tokenUsageUpdates": [
+        {
+          "elapsedMs": 19287,
+          "total": {
+            "totalTokens": 8034,
+            "inputTokens": 7072,
+            "cachedInputTokens": 3712,
+            "cacheWriteInputTokens": 0,
+            "outputTokens": 962,
+            "reasoningOutputTokens": 326
+          },
+          "last": {
+            "totalTokens": 8034,
+            "inputTokens": 7072,
+            "cachedInputTokens": 3712,
+            "cacheWriteInputTokens": 0,
+            "outputTokens": 962,
+            "reasoningOutputTokens": 326
+          },
+          "modelContextWindow": 258400
+        }
+      ],
+      "startedAt": "2026-10-26T10:14:43.108Z",
+      "model": "gpt-5.6-sol",
+      "provider": "openai",
+      "otherInstructionSourceCount": 0,
+      "turnStartedAt": "2026-10-26T10:14:43.325Z",
+      "tokenUsage": {
+        "total": {
+          "totalTokens": 8034,
+          "inputTokens": 7072,
+          "cachedInputTokens": 3712,
+          "cacheWriteInputTokens": 0,
+          "outputTokens": 962,
+          "reasoningOutputTokens": 326
+        },
+        "last": {
+          "totalTokens": 8034,
+          "inputTokens": 7072,
+          "cachedInputTokens": 3712,
+          "cacheWriteInputTokens": 0,
+          "outputTokens": 962,
+          "reasoningOutputTokens": 326
+        },
+        "modelContextWindow": 258400
+      },
+      "status": "completed",
+      "error": null,
+      "elapsedMs": 19309,
+      "turnElapsedMs": 19092,
+      "cohort": "inventory-expanded",
+      "review": {
+        "cohort": "inventory-expanded",
+        "runId": "003",
+        "id": "webhook-sync",
+        "arm": "baseline",
+        "criteria": [
+          true,
+          true,
+          true,
+          true
+        ],
+        "criticalFindings": [],
+        "blockedReads": 0,
+        "notes": "Accepts supplied synchronous 200 and short durable transaction, recognizes upstream/uniqueness/order guards; no compulsory queue.",
+        "sourceResultSha256": "f8bdb410f9df2602a1c5d2c9670796b24457330d16948b3cae98862993a3fdb9"
+      }
+    },
+    {
+      "runId": "004",
+      "id": "webhook-sync",
+      "arm": "skill",
+      "repeat": 1,
+      "prompt": "결제 웹훅 설계를 리뷰해줘. PG 계약은 10초 안의 200을 성공 응답으로 인정해. 상위에서 진위·상점·주문·금액을 검증해. 단일 DB 트랜잭션에서 거래 업무키 UNIQUE와 조건부 상태 변경을 커밋한 뒤 200을 응답하며 중복 수신은 같은 결과를 반환해. 역순 이벤트는 현재 거래 조회와 상태 가드로 대사하고 과거 상태로 덮지 않아. 외부 호출·긴 후처리가 없고 검증을 포함한 최악 응답은 100ms로 부하 시험했어. 큐와 별도 워커는 없어. 제공 사실에 근거한 결함과 추가 확인을 구분하고 구현은 변경하지 마.",
+      "skill": "commerce-review",
+      "skillSha256": "3a931dc5ed84973c1feba53299a19b65133def31b13958a36308dbab0a631010",
+      "cli": "codex-cli 0.153.2",
+      "effort": "medium",
+      "explicitSkill": true,
+      "skillDelivery": "exact SKILL.md in developerInstructions",
+      "skillEntryBytes": 3910,
+      "pluginIsolation": "process feature overrides; plugins and remote_plugin verified false",
+      "blockedReads": 0,
+      "failedCallSamples": [],
+      "reads": [],
+      "messages": [
+        "## 확인된 결함\n\n제공된 사실만으로는 확인된 설계 결함이 없습니다.\n\n- 검증 후 단일 DB 트랜잭션에서 업무키 `UNIQUE`와 조건부 상태 변경을 커밋하고 응답하므로, 200 이전에 내구성 있는 반영이 이뤄집니다.\n- 응답 유실로 PG가 재전송해도 동일 업무키의 기존 결과를 반환하므로 중복 반영을 방지합니다.\n- 역순 이벤트를 현재 상태와 상태 전이 가드로 처리해 과거 상태로 되돌리지 않습니다.\n- 외부 호출이나 긴 후처리가 없고 최악 응답이 100ms라면, PG의 10초 계약을 충족하므로 큐·별도 워커 부재 자체는 결함이 아닙니다.\n\n## 추가 확인이 필요한 사항\n\n1. **업무키 범위와 요청 지문**\n   - `PG사 + 상점 + 이벤트/거래 ID`처럼 서로 다른 거래가 충돌하지 않는 범위인지 확인해야 합니다.\n   - 같은 업무키인데 주문·원거래·금액·통화·이벤트 종류가 다르면 기존 성공 결과를 반환하지 말고 충돌로 처리해야 합니다.\n\n2. **실패 및 응답 유실 경계**\n   - 커밋 전 검증/DB 실패에는 200을 보내지 않아 PG 재시도를 유도하는지 확인해야 합니다.\n   - 커밋 후 200 응답이 유실된 경우 재수신이 기존 커밋 결과만 반환하는지 확인이 필요합니다.\n\n3. **동시성과 저장소 방어**\n   - 동일 키 동시 수신 시 `UNIQUE` 충돌을 정상적인 중복 경로로 처리하는지 확인해야 합니다.\n   - 서로 다른 이벤트가 동시에 도착해도 조건부 갱신 결과의 영향 행 수를 검사하고, 허용되지 않은 상태 전이가 성공으로 기록되지 않는지 확인해야 합니다.\n\n4. **중복 응답 계약**\n   - “같은 결과”가 PG가 재시도를 멈출 수 있는 HTTP 200을 의미하는지, 이미 처리된 실패 이벤트도 PG 계약에 맞게 응답하는지 확인해야 합니다.\n\n프로젝트 코드와 테스트가 제공되지 않아 실제 트랜잭션 경계, 제약 정의, 예외 처리 및 동시성 테스트 구현은 검증하지 못했습니다."
+      ],
+      "unexpectedTools": [],
+      "tokenUsageUpdates": [
+        {
+          "elapsedMs": 14301,
+          "total": {
+            "totalTokens": 7465,
+            "inputTokens": 6732,
+            "cachedInputTokens": 3712,
+            "cacheWriteInputTokens": 0,
+            "outputTokens": 733,
+            "reasoningOutputTokens": 205
+          },
+          "last": {
+            "totalTokens": 7465,
+            "inputTokens": 6732,
+            "cachedInputTokens": 3712,
+            "cacheWriteInputTokens": 0,
+            "outputTokens": 733,
+            "reasoningOutputTokens": 205
+          },
+          "modelContextWindow": 258400
+        }
+      ],
+      "startedAt": "2026-10-26T10:15:02.440Z",
+      "model": "gpt-5.6-sol",
+      "provider": "openai",
+      "otherInstructionSourceCount": 0,
+      "turnStartedAt": "2026-10-26T10:15:02.955Z",
+      "tokenUsage": {
+        "total": {
+          "totalTokens": 7465,
+          "inputTokens": 6732,
+          "cachedInputTokens": 3712,
+          "cacheWriteInputTokens": 0,
+          "outputTokens": 733,
+          "reasoningOutputTokens": 205
+        },
+        "last": {
+          "totalTokens": 7465,
+          "inputTokens": 6732,
+          "cachedInputTokens": 3712,
+          "cacheWriteInputTokens": 0,
+          "outputTokens": 733,
+          "reasoningOutputTokens": 205
+        },
+        "modelContextWindow": 258400
+      },
+      "status": "completed",
+      "error": null,
+      "elapsedMs": 14316,
+      "turnElapsedMs": 13801,
+      "cohort": "inventory-expanded",
+      "review": {
+        "cohort": "inventory-expanded",
+        "runId": "004",
+        "id": "webhook-sync",
+        "arm": "skill",
+        "criteria": [
+          true,
+          true,
+          true,
+          true
+        ],
+        "criticalFindings": [],
+        "blockedReads": 0,
+        "notes": "Reports no confirmed defect in supplied synchronous contract, preserves response/commit ordering and makes runtime checks conditional.",
+        "sourceResultSha256": "9e9927f13cec545a5c9918889976558aa64f7ec0035f4a821d370e28de49cd61"
+      }
+    },
+    {
+      "runId": "005",
+      "id": "lock-watchdog",
+      "arm": "skill",
+      "repeat": 1,
+      "prompt": "재고 작업을 보호하는 Redisson 락 사용을 검토해줘. 고정 leaseTime을 주지 않는 tryLock 대기 방식이고 watchdog timeout·갱신·인스턴스 중단 후 만료를 검증했어. 획득 실패 시 작업하지 않고 인터럽트는 상위로 전파해. 획득 성공 시 finally에서 소유권과 만료 경합에 맞게 해제하며, 저장소는 version 조건으로 늦은 쓰기를 거부해. DB 제약도 유지해. 코드와 운영 환경은 제공하지 않았어. 제공된 계약에서 확인된 결함과 더 확인할 조건을 나눠줘.",
+      "skill": "commerce-backend-expert",
+      "skillSha256": "df752e47635508b1f9e444a9ef0403a3f3b0136455953a1fba17a433d7853a93",
+      "cli": "codex-cli 0.153.2",
+      "effort": "medium",
+      "explicitSkill": true,
+      "skillDelivery": "exact SKILL.md in developerInstructions",
+      "skillEntryBytes": 3859,
+      "pluginIsolation": "process feature overrides; plugins and remote_plugin verified false",
+      "blockedReads": 0,
+      "failedCallSamples": [],
+      "reads": [
+        {
+          "path": "skills/commerce-backend-expert/references/spring-commerce/spring-commerce-locking-idempotency.md",
+          "sha256": "d180b4a2ba5a9908f8fd8ef46649f027adfe577694ea8d4c5b22250838ad511d",
+          "bytes": 4327
+        }
+      ],
+      "messages": [
+        "## 확인된 결함\n\n제공된 계약만으로는 **확정할 수 있는 결함이 없습니다.**\n\n다음 핵심 안전장치는 명시되어 있습니다.\n\n- 고정 `leaseTime` 없이 watchdog 갱신 사용\n- watchdog timeout·갱신·인스턴스 중단 후 만료 검증\n- 락 획득 실패 시 재고 작업 미수행\n- 인터럽트 상위 전파\n- 획득 성공 경로만 `finally`에서 소유권을 확인해 해제\n- 만료와 해제가 경합하는 경우 처리\n- 저장소의 `version` 조건으로 늦은 쓰기 거부\n- DB 제약 유지\n\n따라서 Redis 락 만료 후 이전 소유자의 늦은 쓰기가 새 소유자의 결과를 덮는 문제도 저장소 조건부 갱신으로 방어한다는 계약입니다. Redis 락만을 최종 정합성 수단으로 보지 않는 구성도 적절합니다.\n\n## 추가로 확인할 조건\n\n1. **실제 호출 API**\n   - 실제로 `tryLock(waitTime, unit)`처럼 leaseTime 없는 오버로드인지 확인해야 합니다.\n   - `tryLock(waitTime, leaseTime, unit)`에 값을 전달하면 watchdog 전제를 적용할 수 없습니다.\n   - 사용 중인 Redisson 버전에서 해당 오버로드의 watchdog 동작도 확인 대상입니다.\n\n2. **락 범위와 DB 커밋 순서**\n   - 락이 DB 트랜잭션의 **커밋 완료 이후까지** 유지되는지 확인해야 합니다.\n   - `@Transactional` 프록시가 메서드 반환 후 커밋하는 구조인데 메서드 내부 `finally`에서 먼저 unlock하면 보호 구간이 조기에 끝날 수 있습니다.\n   - 락 획득 → 트랜잭션 실행·커밋 → 락 해제 순서가 필요합니다.\n\n3. **락 키의 업무 범위**\n   - 동일한 재고를 변경하는 모든 경로가 같은 상품·SKU·창고 등의 정규화된 키를 사용하는지 확인해야 합니다.\n   - 주문, 취소, 반품, 관리자 조정, 입고처럼 일부 경로가 락이나 저장소 버전 조건을 우회하면 전체 정합성은 보장되지 않습니다.\n\n4. **저장소 조건부 쓰기의 원자성**\n   - `WHERE id = ? AND version = ?` 갱신과 version 증가가 하나의 원자적 SQL인지 확인해야 합니다.\n   - 영향 행 수가 `0`일 때 성공으로 처리하지 않고 충돌로 판정해야 합니다.\n   - 재고가 음수가 될 수 없다면 version 검사와 별도로 `quantity >= 차감량` 조건 또는 동등한 DB 제약이 실제 변경문에 적용되는지도 확인해야 합니다.\n\n5. **충돌 후 처리**\n   - version 충돌 재시도 여부, 최대 횟수와 backoff가 정해져야 합니다.\n   - 낙관락 실패로 rollback-only가 된 기존 트랜잭션 안에서 반복하지 않고, 필요하면 종료 후 새 트랜잭션에서 다시 조회해야 합니다.\n   - 이미 수행한 외부 부수효과를 재고 재시도와 함께 반복해서는 안 됩니다.\n\n6. **멱등성**\n   - 락은 요청 재전달이나 같은 주문의 순차적 중복 차감까지 막아주지 않습니다.\n   - 주문/재고 작업의 업무키, 요청 지문, 처리 상태와 결과를 저장하거나 동등한 DB `UNIQUE` 제약이 있는지 확인해야 합니다.\n\n7. **운영 장애 조건**\n   - `lockWatchdogTimeout`과 실제 최대 작업 시간, 긴 GC 정지, CPU 고갈, Redis 네트워크 단절에서 갱신이 실패할 때의 동작을 확인해야 합니다.\n   - Redis 재시작·failover 시 락 상태 변화와 stale writer가 실제 DB version 조건에서 거부되는 통합 시험이 필요합니다.\n   - `waitTime`은 유한해야 하며 요청 타임아웃보다 짧게 정렬하는 것이 필요합니다.\n\n8. **스레드 소유권**\n   - 획득과 해제가 같은 스레드에서 수행되는지 확인해야 합니다. 비동기 실행이나 리액티브 체인에서 스레드가 바뀌면 일반 `RLock`의 소유권 전제가 깨질 수 있습니다.\n   - `forceUnlock()`이나 Redis 키 직접 삭제로 정상 해제를 대체하지 않는지도 확인 대상입니다.\n\n코드와 운영 설정이 없으므로 위 항목의 구현 충족 여부와 구체적인 코드 위치는 검증하지 못했습니다. 참고한 내부 지침도 `status: needs-review`, `evidenceLevel: external-source`이므로 실제 Redisson 버전·DB·트랜잭션 구성에 대한 검증을 대신하지 않습니다."
+      ],
+      "unexpectedTools": [],
+      "tokenUsageUpdates": [
+        {
+          "elapsedMs": 4275,
+          "total": {
+            "totalTokens": 6805,
+            "inputTokens": 6715,
+            "cachedInputTokens": 0,
+            "cacheWriteInputTokens": 0,
+            "outputTokens": 90,
+            "reasoningOutputTokens": 16
+          },
+          "last": {
+            "totalTokens": 6805,
+            "inputTokens": 6715,
+            "cachedInputTokens": 0,
+            "cacheWriteInputTokens": 0,
+            "outputTokens": 90,
+            "reasoningOutputTokens": 16
+          },
+          "modelContextWindow": 258400
+        },
+        {
+          "elapsedMs": 34138,
+          "total": {
+            "totalTokens": 16375,
+            "inputTokens": 14699,
+            "cachedInputTokens": 6528,
+            "cacheWriteInputTokens": 0,
+            "outputTokens": 1676,
+            "reasoningOutputTokens": 532
+          },
+          "last": {
+            "totalTokens": 9570,
+            "inputTokens": 7984,
+            "cachedInputTokens": 6528,
+            "cacheWriteInputTokens": 0,
+            "outputTokens": 1586,
+            "reasoningOutputTokens": 516
+          },
+          "modelContextWindow": 258400
+        }
+      ],
+      "startedAt": "2026-10-26T10:15:16.852Z",
+      "model": "gpt-5.6-sol",
+      "provider": "openai",
+      "otherInstructionSourceCount": 0,
+      "turnStartedAt": "2026-10-26T10:15:17.083Z",
+      "tokenUsage": {
+        "total": {
+          "totalTokens": 16375,
+          "inputTokens": 14699,
+          "cachedInputTokens": 6528,
+          "cacheWriteInputTokens": 0,
+          "outputTokens": 1676,
+          "reasoningOutputTokens": 532
+        },
+        "last": {
+          "totalTokens": 9570,
+          "inputTokens": 7984,
+          "cachedInputTokens": 6528,
+          "cacheWriteInputTokens": 0,
+          "outputTokens": 1586,
+          "reasoningOutputTokens": 516
+        },
+        "modelContextWindow": 258400
+      },
+      "status": "completed",
+      "error": null,
+      "elapsedMs": 34152,
+      "turnElapsedMs": 33921,
+      "cohort": "inventory-expanded",
+      "review": {
+        "cohort": "inventory-expanded",
+        "runId": "005",
+        "id": "lock-watchdog",
+        "arm": "skill",
+        "criteria": [
+          true,
+          true,
+          true,
+          true
+        ],
+        "criticalFindings": [],
+        "blockedReads": 0,
+        "notes": "Accepts watchdog and supplied version/DB defenses without a permanent-lock or mandatory-lease finding; operational checks remain conditional.",
+        "sourceResultSha256": "b8ae5d4ebdc94719edbe134df08029e867573abca23cc9b86a56a023a51cc590"
+      }
+    },
+    {
+      "runId": "006",
+      "id": "lock-watchdog",
+      "arm": "baseline",
+      "repeat": 1,
+      "prompt": "재고 작업을 보호하는 Redisson 락 사용을 검토해줘. 고정 leaseTime을 주지 않는 tryLock 대기 방식이고 watchdog timeout·갱신·인스턴스 중단 후 만료를 검증했어. 획득 실패 시 작업하지 않고 인터럽트는 상위로 전파해. 획득 성공 시 finally에서 소유권과 만료 경합에 맞게 해제하며, 저장소는 version 조건으로 늦은 쓰기를 거부해. DB 제약도 유지해. 코드와 운영 환경은 제공하지 않았어. 제공된 계약에서 확인된 결함과 더 확인할 조건을 나눠줘.",
+      "skill": "commerce-backend-expert",
+      "skillSha256": "7dd8d9ecea51feed7b0f135bb3776877ee41713b0cb612fa976228f12c38efa9",
+      "cli": "codex-cli 0.153.2",
+      "effort": "medium",
+      "explicitSkill": true,
+      "skillDelivery": "exact SKILL.md in developerInstructions",
+      "skillEntryBytes": 5533,
+      "pluginIsolation": "process feature overrides; plugins and remote_plugin verified false",
+      "blockedReads": 0,
+      "failedCallSamples": [],
+      "reads": [
+        {
+          "path": "skills/commerce-backend-expert/references/inventory/INDEX.md",
+          "sha256": "67a3a3193dc63160f945ccab7dcf21353296dad510e89db36f5437804ccb8835",
+          "bytes": 1869
+        },
+        {
+          "path": "skills/commerce-backend-expert/references/inventory/concurrency-distributed.md",
+          "sha256": "def158437fe17f61456231ade93ca6d495c44be91df878a623ae043d1fcfbda8",
+          "bytes": 4687
+        },
+        {
+          "path": "skills/commerce-backend-expert/references/inventory/concurrency-optimistic.md",
+          "sha256": "b0975d9fd80438f17d84de248e667614c3ebae9a598cee01ae6add691cccd609",
+          "bytes": 3323
+        }
+      ],
+      "messages": [
+        "## 결론\n\n**제공된 계약만 기준으로 확인되는 결함은 없습니다.** 다음 핵심 실패 경로가 모두 계약에 포함되어 있습니다.\n\n- leaseTime 미지정 방식으로 watchdog 갱신 사용\n- watchdog timeout·갱신·인스턴스 중단 후 만료 검증\n- `tryLock` 획득 실패 시 보호 작업 미실행\n- 인터럽트 상위 전파\n- 획득 성공 경로만 `finally`에서 소유권을 확인해 해제\n- 만료 후 재획득과 기존 작업 재개 경합 고려\n- DB version 조건으로 늦은 쓰기 거부\n- DB 제약 유지\n\n이는 `concurrency-distributed`의 주요 요구사항과 부합합니다. 다만 코드와 운영 환경이 없으므로 **구현 및 운영 안전성이 확인된 것은 아닙니다.**\n\n## 추가로 확인할 조건\n\n1. **락의 보호 범위**\n   - 락 키가 실제 재고 업무 단위(SKU, 창고+SKU 등)와 정확히 일치하는지\n   - 모든 재고 변경 경로가 같은 락이나 동일한 DB 조건부 갱신을 거치는지\n   - 락 획득 후 조회하고, DB `flush/commit` 완료 전에는 해제하지 않는지\n\n2. **version 갱신의 실효성**\n   - 실제 SQL이 `WHERE id = ? AND version = ?` 형태이고 영향 행 수 0을 충돌로 처리하는지\n   - 벌크 UPDATE, 네이티브 SQL, 별도 저장 경로가 version 검사를 우회하지 않는지\n   - 재고 부족 조건과 version 충돌을 구분하는지\n   - 충돌 재시도가 있다면 기존 트랜잭션 종료 후 새 트랜잭션에서 수행하며 상한과 backoff가 있는지  \n     (`concurrency-optimistic`)\n\n3. **늦은 작업의 부수효과**\n   - DB version은 **해당 DB 쓰기**만 거부합니다. 락 소유권, 외부 API 호출, 메시지 발행, 다른 테이블 쓰기까지 보호하지 않습니다.\n   - stale 작업이 결제·이벤트·외부 호출을 먼저 수행할 수 있다면 fencing token, 멱등키, transactional outbox 또는 부수효과 순서 제어가 필요합니다.\n\n4. **Redisson 실제 계약**\n   - 실제 호출 오버로드가 명시적 leaseTime을 전달하지 않아 watchdog 대상인지\n   - 획득 스레드와 해제 스레드가 같은지\n   - `forceUnlock`처럼 소유권 검사를 우회하지 않는지\n   - 만료 직후 `unlock()` 경합에서 발생 가능한 `IllegalMonitorStateException` 처리가 의도대로인지\n\n5. **운영 장애와 용량**\n   - Redis failover, 네트워크 분할, 긴 GC pause 및 갱신 스케줄러 지연에서의 동작\n   - Redis 장애 시 fail-open하지 않고 작업을 중단하는지\n   - 대기시간 상한, 락 획득 실패율, 갱신 실패, 보유시간을 모니터링하는지\n   - 고경합 시 락 대기와 DB version 충돌이 처리량을 감당하는지\n\n6. **DB 불변식**\n   - 유지한다는 제약이 실제로 음수 재고, 중복 예약 등 필요한 불변식을 모두 표현하는지\n   - 락이 만료되어 두 작업이 겹쳐도 DB 조건부 갱신과 제약 위반 처리로 최종 정합성이 보존되는지\n\n참조한 `concurrency-distributed`와 `concurrency-optimistic`은 모두 `status: needs-review`이며 2026-10-24에 문서 검토된 지침입니다. 공식 계약 참고는 포함하지만, Redis 장애 및 운영 DB 경합·성능을 검증한 자료는 아니므로 위 항목은 코드·SQL·설정·장애시험으로 별도 확인해야 합니다."
+      ],
+      "unexpectedTools": [],
+      "tokenUsageUpdates": [
+        {
+          "elapsedMs": 2893,
+          "total": {
+            "totalTokens": 7229,
+            "inputTokens": 7134,
+            "cachedInputTokens": 0,
+            "cacheWriteInputTokens": 0,
+            "outputTokens": 95,
+            "reasoningOutputTokens": 28
+          },
+          "last": {
+            "totalTokens": 7229,
+            "inputTokens": 7134,
+            "cachedInputTokens": 0,
+            "cacheWriteInputTokens": 0,
+            "outputTokens": 95,
+            "reasoningOutputTokens": 28
+          },
+          "modelContextWindow": 258400
+        },
+        {
+          "elapsedMs": 5437,
+          "total": {
+            "totalTokens": 15147,
+            "inputTokens": 14893,
+            "cachedInputTokens": 6912,
+            "cacheWriteInputTokens": 0,
+            "outputTokens": 254,
+            "reasoningOutputTokens": 50
+          },
+          "last": {
+            "totalTokens": 7918,
+            "inputTokens": 7759,
+            "cachedInputTokens": 6912,
+            "cacheWriteInputTokens": 0,
+            "outputTokens": 159,
+            "reasoningOutputTokens": 22
+          },
+          "modelContextWindow": 258400
+        },
+        {
+          "elapsedMs": 33295,
+          "total": {
+            "totalTokens": 26914,
+            "inputTokens": 25034,
+            "cachedInputTokens": 14464,
+            "cacheWriteInputTokens": 0,
+            "outputTokens": 1880,
+            "reasoningOutputTokens": 786
+          },
+          "last": {
+            "totalTokens": 11767,
+            "inputTokens": 10141,
+            "cachedInputTokens": 7552,
+            "cacheWriteInputTokens": 0,
+            "outputTokens": 1626,
+            "reasoningOutputTokens": 736
+          },
+          "modelContextWindow": 258400
+        }
+      ],
+      "startedAt": "2026-10-26T10:15:51.090Z",
+      "model": "gpt-5.6-sol",
+      "provider": "openai",
+      "otherInstructionSourceCount": 0,
+      "turnStartedAt": "2026-10-26T10:15:51.291Z",
+      "tokenUsage": {
+        "total": {
+          "totalTokens": 26914,
+          "inputTokens": 25034,
+          "cachedInputTokens": 14464,
+          "cacheWriteInputTokens": 0,
+          "outputTokens": 1880,
+          "reasoningOutputTokens": 786
+        },
+        "last": {
+          "totalTokens": 11767,
+          "inputTokens": 10141,
+          "cachedInputTokens": 7552,
+          "cacheWriteInputTokens": 0,
+          "outputTokens": 1626,
+          "reasoningOutputTokens": 736
+        },
+        "modelContextWindow": 258400
+      },
+      "status": "completed",
+      "error": null,
+      "elapsedMs": 33309,
+      "turnElapsedMs": 33108,
+      "cohort": "inventory-expanded",
+      "review": {
+        "cohort": "inventory-expanded",
+        "runId": "006",
+        "id": "lock-watchdog",
+        "arm": "baseline",
+        "criteria": [
+          true,
+          true,
+          true,
+          true
+        ],
+        "criticalFindings": [],
+        "blockedReads": 0,
+        "notes": "Recognizes watchdog/release/version contract, keeps external effects and infrastructure conditions as additional checks rather than confirmed defects.",
+        "sourceResultSha256": "d4bc3cc6ce593c7062fda041ce54a511acf63d56405542f73f66d7fb8b1b74c7"
+      }
+    },
+    {
+      "runId": "007",
+      "id": "payment-uncertain",
+      "arm": "baseline",
+      "repeat": 1,
+      "prompt": "승인 호출이 5초 후 타임아웃됐어. 재고 차감은 DB에 커밋됐지만 PG 상태·웹훅·원장 결과는 아직 몰라. 새 키로 다시 승인하고 재고부터 복구해도 될까? 운영 접근은 없어. 현재 확인 가능한 판단과 다음 확인 순서를 설명해줘.",
+      "skill": "commerce-backend-expert",
+      "skillSha256": "7dd8d9ecea51feed7b0f135bb3776877ee41713b0cb612fa976228f12c38efa9",
+      "cli": "codex-cli 0.153.2",
+      "effort": "medium",
+      "explicitSkill": true,
+      "skillDelivery": "exact SKILL.md in developerInstructions",
+      "skillEntryBytes": 5533,
+      "pluginIsolation": "process feature overrides; plugins and remote_plugin verified false",
+      "blockedReads": 0,
+      "failedCallSamples": [],
+      "reads": [
+        {
+          "path": "skills/commerce-backend-expert/references/payment/INDEX.md",
+          "sha256": "bf39a474edfa687faedbfd2ca8446ce0e190c99ad2f7ecbff564f111a87c1607",
+          "bytes": 1860
+        },
+        {
+          "path": "skills/commerce-backend-expert/references/inventory/INDEX.md",
+          "sha256": "67a3a3193dc63160f945ccab7dcf21353296dad510e89db36f5437804ccb8835",
+          "bytes": 1869
+        },
+        {
+          "path": "skills/commerce-backend-expert/references/spring-commerce/INDEX.md",
+          "sha256": "aaf71251da59bd2ab5844863a5eb6e11bf225573779ae294b7f8a28b0250ef20",
+          "bytes": 5198
+        },
+        {
+          "path": "skills/commerce-backend-expert/references/payment/network-cancellation.md",
+          "sha256": "83cbf711a20e1f959de5f5ff62f13f11aff3567b4d592dd59097aa10df0ee38b",
+          "bytes": 4652
+        },
+        {
+          "path": "skills/commerce-backend-expert/references/payment/payment-idempotency.md",
+          "sha256": "696d318e096ef800fe1337c45781fb047114d725ddfffbe56096188548e6e014",
+          "bytes": 5067
+        },
+        {
+          "path": "skills/commerce-backend-expert/references/payment/duplicate-payment-guard.md",
+          "sha256": "759a9b6f548a2451c6ce019bc04e5430d46c15480fe18f1f89cc9f1634618844",
+          "bytes": 5183
+        },
+        {
+          "path": "skills/commerce-backend-expert/references/payment/webhook-handling.md",
+          "sha256": "edbe106ef1ccaf690415c8aef82db8a85c3accc04bd31089469ae645f2c81d69",
+          "bytes": 5153
+        },
+        {
+          "path": "skills/commerce-backend-expert/references/payment/payment-status-machine.md",
+          "sha256": "bea62c1977292458a49ed069b2ce5bf9b4192d08acd739eabe0e1258e5cfbf5e",
+          "bytes": 4620
+        },
+        {
+          "path": "skills/commerce-backend-expert/references/inventory/stock-reservation.md",
+          "sha256": "18a0eaf65a3f6b0c0a7add37bbaf6acfb0412df238254e22b87e2cda7bd34265",
+          "bytes": 3157
+        },
+        {
+          "path": "skills/commerce-backend-expert/references/inventory/saga-pattern.md",
+          "sha256": "706e75d229649ef2d44a6f2b514909a889346e3ea2cbbc05dd897384c8199fb0",
+          "bytes": 2670
+        }
+      ],
+      "messages": [
+        "## 결론\n\n**지금은 새 키로 재승인하거나 재고를 먼저 복구하면 안 됩니다.**\n\n5초 타임아웃은 승인 실패가 아니라 **응답을 받지 못했다는 사실**만 의미합니다. PG가 5초 이후 승인했거나 응답만 유실됐을 수 있습니다.\n\n- 새 키 재승인: 기존 승인이 성공했다면 **이중 결제 위험**\n- 재고 선복구: 늦은 승인 도착 시 **결제 완료인데 재고가 없는 상태·초과판매 위험**\n- 동일 키 재호출도 PG의 멱등성 계약이 확인되지 않았다면 자동 실행하면 안 됩니다.\n\n현재 결제 시도는 논리적으로 `UNCERTAIN`으로 취급하고, 해당 주문의 추가 승인·출고·재고 자동복구를 보류하는 것이 안전합니다.\n\n## 다음 확인 순서\n\n### 1. 우선 추가 변경을 차단\n\n운영 권한이 있는 담당자에게 다음 조치를 요청합니다.\n\n- 해당 주문의 신규 결제 시도 차단\n- 재고 만료·자동복구 작업이 있다면 해당 업무의 경합 여부 확인\n- 결제 확정 전 출고 차단\n- 기존 결제 시도 ID와 멱등키를 보존하고 새 키를 만들지 않기\n\n전사 작업을 임의 중단하기보다는, 가능하면 해당 주문·결제 시도 단위로 보류해야 합니다.\n\n### 2. 원 시도를 식별할 자료 확보\n\n읽기 전용으로 다음 값을 한 묶음으로 확보합니다.\n\n- 주문 ID, 내부 결제 시도 ID\n- 기존 PG 멱등키 또는 상점 주문번호\n- PG 거래 ID나 요청 추적 ID가 있으면 해당 값\n- 요청 시각, 타임아웃 시각\n- 금액, 통화, 결제수단 등 요청 지문\n- 재고 차감 업무키·수불 ID·차감 수량과 커밋 시각\n- 현재 주문·결제·원장·재고 상태 및 상태 변경 이력\n\n결제 시도 레코드가 외부 호출 전에 커밋됐는지도 중요합니다. 없다면 원 거래 추적과 중복 방지가 더 어려워집니다.\n\n### 3. PG에서 원 거래를 인증된 방식으로 조회\n\n해당 PG의 공식 계약을 확인한 뒤 **원 결제 시도의 식별자**로 조회합니다.\n\n확인할 계약은 다음과 같습니다.\n\n- 거래 조회가 가능해지는 시점\n- 기존 멱등키 재사용의 의미와 보존 기간\n- 타임아웃 거래의 망취소 지원 여부\n- 최종 성공·실패·취소 상태 정의\n- 웹훅 인증 및 재전송 정책\n\n조회 결과의 주문번호, 금액, 통화, 상점 식별자를 내부 요청과 대조해야 합니다. 검증되지 않은 웹훅 본문만으로 확정하면 안 됩니다.\n\n### 4. 웹훅과 내부 수신 기록 확인\n\n- 웹훅 inbox/수신 로그에 지연·실패·중복 이벤트가 있는지\n- 서명 또는 계약상 인증이 검증됐는지\n- 웹훅은 수신됐지만 상태 반영이 실패한 것은 아닌지\n- 원장/outbox/후처리 워커가 처리 중이거나 재시도 대기 중인지\n\n웹훅과 PG 조회가 다르다면 이벤트 발생 시각, 현재 PG 조회 결과, 내부 전이 이력을 함께 대사합니다.\n\n### 5. 결과별 처리\n\n| 확인 결과 | 처리 |\n|---|---|\n| **승인 성공** | 원 거래 ID의 중복을 검사하고 `UNCERTAIN → PAID`를 조건부 전이합니다. 원장은 한 번만 기록하고 이미 차감된 재고는 다시 차감하거나 복구하지 않습니다. |\n| **실패가 최종 확정** | 결제 시도를 `FAILED`로 확정한 뒤, 커밋된 재고 차감만 원 차감 업무키에 연결해 **한 번만** 복구합니다. 이후 사용자가 명시적으로 새 결제를 시작할 때만 새 시도·새 키를 만듭니다. |\n| **취소가 최종 확정** | 취소 거래와 원 승인의 연결 및 금액을 검증한 후 재고를 한 번만 복구합니다. |\n| **여전히 미확정** | 재승인·재고복구를 계속 보류하고 계약상 조회 재시도 또는 망취소를 수행합니다. 망취소 자체도 미확정이면 다시 조회·대사합니다. |\n| **재고 복구 후 늦은 승인 발견** | 출고를 보류하고 원 승인에 연결된 멱등 취소/환불 또는 재고 재확보 정책으로 대사합니다. 임의의 새 승인이나 중복 재차감으로 덮으면 안 됩니다. |\n\n## 현재 확인할 수 없는 범위\n\n운영 접근과 프로젝트 코드가 제공되지 않아 다음은 실제 확인되지 않았습니다.\n\n- 요청이 PG에 도달했는지와 실제 승인 여부\n- PG별 멱등키·조회·망취소 계약\n- 웹훅 수신 여부\n- 내부 결제 시도 및 원장 기록\n- 재고 복구의 멱등성·자동 만료 경합\n\n판단 근거는 `network-cancellation`, `payment-idempotency`, `duplicate-payment-guard`, `payment-status-machine`, `stock-reservation`입니다. 결제 지침은 `needs-review`이며 특정 PG의 실제 계약을 검증한 자료가 아니고, 재고 지침도 외부 근거가 첨부되지 않은 프로젝트 가이드이므로 **최종 실행은 사용하는 PG 공식 계약과 실제 상태 조회 후 결정해야 합니다.**"
+      ],
+      "unexpectedTools": [],
+      "tokenUsageUpdates": [
+        {
+          "elapsedMs": 5201,
+          "total": {
+            "totalTokens": 7290,
+            "inputTokens": 7066,
+            "cachedInputTokens": 3712,
+            "cacheWriteInputTokens": 0,
+            "outputTokens": 224,
+            "reasoningOutputTokens": 38
+          },
+          "last": {
+            "totalTokens": 7290,
+            "inputTokens": 7066,
+            "cachedInputTokens": 3712,
+            "cacheWriteInputTokens": 0,
+            "outputTokens": 224,
+            "reasoningOutputTokens": 38
+          },
+          "modelContextWindow": 258400
+        },
+        {
+          "elapsedMs": 8688,
+          "total": {
+            "totalTokens": 17278,
+            "inputTokens": 16836,
+            "cachedInputTokens": 10624,
+            "cacheWriteInputTokens": 0,
+            "outputTokens": 442,
+            "reasoningOutputTokens": 98
+          },
+          "last": {
+            "totalTokens": 9988,
+            "inputTokens": 9770,
+            "cachedInputTokens": 6912,
+            "cacheWriteInputTokens": 0,
+            "outputTokens": 218,
+            "reasoningOutputTokens": 60
+          },
+          "modelContextWindow": 258400
+        },
+        {
+          "elapsedMs": 45978,
+          "total": {
+            "totalTokens": 37399,
+            "inputTokens": 34785,
+            "cachedInputTokens": 20224,
+            "cacheWriteInputTokens": 0,
+            "outputTokens": 2614,
+            "reasoningOutputTokens": 991
+          },
+          "last": {
+            "totalTokens": 20121,
+            "inputTokens": 17949,
+            "cachedInputTokens": 9600,
+            "cacheWriteInputTokens": 0,
+            "outputTokens": 2172,
+            "reasoningOutputTokens": 893
+          },
+          "modelContextWindow": 258400
+        }
+      ],
+      "startedAt": "2026-10-26T10:16:24.476Z",
+      "model": "gpt-5.6-sol",
+      "provider": "openai",
+      "otherInstructionSourceCount": 0,
+      "turnStartedAt": "2026-10-26T10:16:25.192Z",
+      "tokenUsage": {
+        "total": {
+          "totalTokens": 37399,
+          "inputTokens": 34785,
+          "cachedInputTokens": 20224,
+          "cacheWriteInputTokens": 0,
+          "outputTokens": 2614,
+          "reasoningOutputTokens": 991
+        },
+        "last": {
+          "totalTokens": 20121,
+          "inputTokens": 17949,
+          "cachedInputTokens": 9600,
+          "cacheWriteInputTokens": 0,
+          "outputTokens": 2172,
+          "reasoningOutputTokens": 893
+        },
+        "modelContextWindow": 258400
+      },
+      "status": "completed",
+      "error": null,
+      "elapsedMs": 45993,
+      "turnElapsedMs": 45277,
+      "cohort": "inventory-expanded",
+      "review": {
+        "cohort": "inventory-expanded",
+        "runId": "007",
+        "id": "payment-uncertain",
+        "arm": "baseline",
+        "criteria": [
+          true,
+          true,
+          true,
+          true
+        ],
+        "criticalFindings": [],
+        "blockedReads": 0,
+        "notes": "Keeps uncertain approval and committed stock, rejects new-key approval or early restore, reconciles original attempt and provider-specific contracts without operational claims.",
+        "sourceResultSha256": "4c14ad3aaacbbbc8a8ddc27bed96190f3f550ce611b40258b5adaf0ebc211efa"
+      }
+    },
+    {
+      "runId": "008",
+      "id": "payment-uncertain",
+      "arm": "skill",
+      "repeat": 1,
+      "prompt": "승인 호출이 5초 후 타임아웃됐어. 재고 차감은 DB에 커밋됐지만 PG 상태·웹훅·원장 결과는 아직 몰라. 새 키로 다시 승인하고 재고부터 복구해도 될까? 운영 접근은 없어. 현재 확인 가능한 판단과 다음 확인 순서를 설명해줘.",
+      "skill": "commerce-backend-expert",
+      "skillSha256": "df752e47635508b1f9e444a9ef0403a3f3b0136455953a1fba17a433d7853a93",
+      "cli": "codex-cli 0.153.2",
+      "effort": "medium",
+      "explicitSkill": true,
+      "skillDelivery": "exact SKILL.md in developerInstructions",
+      "skillEntryBytes": 3859,
+      "pluginIsolation": "process feature overrides; plugins and remote_plugin verified false",
+      "blockedReads": 0,
+      "failedCallSamples": [],
+      "reads": [
+        {
+          "path": "skills/commerce-backend-expert/references/payment/network-cancellation.md",
+          "sha256": "83cbf711a20e1f959de5f5ff62f13f11aff3567b4d592dd59097aa10df0ee38b",
+          "bytes": 4652
+        },
+        {
+          "path": "skills/commerce-backend-expert/references/payment/webhook-handling.md",
+          "sha256": "edbe106ef1ccaf690415c8aef82db8a85c3accc04bd31089469ae645f2c81d69",
+          "bytes": 5153
+        },
+        {
+          "path": "skills/commerce-backend-expert/references/spring-commerce/spring-commerce-locking-idempotency.md",
+          "sha256": "d180b4a2ba5a9908f8fd8ef46649f027adfe577694ea8d4c5b22250838ad511d",
+          "bytes": 4327
+        }
+      ],
+      "messages": [
+        "## 현재 판단\n\n**지금은 새 키로 재승인하거나 재고를 먼저 복구하면 안 됩니다.**\n\n- 5초 타임아웃은 **승인 실패가 아니라 결과 미확정(UNCERTAIN)** 입니다. PG에서는 이미 승인됐지만 응답만 유실됐을 수 있습니다.\n- 새 키 재승인은 기존 승인이 살아 있는 경우 **이중 승인**을 만들 수 있습니다.\n- 재고를 먼저 복구하면 늦게 승인이 확인됐을 때 **결제 완료 주문의 재고가 풀려 오버셀링**될 수 있습니다.\n- 현재 가장 안전한 상태는 원 승인 시도와 재고 점유를 유지하면서 주문을 `결제 미확정` 상태로 격리하는 것입니다.\n\n## 다음 확인 순서\n\n1. **자동 후속 처리 차단**\n   - 새 승인, 주문 완료, 재고 복구, 자동 취소가 중복 실행되지 않도록 합니다.\n   - 원 결제 시도 ID, 멱등 키, 주문번호, 금액·통화, 요청 지문, 호출 시각을 보존합니다.\n\n2. **내부 원장과 시도 기록 확인**\n   - 원 승인 시도가 `PENDING/UNCERTAIN`으로 영속됐는지 확인합니다.\n   - 동일 주문이나 동일 업무키로 다른 승인·취소·재고 보상이 실행됐는지 확인합니다.\n   - DB 트랜잭션 로그, 결제 원장, outbox/inbox, 작업 재시도 기록을 함께 대조합니다.\n\n3. **원 시도를 PG에서 인증 조회**\n   - 반드시 **원 주문번호·결제키·승인 시도 식별자**로 조회합니다.\n   - 주문, 금액, 통화, 상점 정보를 대조합니다.\n   - `조회 결과 없음`도 곧바로 실패로 단정하지 말고 PG의 조회 반영 지연과 최종 상태 계약을 확인해야 합니다.\n\n4. **웹훅 확인**\n   - 서명·secret 검증을 통과했거나 인증 조회로 재확인된 이벤트만 근거로 사용합니다.\n   - 중복·역순 웹훅 가능성을 고려하여 이벤트 ID, 거래 ID, 현재 원장 상태를 대조합니다.\n   - 검증되지 않은 웹훅 body만으로 승인 완료나 실패를 확정하면 안 됩니다.\n\n5. **확정 결과별 처리**\n   - **승인 성공:** 원 거래를 내부 원장에 멱등 반영하고 재고 차감을 유지합니다. 새 승인은 금지합니다.\n   - **명시적 승인 실패/최종 미승인:** 같은 업무키의 멱등 보상으로 재고를 복구합니다. 재승인이 필요하면 기존 시도가 최종 무과금임을 확인한 뒤 별도 정책에 따라 처리합니다.\n   - **승인됐지만 주문 취소가 필요:** 원 거래를 대상으로 취소하고, 취소 결과가 확정된 후 재고를 멱등 복구합니다.\n   - **계속 미확정:** 재고를 임의 해제하지 말고 미확정 상태를 유지하며 PG 계약상 조회·망취소 시점에 재대사합니다. 취소 결과 역시 타임아웃이면 다시 미확정으로 관리합니다.\n\n## 재승인 키 원칙\n\n동일 승인 재시도가 PG 계약상 멱등하게 지원된다면 **원 키를 재사용**해야 합니다. 다만 PG별 계약이 다르므로, 같은 키 재시도가 가능한지 확인하지 않은 채 호출해서도 안 됩니다. 새 키는 원 시도가 최종적으로 승인되지 않았음이 확정되고, 새로운 결제 시도로 생성한다는 정책과 연결 원장이 있을 때만 고려할 수 있습니다.\n\n## 확인 한계\n\n운영 접근과 프로젝트 코드가 없어 실제 PG 상태, 웹훅 수신 여부, 내부 원장 및 자동 재시도 동작은 확인하지 못했습니다. 적용한 참고 규칙도 `needs-review`이며 특정 PG 계약을 인증한 자료는 아닙니다. 따라서 **사용 중인 PG의 공식 조회 가능 시점, 멱등 키 재사용, 망취소 및 웹훅 계약**을 최종 기준으로 확인해야 합니다."
+      ],
+      "unexpectedTools": [],
+      "tokenUsageUpdates": [
+        {
+          "elapsedMs": 3674,
+          "total": {
+            "totalTokens": 6746,
+            "inputTokens": 6647,
+            "cachedInputTokens": 3712,
+            "cacheWriteInputTokens": 0,
+            "outputTokens": 99,
+            "reasoningOutputTokens": 30
+          },
+          "last": {
+            "totalTokens": 6746,
+            "inputTokens": 6647,
+            "cachedInputTokens": 3712,
+            "cacheWriteInputTokens": 0,
+            "outputTokens": 99,
+            "reasoningOutputTokens": 30
+          },
+          "modelContextWindow": 258400
+        },
+        {
+          "elapsedMs": 6647,
+          "total": {
+            "totalTokens": 14918,
+            "inputTokens": 14627,
+            "cachedInputTokens": 10240,
+            "cacheWriteInputTokens": 0,
+            "outputTokens": 291,
+            "reasoningOutputTokens": 79
+          },
+          "last": {
+            "totalTokens": 8172,
+            "inputTokens": 7980,
+            "cachedInputTokens": 6528,
+            "cacheWriteInputTokens": 0,
+            "outputTokens": 192,
+            "reasoningOutputTokens": 49
+          },
+          "modelContextWindow": 258400
+        },
+        {
+          "elapsedMs": 32146,
+          "total": {
+            "totalTokens": 27119,
+            "inputTokens": 25403,
+            "cachedInputTokens": 18048,
+            "cacheWriteInputTokens": 0,
+            "outputTokens": 1716,
+            "reasoningOutputTokens": 584
+          },
+          "last": {
+            "totalTokens": 12201,
+            "inputTokens": 10776,
+            "cachedInputTokens": 7808,
+            "cacheWriteInputTokens": 0,
+            "outputTokens": 1425,
+            "reasoningOutputTokens": 505
+          },
+          "modelContextWindow": 258400
+        }
+      ],
+      "startedAt": "2026-10-26T10:17:10.545Z",
+      "model": "gpt-5.6-sol",
+      "provider": "openai",
+      "otherInstructionSourceCount": 0,
+      "turnStartedAt": "2026-10-26T10:17:11.094Z",
+      "tokenUsage": {
+        "total": {
+          "totalTokens": 27119,
+          "inputTokens": 25403,
+          "cachedInputTokens": 18048,
+          "cacheWriteInputTokens": 0,
+          "outputTokens": 1716,
+          "reasoningOutputTokens": 584
+        },
+        "last": {
+          "totalTokens": 12201,
+          "inputTokens": 10776,
+          "cachedInputTokens": 7808,
+          "cacheWriteInputTokens": 0,
+          "outputTokens": 1425,
+          "reasoningOutputTokens": 505
+        },
+        "modelContextWindow": 258400
+      },
+      "status": "completed",
+      "error": null,
+      "elapsedMs": 32159,
+      "turnElapsedMs": 31610,
+      "cohort": "inventory-expanded",
+      "review": {
+        "cohort": "inventory-expanded",
+        "runId": "008",
+        "id": "payment-uncertain",
+        "arm": "skill",
+        "criteria": [
+          true,
+          true,
+          true,
+          true
+        ],
+        "criticalFindings": [],
+        "blockedReads": 0,
+        "notes": "Retains UNKNOWN, original key/fingerprint and stock; authenticated lookup/notices/ledger determine definitive outcome and any later compensation.",
+        "sourceResultSha256": "03b1c79cc5b5c92477344f7b77a4ee2424a50b39198f5ffe231eaf4ae50c57e9"
+      }
+    },
+    {
+      "runId": "009",
+      "id": "coupon-redelivery",
+      "arm": "skill",
+      "repeat": 1,
+      "prompt": "쿠폰 소비자 A가 발급 원장을 DB에 커밋한 직후 ack 전에 종료됐어. 소비자 B가 같은 요청을 다시 받았고 다른 파티션에도 같은 캠페인의 발급 요청이 있어. 캠페인 발급 한도는 100개이고 현재 원장에는 99개야. 큐는 파티션 안에서만 순서를 보장해. 이 구조에서 중복 발급과 총 한도 초과를 막으려면 무엇을 확인하고 바꿔야 할까? 코드·운영 환경은 제공하지 않았어.",
+      "skill": "commerce-backend-expert",
+      "skillSha256": "df752e47635508b1f9e444a9ef0403a3f3b0136455953a1fba17a433d7853a93",
+      "cli": "codex-cli 0.153.2",
+      "effort": "medium",
+      "explicitSkill": true,
+      "skillDelivery": "exact SKILL.md in developerInstructions",
+      "skillEntryBytes": 3859,
+      "pluginIsolation": "process feature overrides; plugins and remote_plugin verified false",
+      "blockedReads": 0,
+      "failedCallSamples": [],
+      "reads": [
+        {
+          "path": "skills/commerce-backend-expert/references/coupon/coupon-issuance.md",
+          "sha256": "c3f75c395b1f2ab1bc29512cf7cd847ab16f908619e11bbc84e2d68b44663e99",
+          "bytes": 4842
+        },
+        {
+          "path": "skills/commerce-backend-expert/references/spring-commerce/spring-commerce-locking-idempotency.md",
+          "sha256": "d180b4a2ba5a9908f8fd8ef46649f027adfe577694ea8d4c5b22250838ad511d",
+          "bytes": 4327
+        }
+      ],
+      "messages": [
+        "현재 구조에서 **파티션 순서만으로는 중복 발급이나 캠페인 전체 한도를 보장할 수 없습니다.** 판단 기준은 큐가 아니라 공유 저장소의 원자적 제약이어야 합니다.\n\n## 반드시 확인할 사항\n\n1. **재전달 시 동일하게 유지되는 업무키**\n   - 메시지마다 안정적인 `issuanceRequestId`가 있는지 확인합니다.\n   - 1인 1매 정책이면 별도로 `(campaignId, userId)`도 업무키입니다.\n   - 동일 요청 ID에 캠페인·사용자·회차 등이 다른 경우를 막기 위해 요청 지문도 저장·비교해야 합니다.\n\n2. **DB 제약**\n   - `UNIQUE(issuance_request_id)`\n   - 1인 1매라면 `UNIQUE(campaign_id, user_id)`\n   - 회차 또는 1인 N매라면 실제 정책 범위가 제약 키에 포함되어야 합니다.\n   - 애플리케이션의 `SELECT 후 INSERT`만으로는 부족합니다.\n\n3. **한도 판정 방식**\n   - `SELECT COUNT(*) = 99` 후 발급하는 구조라면 경쟁 요청들이 모두 통과할 수 있습니다.\n   - 여러 파티션이 공유하는 캠페인 행에서 다음과 같은 **조건부 갱신**이 필요합니다.\n\n```sql\nUPDATE coupon_campaign\nSET issued_count = issued_count + 1\nWHERE campaign_id = :campaignId\n  AND issued_count < issue_limit;\n```\n\n영향받은 행이 1개인 요청만 한도를 확보한 것입니다. 현재 수량이 99라면 서로 다른 두 요청 중 하나만 100으로 만들고, 다른 요청은 실패해야 합니다.\n\n## 권장 트랜잭션 흐름\n\n```text\nBEGIN\n\n1. 발급 원장을 업무키로 INSERT\n   - 이미 존재하면 신규 발급이 아니라 재전달로 처리\n   - 저장된 요청 지문과 같으면 기존 결과 반환\n   - 지문이 다르면 키 충돌로 거부\n   - 이 경우 issued_count를 증가시키지 않음\n\n2. 신규 원장인 경우에만 캠페인 수량을 조건부 증가\n   - 성공: 발급 확정\n   - 영향 행 0개: 한도 소진이므로 전체 트랜잭션 롤백\n     (또는 정책에 따라 실패 결과를 별도 멱등 원장에 확정)\n\nCOMMIT\n\n3. 커밋 완료 후 메시지 ack\n```\n\n원장 INSERT를 먼저 하더라도 한도 확보 실패 시 반드시 같은 트랜잭션 전체가 롤백되어야 합니다. 반대로 수량부터 증가시킨 뒤 UNIQUE 충돌이 발생한다면 그 충돌을 같은 트랜잭션 안에서 삼키지 말고 전체 롤백 후 새 트랜잭션에서 기존 원장을 조회해야 합니다. UNIQUE 위반으로 `rollback-only`가 된 Spring 트랜잭션을 계속 사용하면 안 됩니다.\n\n## 주어진 장애에서 기대되는 결과\n\nA의 원장이 실제 커밋됐다면 B는 재전달된 동일 업무키의 원장을 발견해야 합니다.\n\n- 새 원장 생성 없음\n- 캠페인 수량 추가 증가 없음\n- A가 확정한 기존 결과를 재사용\n- 그 후 ack\n\n99개가 A의 커밋을 포함한 수량이라면 다른 파티션의 정상 요청 하나만 마지막 100번째를 확보합니다. B의 재전달은 자리를 다시 차지하지 않습니다.\n\n## 운영·구조상 추가 확인\n\n- ack가 DB 커밋 완료 전에 실행되지 않는지\n- DB 타임아웃 등 커밋 결과가 불명확할 때 업무키로 조회한 뒤 재시도하는지\n- 한도 판단이 읽기 복제본이나 캐시가 아니라 권위 있는 저장소에서 수행되는지\n- 캠페인 한도 변경, 발급 취소·회수 시 `issued_count`를 되돌릴지에 대한 정책\n- 원장과 카운터 불일치를 탐지하는 대사 작업\n- Redis를 사용한다면 한도 차감과 중복 선점은 하나의 Lua 연산이어야 하며, Redis 성공과 DB 원장 커밋 사이의 불일치를 복구할 영속 시도 기록과 대사가 있는지\n\n같은 캠페인을 동일 파티션 키로 라우팅하면 경합을 줄일 수는 있지만, 재전달·리밸런싱·잘못된 라우팅에 대비한 최종 방어가 될 수는 없습니다.\n\n코드와 DDL, 큐 ack 설정이 제공되지 않았으므로 위 항목의 실제 누락 여부는 확인할 수 없습니다. 특히 현재의 `99`가 원장 집계인지 별도 카운터인지, A의 발급을 포함하는지도 추가 확인이 필요합니다. 참고 규칙 또한 `needs-review` 상태이므로 실제 DB 종류와 운영 장애 조건에서 검증해야 합니다."
+      ],
+      "unexpectedTools": [],
+      "tokenUsageUpdates": [
+        {
+          "elapsedMs": 4242,
+          "total": {
+            "totalTokens": 6884,
+            "inputTokens": 6697,
+            "cachedInputTokens": 3712,
+            "cacheWriteInputTokens": 0,
+            "outputTokens": 187,
+            "reasoningOutputTokens": 44
+          },
+          "last": {
+            "totalTokens": 6884,
+            "inputTokens": 6697,
+            "cachedInputTokens": 3712,
+            "cacheWriteInputTokens": 0,
+            "outputTokens": 187,
+            "reasoningOutputTokens": 44
+          },
+          "modelContextWindow": 258400
+        },
+        {
+          "elapsedMs": 50516,
+          "total": {
+            "totalTokens": 18918,
+            "inputTokens": 16270,
+            "cachedInputTokens": 10240,
+            "cacheWriteInputTokens": 0,
+            "outputTokens": 2648,
+            "reasoningOutputTokens": 1416
+          },
+          "last": {
+            "totalTokens": 12034,
+            "inputTokens": 9573,
+            "cachedInputTokens": 6528,
+            "cacheWriteInputTokens": 0,
+            "outputTokens": 2461,
+            "reasoningOutputTokens": 1372
+          },
+          "modelContextWindow": 258400
+        }
+      ],
+      "startedAt": "2026-10-26T10:17:42.781Z",
+      "model": "gpt-5.6-sol",
+      "provider": "openai",
+      "otherInstructionSourceCount": 0,
+      "turnStartedAt": "2026-10-26T10:17:42.975Z",
+      "tokenUsage": {
+        "total": {
+          "totalTokens": 18918,
+          "inputTokens": 16270,
+          "cachedInputTokens": 10240,
+          "cacheWriteInputTokens": 0,
+          "outputTokens": 2648,
+          "reasoningOutputTokens": 1416
+        },
+        "last": {
+          "totalTokens": 12034,
+          "inputTokens": 9573,
+          "cachedInputTokens": 6528,
+          "cacheWriteInputTokens": 0,
+          "outputTokens": 2461,
+          "reasoningOutputTokens": 1372
+        },
+        "modelContextWindow": 258400
+      },
+      "status": "completed",
+      "error": null,
+      "elapsedMs": 50531,
+      "turnElapsedMs": 50337,
+      "cohort": "inventory-expanded",
+      "review": {
+        "cohort": "inventory-expanded",
+        "runId": "009",
+        "id": "coupon-redelivery",
+        "arm": "skill",
+        "criteria": [
+          true,
+          true,
+          true,
+          true
+        ],
+        "criticalFindings": [],
+        "blockedReads": 0,
+        "notes": "Uses stable deduplication and conditional one-per-user policy, atomically reserves the shared cap with ledger and ack only after commit; does not treat partitioning or Redis alone as durable guarantee.",
+        "sourceResultSha256": "f0d0e4aa6426524df9ffa2fe6c83bed127af879f5903f0066e43f17c1ae37ebf"
+      }
+    },
+    {
+      "runId": "010",
+      "id": "coupon-redelivery",
+      "arm": "baseline",
+      "repeat": 1,
+      "prompt": "쿠폰 소비자 A가 발급 원장을 DB에 커밋한 직후 ack 전에 종료됐어. 소비자 B가 같은 요청을 다시 받았고 다른 파티션에도 같은 캠페인의 발급 요청이 있어. 캠페인 발급 한도는 100개이고 현재 원장에는 99개야. 큐는 파티션 안에서만 순서를 보장해. 이 구조에서 중복 발급과 총 한도 초과를 막으려면 무엇을 확인하고 바꿔야 할까? 코드·운영 환경은 제공하지 않았어.",
+      "skill": "commerce-backend-expert",
+      "skillSha256": "7dd8d9ecea51feed7b0f135bb3776877ee41713b0cb612fa976228f12c38efa9",
+      "cli": "codex-cli 0.153.2",
+      "effort": "medium",
+      "explicitSkill": true,
+      "skillDelivery": "exact SKILL.md in developerInstructions",
+      "skillEntryBytes": 5533,
+      "pluginIsolation": "process feature overrides; plugins and remote_plugin verified false",
+      "blockedReads": 0,
+      "failedCallSamples": [],
+      "reads": [
+        {
+          "path": "skills/commerce-backend-expert/references/coupon/INDEX.md",
+          "sha256": "be989790fa7e9f9bb074e16f5f7ddb8f8791d79e62615f9f6e8079fac5d7c734",
+          "bytes": 1742
+        },
+        {
+          "path": "skills/commerce-backend-expert/references/coupon/coupon-issuance.md",
+          "sha256": "c3f75c395b1f2ab1bc29512cf7cd847ab16f908619e11bbc84e2d68b44663e99",
+          "bytes": 4842
+        },
+        {
+          "path": "skills/commerce-backend-expert/references/spring-commerce/INDEX.md",
+          "sha256": "aaf71251da59bd2ab5844863a5eb6e11bf225573779ae294b7f8a28b0250ef20",
+          "bytes": 5198
+        },
+        {
+          "path": "skills/commerce-backend-expert/references/spring-commerce/spring-commerce-locking-idempotency.md",
+          "sha256": "d180b4a2ba5a9908f8fd8ef46649f027adfe577694ea8d4c5b22250838ad511d",
+          "bytes": 4327
+        }
+      ],
+      "messages": [
+        "## 결론\n\nDB 커밋과 큐 ack 사이의 장애 구간 자체는 없앨 수 없습니다. 대신 **재전달되어도 DB 효과가 한 번만 발생하도록** 만들어야 합니다.\n\n현재 99건에 A가 커밋한 발급도 포함되어 있다면:\n\n- B의 재전달은 기존 발급 결과를 반환하고 수량을 늘리지 않아야 합니다.\n- 다른 파티션의 정상 요청 하나만 100번째 발급에 성공해야 합니다.\n- 파티션 순서는 캠페인 전체 한도를 보호하지 못하므로 DB에서 캠페인 단위로 직렬화해야 합니다.\n\n## 확인하고 변경할 사항\n\n### 1. 발급 업무키를 확정하고 DB UNIQUE로 강제\n\n최소한 다음 두 종류를 구분해야 합니다.\n\n- **동일 요청 재전달 키**: `issuance_request_id` 같은 생산 시점부터 고정된 키\n- **업무상 중복 발급 키**: 1인 1매라면 `(campaign_id, user_id[, round])`\n\n두 키 모두 필요한 경우 각각 UNIQUE 제약을 둡니다. 큐 메시지 ID만 사용할지는 생산자의 재발행 방식까지 확인해야 합니다. 같은 요청이 새 메시지 ID로 발행될 수 있다면 메시지 ID만으로는 부족합니다.\n\n애플리케이션의 `SELECT 후 INSERT`만으로 중복을 막으면 안 됩니다.\n\n### 2. 캠페인 한도를 원자적으로 확보\n\n다음과 같은 원장 건수 선조회 방식은 피해야 합니다.\n\n```sql\nSELECT COUNT(*) ...;  -- 99\nif (count < 100) INSERT ...;\n```\n\n서로 다른 파티션의 소비자가 모두 99를 보고 발급할 수 있습니다.\n\n권장되는 DB-only 방식은 캠페인별 카운터 행을 두고 다음 조건부 갱신을 사용하는 것입니다.\n\n```sql\nUPDATE coupon_campaign\nSET issued_count = issued_count + 1\nWHERE campaign_id = :campaignId\n  AND issued_count < issue_limit;\n```\n\n영향받은 행이 1개일 때만 한도를 확보한 것입니다. 다음 작업은 반드시 **같은 물리 DB 트랜잭션**이어야 합니다.\n\n1. 멱등 요청 키 선점 또는 기존 결과 확인\n2. 캠페인 한도 조건부 증가\n3. 발급 원장 INSERT\n4. 멱등 결과를 `SUCCESS`로 저장\n5. 커밋\n\n원장 INSERT가 UNIQUE 충돌 등으로 실패하면 카운터 증가도 전부 롤백되어야 합니다. Spring에서 `DataIntegrityViolationException`을 같은 트랜잭션 안에서 잡고 정상 커밋하여 카운터만 남기는 구조인지 특히 확인해야 합니다.\n\n대안으로 캠페인 행 `SELECT ... FOR UPDATE` 후 확인·갱신·원장 저장도 가능하지만, 폭주 시 락 대기와 커넥션 소진을 검증해야 합니다.\n\n### 3. 멱등 확인을 품절 판정보다 앞에 둠\n\n캠페인이 이미 100개가 된 뒤 B가 재전달될 수 있습니다. 이때 한도부터 검사하면 B를 `SOLD_OUT`으로 잘못 처리할 수 있습니다.\n\n안전한 처리 순서는 다음과 같습니다.\n\n```text\nBEGIN\n\n요청 업무키를 UNIQUE하게 선점\n  이미 존재:\n    요청 지문이 다르면 거부\n    동일 요청이면 저장된 기존 발급 결과 반환\n    수량 변경 없음\n\n신규 요청:\n  캠페인 카운터를 issued_count < limit 조건으로 증가\n  실패하면 SOLD_OUT 처리\n  성공하면 발급 원장 저장\n  성공 결과 저장\n\nCOMMIT\n그 후 ACK\n```\n\n`INSERT ... ON CONFLICT DO NOTHING` 같은 방식을 쓸 수 있습니다. 단순히 UNIQUE 예외를 잡는 방식은 DB/JPA에 따라 트랜잭션이 rollback-only가 될 수 있으므로 별도 트랜잭션에서 기존 결과를 다시 읽거나 명시적인 upsert 흐름을 사용해야 합니다.\n\n### 4. ack 정책 확인\n\n- 자동 ack가 DB 커밋보다 먼저 되지 않는지\n- DB 커밋 성공 후에만 수동 ack/offset commit 하는지\n- ack 실패 시 재전달되는지\n- 기존 성공 결과를 확인한 B도 정상적으로 ack하는지\n- DB 오류나 트랜잭션 롤백 시에는 ack하지 않는지\n- 재시도 횟수와 DLQ 전환 후 운영 복구 절차가 있는지\n\n목표는 메시지의 정확히 한 번 전달이 아니라 **최소 한 번 전달에서도 발급 효과가 정확히 한 번만 나타나는 것**입니다.\n\n## 추가 운영 확인\n\n- 현재 원장 99건과 캠페인 `issued_count`가 실제로 일치하는지\n- 99건에 A의 커밋 건이 포함됐는지와 조회 시점\n- 취소·회수·만료 건을 한도에서 차감하는지\n- 기존 데이터에 중복 업무키가 없는지와 UNIQUE 마이그레이션 방법\n- 카운터와 원장 불일치 탐지·대사 절차\n- 데드락/직렬화 실패에 대한 제한된 재시도와 backoff\n- 서로 다른 파티션 소비자를 동시에 실행해 다음을 검증:\n  - A 커밋 후 ack 전 종료와 B 재전달\n  - 99건에서 서로 다른 두 요청의 동시 처리\n  - 동일 요청의 동시 재전달\n  - 원장 INSERT 실패 시 카운터 롤백\n  - 100건 도달 후 과거 성공 요청 재전달\n\nRedis로 선점한다면 Lua의 원자성만으로 Redis와 DB의 원자적 커밋이 되지는 않습니다. 영속 attempt, 확정 상태, 멱등 보상 및 대사까지 필요하므로, 제시된 조건만 보면 최종 원장 DB에서 조건부 카운터와 UNIQUE를 같은 트랜잭션으로 묶는 방식이 단순합니다.\n\n근거는 `coupon-issuance`, `spring-commerce-locking-idempotency` 규칙입니다. 두 문서 모두 `needs-review`이며 실제 코드, DB 종류·격리 수준, 큐 설정과 운영 failover는 제공되지 않았으므로 현재 시스템이 안전한지는 확인할 수 없습니다."
+      ],
+      "unexpectedTools": [],
+      "tokenUsageUpdates": [
+        {
+          "elapsedMs": 2911,
+          "total": {
+            "totalTokens": 7207,
+            "inputTokens": 7116,
+            "cachedInputTokens": 3712,
+            "cacheWriteInputTokens": 0,
+            "outputTokens": 91,
+            "reasoningOutputTokens": 25
+          },
+          "last": {
+            "totalTokens": 7207,
+            "inputTokens": 7116,
+            "cachedInputTokens": 3712,
+            "cacheWriteInputTokens": 0,
+            "outputTokens": 91,
+            "reasoningOutputTokens": 25
+          },
+          "modelContextWindow": 258400
+        },
+        {
+          "elapsedMs": 5169,
+          "total": {
+            "totalTokens": 14984,
+            "inputTokens": 14792,
+            "cachedInputTokens": 10624,
+            "cacheWriteInputTokens": 0,
+            "outputTokens": 192,
+            "reasoningOutputTokens": 57
+          },
+          "last": {
+            "totalTokens": 7777,
+            "inputTokens": 7676,
+            "cachedInputTokens": 6912,
+            "cacheWriteInputTokens": 0,
+            "outputTokens": 101,
+            "reasoningOutputTokens": 32
+          },
+          "modelContextWindow": 258400
+        },
+        {
+          "elapsedMs": 7076,
+          "total": {
+            "totalTokens": 24199,
+            "inputTokens": 23909,
+            "cachedInputTokens": 10624,
+            "cacheWriteInputTokens": 0,
+            "outputTokens": 290,
+            "reasoningOutputTokens": 88
+          },
+          "last": {
+            "totalTokens": 9215,
+            "inputTokens": 9117,
+            "cachedInputTokens": 0,
+            "cacheWriteInputTokens": 0,
+            "outputTokens": 98,
+            "reasoningOutputTokens": 31
+          },
+          "modelContextWindow": 258400
+        },
+        {
+          "elapsedMs": 8675,
+          "total": {
+            "totalTokens": 34864,
+            "inputTokens": 34491,
+            "cachedInputTokens": 19584,
+            "cacheWriteInputTokens": 0,
+            "outputTokens": 373,
+            "reasoningOutputTokens": 98
+          },
+          "last": {
+            "totalTokens": 10665,
+            "inputTokens": 10582,
+            "cachedInputTokens": 8960,
+            "cacheWriteInputTokens": 0,
+            "outputTokens": 83,
+            "reasoningOutputTokens": 10
+          },
+          "modelContextWindow": 258400
+        },
+        {
+          "elapsedMs": 80082,
+          "total": {
+            "totalTokens": 50609,
+            "inputTokens": 46335,
+            "cachedInputTokens": 29952,
+            "cacheWriteInputTokens": 0,
+            "outputTokens": 4274,
+            "reasoningOutputTokens": 2602
+          },
+          "last": {
+            "totalTokens": 15745,
+            "inputTokens": 11844,
+            "cachedInputTokens": 10368,
+            "cacheWriteInputTokens": 0,
+            "outputTokens": 3901,
+            "reasoningOutputTokens": 2504
+          },
+          "modelContextWindow": 258400
+        }
+      ],
+      "startedAt": "2026-10-26T10:18:33.391Z",
+      "model": "gpt-5.6-sol",
+      "provider": "openai",
+      "otherInstructionSourceCount": 0,
+      "turnStartedAt": "2026-10-26T10:18:33.721Z",
+      "tokenUsage": {
+        "total": {
+          "totalTokens": 50609,
+          "inputTokens": 46335,
+          "cachedInputTokens": 29952,
+          "cacheWriteInputTokens": 0,
+          "outputTokens": 4274,
+          "reasoningOutputTokens": 2602
+        },
+        "last": {
+          "totalTokens": 15745,
+          "inputTokens": 11844,
+          "cachedInputTokens": 10368,
+          "cacheWriteInputTokens": 0,
+          "outputTokens": 3901,
+          "reasoningOutputTokens": 2504
+        },
+        "modelContextWindow": 258400
+      },
+      "status": "completed",
+      "error": null,
+      "elapsedMs": 80100,
+      "turnElapsedMs": 79770,
+      "cohort": "inventory-expanded",
+      "review": {
+        "cohort": "inventory-expanded",
+        "runId": "010",
+        "id": "coupon-redelivery",
+        "arm": "baseline",
+        "criteria": [
+          true,
+          true,
+          true,
+          true
+        ],
+        "criticalFindings": [],
+        "blockedReads": 0,
+        "notes": "Separates redelivery identity and business uniqueness, checks deduplication before sold-out handling, protects the shared 99-to-100 boundary and DB commit before ack.",
+        "sourceResultSha256": "3100dfd6b3f5f809e262265df7ff8acc6e2ec8e5c04c33e3de8a88cd23a4d477"
+      }
+    },
+    {
+      "runId": "011",
+      "id": "retry-rollback-only",
+      "arm": "baseline",
+      "repeat": 1,
+      "prompt": "Spring 서비스의 @Transactional 메서드에서 Hibernate flush가 OptimisticLockException을 던졌어. catch 안에서 같은 트랜잭션·같은 엔티티로 재시도하면 될까? 이 메서드에는 외부 PG 승인 호출도 있어. 실제 코드와 실행 환경은 없어. 최소한의 수정 방향과 확인할 실패 구간을 검토해줘.",
+      "skill": "commerce-backend-expert",
+      "skillSha256": "7dd8d9ecea51feed7b0f135bb3776877ee41713b0cb612fa976228f12c38efa9",
+      "cli": "codex-cli 0.153.2",
+      "effort": "medium",
+      "explicitSkill": true,
+      "skillDelivery": "exact SKILL.md in developerInstructions",
+      "skillEntryBytes": 5533,
+      "pluginIsolation": "process feature overrides; plugins and remote_plugin verified false",
+      "blockedReads": 0,
+      "failedCallSamples": [],
+      "reads": [
+        {
+          "path": "skills/commerce-backend-expert/references/spring-commerce/INDEX.md",
+          "sha256": "aaf71251da59bd2ab5844863a5eb6e11bf225573779ae294b7f8a28b0250ef20",
+          "bytes": 5198
+        },
+        {
+          "path": "skills/commerce-backend-expert/references/payment/INDEX.md",
+          "sha256": "bf39a474edfa687faedbfd2ca8446ce0e190c99ad2f7ecbff564f111a87c1607",
+          "bytes": 1860
+        },
+        {
+          "path": "skills/commerce-backend-expert/references/spring-commerce/spring-commerce-transaction-boundary.md",
+          "sha256": "fd7e60ef356911a32c260b350572a8a254afeacbb5330395e9bda75c7e07b2de",
+          "bytes": 2516
+        },
+        {
+          "path": "skills/commerce-backend-expert/references/spring-commerce/spring-commerce-locking-idempotency.md",
+          "sha256": "d180b4a2ba5a9908f8fd8ef46649f027adfe577694ea8d4c5b22250838ad511d",
+          "bytes": 4327
+        },
+        {
+          "path": "skills/commerce-backend-expert/references/spring-commerce/spring-resilience-retry-timeout.md",
+          "sha256": "097fcea8e52725cd770665f72b13fee97aec8dfb565acb1d42004f7becee26b8",
+          "bytes": 2974
+        },
+        {
+          "path": "skills/commerce-backend-expert/references/payment/duplicate-payment-guard.md",
+          "sha256": "759a9b6f548a2451c6ce019bc04e5430d46c15480fe18f1f89cc9f1634618844",
+          "bytes": 5183
+        },
+        {
+          "path": "skills/commerce-backend-expert/references/payment/payment-idempotency.md",
+          "sha256": "696d318e096ef800fe1337c45781fb047114d725ddfffbe56096188548e6e014",
+          "bytes": 5067
+        },
+        {
+          "path": "skills/commerce-backend-expert/references/payment/network-cancellation.md",
+          "sha256": "83cbf711a20e1f959de5f5ff62f13f11aff3567b4d592dd59097aa10df0ee38b",
+          "bytes": 4652
+        }
+      ],
+      "messages": [
+        "## 결론\n\n**같은 트랜잭션·같은 엔티티로 재시도하면 안 됩니다.**\n\n`OptimisticLockException`이 발생한 트랜잭션은 일반적으로 rollback 대상으로 표시됩니다. Hibernate `Session`/영속성 컨텍스트와 기존 엔티티의 버전도 재사용하기 어렵습니다. catch에서 다시 `flush()`해도 성공을 기대할 수 없고, 예외를 삼키면 마지막에 `UnexpectedRollbackException`이 발생할 수 있습니다.\n\n또한 PG 승인이 포함된 메서드 전체를 재시도하면 **이미 성공한 승인을 다시 호출하여 이중 결제**가 발생할 수 있습니다.\n\n## 최소 수정 방향\n\n1. 현재 catch 내부 재시도를 제거하고 예외를 바깥으로 전파합니다.\n2. 재시도가 필요한 DB 변경만 별도 `public @Transactional` 메서드나 `TransactionTemplate`로 분리합니다.\n3. 재시도마다:\n   - 이전 트랜잭션을 완전히 종료하고\n   - 새 트랜잭션과 새 영속성 컨텍스트에서\n   - 엔티티를 다시 조회하여 변경합니다.\n4. 재시도는 충돌이 드문 경우에만 제한된 횟수와 backoff를 적용합니다.\n5. **PG 호출은 이 DB 재시도 블록 밖에 둡니다.**\n\n권장되는 최소 흐름은 다음과 같습니다.\n\n```text\n[짧은 TX 1]\n결제 가능 상태 확인\n결제 시도 ID·요청 지문·PG 멱등키 생성\nPENDING 시도 원자적 선점 및 커밋\n\n[TX 없음]\nPG 승인 1회 호출 — 저장한 동일 멱등키 사용\n\n[짧은 TX 2]\n엔티티 재조회\n승인 결과를 상태 전이 가드로 반영 및 커밋\n낙관락이면 이 로컬 반영만 새 TX에서 제한 재시도\n```\n\n같은 클래스 내부의 `this.retryMethod()` 호출은 `@Transactional` 프록시를 우회할 수 있으므로 별도 빈 또는 `TransactionTemplate`을 사용해야 합니다. `REQUIRES_NEW`만 붙이고 self-invocation 하는 방식도 해결되지 않습니다.\n\n## 반드시 확인할 실패 구간\n\n| 실패 구간 | 처리 원칙 |\n|---|---|\n| PG 호출 전 DB flush 충돌 | 외부 효과가 없음을 확인한 뒤 새 트랜잭션에서 재조회·제한 재시도 |\n| PENDING 커밋 후 PG 호출 전 프로세스 종료 | PENDING 재처리 작업이 기존 시도를 이어서 처리 |\n| PG 요청 송신 후 timeout/연결 종료 | 실패로 확정하지 말고 `UNCERTAIN`; 새 승인 금지, 기존 거래 조회·웹훅·대사 |\n| PG 승인 성공 후 결과 저장/flush 충돌 | PG를 재호출하지 않고 기존 시도/PG 거래를 조회하여 새 TX에서 결과 반영 |\n| DB 커밋 성공 후 애플리케이션 응답 유실 | 동일 업무키 요청에 저장된 결과 반환 |\n| 중복 요청·다중 인스턴스 동시 실행 | 활성 시도에 UNIQUE/CAS/상태 전이 가드 적용 |\n| 늦은 승인과 주문 취소 경합 | 원 거래 확인 후 멱등한 취소·보상; 새 키로 취소 반복 금지 |\n\n추가로 예외가 메서드 안의 명시적 `flush()`에서 발생하는지, 아니면 `@Transactional` 프록시의 **커밋 시점**에 발생하는지 확인해야 합니다. 후자라면 메서드 내부 catch로는 잡히지 않을 수 있습니다. 실제 예외도 `OptimisticLockException`, `RollbackException`, Spring의 `ObjectOptimisticLockingFailureException` 등으로 변환될 수 있습니다.\n\n## 확인할 계약과 제약\n\n- 결제 시도 업무키 및 요청 지문(주문·금액·통화·수단)\n- 활성 결제 시도의 DB UNIQUE 또는 조건부 갱신\n- PG 멱등키 지원 방식과 보존 기간\n- PG 거래 ID의 고유 범위와 UNIQUE 제약\n- timeout 이후 거래 조회 및 망취소 계약\n- retry 프록시와 transaction advisor의 적용 순서\n- HTTP 클라이언트/SDK에 숨은 자동 재시도가 있는지\n\n근거는 `spring-commerce-locking-idempotency`, `spring-commerce-transaction-boundary`, `duplicate-payment-guard`, `network-cancellation`입니다. 다만 일부 문서는 `needs-review`이고 실제 PG·DB 경합은 미검증 상태입니다. 제공된 코드와 실행 환경이 없으므로 실제 트랜잭션 전파, 예외 변환, PG 멱등 보장은 별도 확인이 필요합니다."
+      ],
+      "unexpectedTools": [],
+      "tokenUsageUpdates": [
+        {
+          "elapsedMs": 4096,
+          "total": {
+            "totalTokens": 7251,
+            "inputTokens": 7072,
+            "cachedInputTokens": 3712,
+            "cacheWriteInputTokens": 0,
+            "outputTokens": 179,
+            "reasoningOutputTokens": 36
+          },
+          "last": {
+            "totalTokens": 7251,
+            "inputTokens": 7072,
+            "cachedInputTokens": 3712,
+            "cacheWriteInputTokens": 0,
+            "outputTokens": 179,
+            "reasoningOutputTokens": 36
+          },
+          "modelContextWindow": 258400
+        },
+        {
+          "elapsedMs": 7103,
+          "total": {
+            "totalTokens": 16629,
+            "inputTokens": 16255,
+            "cachedInputTokens": 10624,
+            "cacheWriteInputTokens": 0,
+            "outputTokens": 374,
+            "reasoningOutputTokens": 68
+          },
+          "last": {
+            "totalTokens": 9378,
+            "inputTokens": 9183,
+            "cachedInputTokens": 6912,
+            "cacheWriteInputTokens": 0,
+            "outputTokens": 195,
+            "reasoningOutputTokens": 32
+          },
+          "modelContextWindow": 258400
+        },
+        {
+          "elapsedMs": 32552,
+          "total": {
+            "totalTokens": 34048,
+            "inputTokens": 32123,
+            "cachedInputTokens": 19584,
+            "cacheWriteInputTokens": 0,
+            "outputTokens": 1925,
+            "reasoningOutputTokens": 562
+          },
+          "last": {
+            "totalTokens": 17419,
+            "inputTokens": 15868,
+            "cachedInputTokens": 8960,
+            "cacheWriteInputTokens": 0,
+            "outputTokens": 1551,
+            "reasoningOutputTokens": 494
+          },
+          "modelContextWindow": 258400
+        }
+      ],
+      "startedAt": "2026-10-26T10:19:53.571Z",
+      "model": "gpt-5.6-sol",
+      "provider": "openai",
+      "otherInstructionSourceCount": 0,
+      "turnStartedAt": "2026-10-26T10:19:53.782Z",
+      "tokenUsage": {
+        "total": {
+          "totalTokens": 34048,
+          "inputTokens": 32123,
+          "cachedInputTokens": 19584,
+          "cacheWriteInputTokens": 0,
+          "outputTokens": 1925,
+          "reasoningOutputTokens": 562
+        },
+        "last": {
+          "totalTokens": 17419,
+          "inputTokens": 15868,
+          "cachedInputTokens": 8960,
+          "cacheWriteInputTokens": 0,
+          "outputTokens": 1551,
+          "reasoningOutputTokens": 494
+        },
+        "modelContextWindow": 258400
+      },
+      "status": "completed",
+      "error": null,
+      "elapsedMs": 32566,
+      "turnElapsedMs": 32355,
+      "cohort": "inventory-expanded",
+      "review": {
+        "cohort": "inventory-expanded",
+        "runId": "011",
+        "id": "retry-rollback-only",
+        "arm": "baseline",
+        "criteria": [
+          true,
+          true,
+          true,
+          true
+        ],
+        "criticalFindings": [],
+        "blockedReads": 0,
+        "notes": "Rejects rollback-only/context reuse and retries only local DB work after prior transaction ends; preserves external approval identity and handles proxy/commit timing.",
+        "sourceResultSha256": "e10575e59357fe9e0a3ed258d28a88f8cd8deb5d70577fef6ad296211144f27c"
+      }
+    },
+    {
+      "runId": "012",
+      "id": "retry-rollback-only",
+      "arm": "skill",
+      "repeat": 1,
+      "prompt": "Spring 서비스의 @Transactional 메서드에서 Hibernate flush가 OptimisticLockException을 던졌어. catch 안에서 같은 트랜잭션·같은 엔티티로 재시도하면 될까? 이 메서드에는 외부 PG 승인 호출도 있어. 실제 코드와 실행 환경은 없어. 최소한의 수정 방향과 확인할 실패 구간을 검토해줘.",
+      "skill": "commerce-backend-expert",
+      "skillSha256": "df752e47635508b1f9e444a9ef0403a3f3b0136455953a1fba17a433d7853a93",
+      "cli": "codex-cli 0.153.2",
+      "effort": "medium",
+      "explicitSkill": true,
+      "skillDelivery": "exact SKILL.md in developerInstructions",
+      "skillEntryBytes": 3859,
+      "pluginIsolation": "process feature overrides; plugins and remote_plugin verified false",
+      "blockedReads": 0,
+      "failedCallSamples": [],
+      "reads": [
+        {
+          "path": "skills/commerce-backend-expert/references/spring-commerce/spring-resilience-retry-timeout.md",
+          "sha256": "097fcea8e52725cd770665f72b13fee97aec8dfb565acb1d42004f7becee26b8",
+          "bytes": 2974
+        },
+        {
+          "path": "skills/commerce-backend-expert/references/payment/network-cancellation.md",
+          "sha256": "83cbf711a20e1f959de5f5ff62f13f11aff3567b4d592dd59097aa10df0ee38b",
+          "bytes": 4652
+        },
+        {
+          "path": "skills/commerce-backend-expert/references/spring-commerce/spring-commerce-locking-idempotency.md",
+          "sha256": "d180b4a2ba5a9908f8fd8ef46649f027adfe577694ea8d4c5b22250838ad511d",
+          "bytes": 4327
+        }
+      ],
+      "messages": [
+        "## 결론\n\n**catch 안에서 같은 트랜잭션·같은 엔티티로 재시도하면 안 됩니다.**\n\n`OptimisticLockException`이 발생한 트랜잭션은 rollback-only가 될 수 있고, 기존 영속성 컨텍스트와 엔티티의 상태도 재시도 기반으로 신뢰하기 어렵습니다. catch에서 `save()`나 `flush()`를 반복해도 결국 롤백되거나 `UnexpectedRollbackException`으로 끝날 수 있습니다.\n\n또한 PG 승인은 DB 롤백으로 취소되지 않으므로, 메서드 전체를 단순 재시도하면 **중복 승인** 위험이 있습니다.\n\n## 최소 수정 방향\n\n### 1. 재시도 단위를 DB 처리로만 제한\n\n외부 호출을 포함한 기존 `@Transactional` 메서드 전체를 재시도하지 말고 다음처럼 분리합니다.\n\n1. **새 트랜잭션:** 결제 시도 생성\n   - 결제 시도 ID\n   - 멱등성 키\n   - 주문·금액·통화 등의 요청 지문\n   - `PENDING`\n   - PG 호출 전에 커밋\n2. **트랜잭션 밖:** PG 승인 호출\n3. **새로운 짧은 트랜잭션:** 승인 결과와 주문 상태 반영\n   - 매 시도마다 엔티티를 DB에서 새로 조회\n   - 낙관락 충돌 시 이 DB 반영 단계만 제한적으로 재시도\n   - PG 승인 API는 다시 호출하지 않음\n\n재시도 구조는 개념적으로 다음과 같아야 합니다.\n\n```java\npublic PaymentResult approve(Command command) {\n    PaymentAttempt attempt = attemptService.createOrLoad(command); // 별도 TX\n    PgResult result = pgClient.approve(attempt.idempotencyKey(), command);\n\n    return retryLocalApply(attempt.id(), result); // 매번 새 TX\n}\n```\n\n`retryLocalApply()`는 별도 Spring 빈을 통해 호출하거나 외부 재시도기가 프록시 메서드를 다시 호출하게 해야 합니다. 같은 클래스의 self-invocation은 `@Transactional`이나 `@Retryable`이 적용되지 않을 수 있습니다.\n\n### 2. 기존 트랜잭션이 끝난 뒤 재시도\n\n재시도 1회마다 다음이 보장되어야 합니다.\n\n- 이전 트랜잭션 완전 종료\n- 새 트랜잭션 시작\n- 새 영속성 컨텍스트 사용\n- 주문·결제 엔티티 재조회\n- 허용 상태 전이와 금액을 다시 검증\n- 재시도 횟수 제한 및 짧은 backoff 적용\n\n예외가 commit 시점에 발생하면 `@Transactional` 메서드 내부 catch로는 잡히지 않을 수도 있으므로, 재시도 경계는 **트랜잭션 프록시 바깥**에 두는 편이 안전합니다.\n\n### 3. PG 결과가 불명확하면 승인 재호출 금지\n\ntimeout, 연결 종료, 응답 유실은 실패가 아니라 `UNCERTAIN`으로 취급해야 합니다.\n\n- 새 승인 키로 다시 승인하지 않음\n- 원 결제 시도 ID와 같은 업무키를 유지\n- PG의 조회 API 또는 검증된 웹훅으로 결과 확인\n- 승인 확인 후에는 로컬 DB 반영만 재시도\n- 필요하면 PG 계약에 따른 망취소·보상 수행\n- 보상 결과도 불명확하면 다시 대사 대상으로 관리\n\nPG가 동일 멱등성 키의 재요청을 공식적으로 보장하는지는 별도로 확인해야 합니다.\n\n## 확인할 실패 구간\n\n| 실패 구간 | 처리 방향 |\n|---|---|\n| 결제 시도 저장 전 낙관락 충돌 | 새 트랜잭션에서 로컬 처리만 재시도 |\n| 결제 시도 커밋 후, PG 호출 전 장애 | `PENDING` 시도를 조회해 후속 처리. 무조건 새 시도를 만들지 않음 |\n| PG 요청 전송 여부 자체가 불명확 | PG 계약에 따라 조회·대사. 자동 재승인 금지 |\n| PG가 명시적 실패를 반환 | 시도를 `FAILED`로 반영 |\n| PG 승인 성공 후 DB flush 충돌 | 승인은 이미 존재함. PG를 재호출하지 않고 승인 결과의 DB 반영만 새 트랜잭션에서 재시도 |\n| PG 승인 성공 후 DB commit 결과 불명확 | DB와 PG 양쪽을 조회하여 대사한 뒤 로컬 반영 |\n| DB 커밋 성공 후 클라이언트 응답 유실 | API 멱등성 키로 기존 결과 반환 |\n| 취소·보상 요청의 응답 유실 | 중복 취소하지 말고 원 보상 키로 조회·대사 |\n\n## 추가 확인 사항\n\n실제 코드가 없으므로 다음은 미검증입니다.\n\n- `flush()`가 명시적 호출인지 commit 과정의 자동 flush인지\n- PG 호출이 낙관락 실패 전인지 후인지\n- PG의 멱등성 키와 승인 조회·망취소 계약\n- 결제 시도 기록이 PG 호출 전에 독립적으로 커밋되는지\n- 주문 상태 전이 및 DB `UNIQUE` 제약\n- HTTP client/SDK의 숨은 자동 재시도\n- `@Retryable`과 `@Transactional`의 프록시 순서 및 self-invocation 여부\n\n현재로서 가장 작은 안전한 변경은 **catch 내부 재시도를 제거하고, PG 호출과 DB 반영을 분리한 뒤 DB 반영만 새 트랜잭션에서 재시도하는 것**입니다. 승인 시도 원장을 PG 호출 전에 커밋할 수 없다면, 그 부분도 함께 보강해야 합니다."
+      ],
+      "unexpectedTools": [],
+      "tokenUsageUpdates": [
+        {
+          "elapsedMs": 4311,
+          "total": {
+            "totalTokens": 6855,
+            "inputTokens": 6653,
+            "cachedInputTokens": 3712,
+            "cacheWriteInputTokens": 0,
+            "outputTokens": 202,
+            "reasoningOutputTokens": 50
+          },
+          "last": {
+            "totalTokens": 6855,
+            "inputTokens": 6653,
+            "cachedInputTokens": 3712,
+            "cacheWriteInputTokens": 0,
+            "outputTokens": 202,
+            "reasoningOutputTokens": 50
+          },
+          "modelContextWindow": 258400
+        },
+        {
+          "elapsedMs": 16191,
+          "total": {
+            "totalTokens": 16363,
+            "inputTokens": 15572,
+            "cachedInputTokens": 10240,
+            "cacheWriteInputTokens": 0,
+            "outputTokens": 791,
+            "reasoningOutputTokens": 566
+          },
+          "last": {
+            "totalTokens": 9508,
+            "inputTokens": 8919,
+            "cachedInputTokens": 6528,
+            "cacheWriteInputTokens": 0,
+            "outputTokens": 589,
+            "reasoningOutputTokens": 516
+          },
+          "modelContextWindow": 258400
+        },
+        {
+          "elapsedMs": 36742,
+          "total": {
+            "totalTokens": 28313,
+            "inputTokens": 26259,
+            "cachedInputTokens": 18944,
+            "cacheWriteInputTokens": 0,
+            "outputTokens": 2054,
+            "reasoningOutputTokens": 566
+          },
+          "last": {
+            "totalTokens": 11950,
+            "inputTokens": 10687,
+            "cachedInputTokens": 8704,
+            "cacheWriteInputTokens": 0,
+            "outputTokens": 1263,
+            "reasoningOutputTokens": 0
+          },
+          "modelContextWindow": 258400
+        }
+      ],
+      "startedAt": "2026-10-26T10:20:26.213Z",
+      "model": "gpt-5.6-sol",
+      "provider": "openai",
+      "otherInstructionSourceCount": 0,
+      "turnStartedAt": "2026-10-26T10:20:26.407Z",
+      "tokenUsage": {
+        "total": {
+          "totalTokens": 28313,
+          "inputTokens": 26259,
+          "cachedInputTokens": 18944,
+          "cacheWriteInputTokens": 0,
+          "outputTokens": 2054,
+          "reasoningOutputTokens": 566
+        },
+        "last": {
+          "totalTokens": 11950,
+          "inputTokens": 10687,
+          "cachedInputTokens": 8704,
+          "cacheWriteInputTokens": 0,
+          "outputTokens": 1263,
+          "reasoningOutputTokens": 0
+        },
+        "modelContextWindow": 258400
+      },
+      "status": "completed",
+      "error": null,
+      "elapsedMs": 36767,
+      "turnElapsedMs": 36573,
+      "cohort": "inventory-expanded",
+      "review": {
+        "cohort": "inventory-expanded",
+        "runId": "012",
+        "id": "retry-rollback-only",
+        "arm": "skill",
+        "criteria": [
+          true,
+          true,
+          true,
+          true
+        ],
+        "criticalFindings": [],
+        "blockedReads": 0,
+        "notes": "Moves orchestration/PG outside fresh DB retries, preserves original attempt on unknown results, explains fresh contexts and actual proxy boundaries without claiming execution.",
+        "sourceResultSha256": "755ef2cb9a407ef82757abafcbebd32f7f8e5c844cd966e5e7b653a57a25034d"
+      }
+    },
+    {
+      "runId": "013",
+      "id": "benefit-policy",
+      "arm": "skill",
+      "repeat": 1,
+      "prompt": "합성 부분 환불 정책을 검토해줘. 환불액은 저장된 라인별 실결제액으로 계산하고, 남은 상품의 할인액은 회수하지 않는 '혜택 유지' 정책이야. 별도 쿠폰 정책은 PG 환불 성공이 확정된 뒤 원 쿠폰을 한 번 재발급하도록 허용해. 사용 포인트와 적립 포인트는 없어. 현재 환불은 PG 응답 유실로 UNKNOWN이야. 혜택 유지이므로 쿠폰 재발급도 영구 금지해야 할까? 지금 보류할 일과 결과 확정 뒤 허용할 일을 구분해줘. 실제 운영 접근이나 코드 변경은 하지 마.",
+      "skill": "commerce-review",
+      "skillSha256": "3a931dc5ed84973c1feba53299a19b65133def31b13958a36308dbab0a631010",
+      "cli": "codex-cli 0.153.2",
+      "effort": "medium",
+      "explicitSkill": true,
+      "skillDelivery": "exact SKILL.md in developerInstructions",
+      "skillEntryBytes": 3910,
+      "pluginIsolation": "process feature overrides; plugins and remote_plugin verified false",
+      "blockedReads": 0,
+      "failedCallSamples": [],
+      "reads": [],
+      "messages": [
+        "아니요. **‘혜택 유지’가 쿠폰 재발급의 영구 금지를 의미하지는 않습니다.**  \n혜택 유지는 남은 상품에 배부된 할인을 회수하지 않는 환불액 산정 정책이고, 쿠폰 재발급은 별도로 정한 권리 복원 정책입니다.\n\n### 현재 `UNKNOWN` 상태에서 보류할 일\n\n- 환불 성공·실패 어느 쪽으로도 확정하지 않기\n- 원 쿠폰 재발급 금지\n- 동일 환불의 점유 금액·라인·수량을 유지하고 다른 부분 환불이 침범하지 못하게 하기\n- 새 업무키로 PG 환불을 다시 생성하지 않기\n- 재전송이 필요하면 원래 멱등키와 동일한 요청 지문을 유지하기\n- PG 원 거래 조회, 검증된 웹훅 또는 대사로 결과 확인하기\n- 저장된 라인별 실결제액과 혜택 유지 기준으로 계산한 환불액을 변경하지 않기\n\n### 결과 확정 후\n\n- **PG 성공 확정:** 환불 상태를 먼저 내구성 있게 확정한 뒤 원 쿠폰을 **한 번만** 재발급할 수 있습니다. 원 환불 업무와 연결하고, 중복 웹훅·재처리에도 재발급되지 않도록 멱등성을 보장해야 합니다.\n- **PG 실패 확정:** 쿠폰을 재발급하지 않습니다. 환불 점유를 해제한 뒤 정책에 따라 새 시도를 허용할 수 있습니다.\n- **계속 미확정:** 점유와 쿠폰 재발급 보류를 계속 유지합니다.\n\n사용·적립 포인트가 없으므로 포인트 복원이나 회수 처리는 없습니다. 제공된 정책만 검토했으며, 프로젝트 코드가 없어 실제 점유·멱등성·쿠폰 1회 제약 구현 여부는 확인하지 못했습니다."
+      ],
+      "unexpectedTools": [],
+      "tokenUsageUpdates": [
+        {
+          "elapsedMs": 16079,
+          "total": {
+            "totalTokens": 7507,
+            "inputTokens": 6709,
+            "cachedInputTokens": 3712,
+            "cacheWriteInputTokens": 0,
+            "outputTokens": 798,
+            "reasoningOutputTokens": 372
+          },
+          "last": {
+            "totalTokens": 7507,
+            "inputTokens": 6709,
+            "cachedInputTokens": 3712,
+            "cacheWriteInputTokens": 0,
+            "outputTokens": 798,
+            "reasoningOutputTokens": 372
+          },
+          "modelContextWindow": 258400
+        }
+      ],
+      "startedAt": "2026-10-26T10:21:02.994Z",
+      "model": "gpt-5.6-sol",
+      "provider": "openai",
+      "otherInstructionSourceCount": 0,
+      "turnStartedAt": "2026-10-26T10:21:03.868Z",
+      "tokenUsage": {
+        "total": {
+          "totalTokens": 7507,
+          "inputTokens": 6709,
+          "cachedInputTokens": 3712,
+          "cacheWriteInputTokens": 0,
+          "outputTokens": 798,
+          "reasoningOutputTokens": 372
+        },
+        "last": {
+          "totalTokens": 7507,
+          "inputTokens": 6709,
+          "cachedInputTokens": 3712,
+          "cacheWriteInputTokens": 0,
+          "outputTokens": 798,
+          "reasoningOutputTokens": 372
+        },
+        "modelContextWindow": 258400
+      },
+      "status": "completed",
+      "error": null,
+      "elapsedMs": 16096,
+      "turnElapsedMs": 15222,
+      "cohort": "inventory-expanded",
+      "review": {
+        "cohort": "inventory-expanded",
+        "runId": "013",
+        "id": "benefit-policy",
+        "arm": "skill",
+        "criteria": [
+          true,
+          true,
+          true,
+          true
+        ],
+        "criticalFindings": [],
+        "blockedReads": 0,
+        "notes": "Distinguishes retained discount from once-only coupon policy after definitive success, holds UNKNOWN reservations and reissue, explicitly excludes nonexistent points.",
+        "sourceResultSha256": "798d755f78afdeb175ddf5c1188648a53a11ff48f8094c98d49323058c10b506"
+      }
+    },
+    {
+      "runId": "014",
+      "id": "benefit-policy",
+      "arm": "baseline",
+      "repeat": 1,
+      "prompt": "합성 부분 환불 정책을 검토해줘. 환불액은 저장된 라인별 실결제액으로 계산하고, 남은 상품의 할인액은 회수하지 않는 '혜택 유지' 정책이야. 별도 쿠폰 정책은 PG 환불 성공이 확정된 뒤 원 쿠폰을 한 번 재발급하도록 허용해. 사용 포인트와 적립 포인트는 없어. 현재 환불은 PG 응답 유실로 UNKNOWN이야. 혜택 유지이므로 쿠폰 재발급도 영구 금지해야 할까? 지금 보류할 일과 결과 확정 뒤 허용할 일을 구분해줘. 실제 운영 접근이나 코드 변경은 하지 마.",
+      "skill": "commerce-review",
+      "skillSha256": "daee540f06f2481c237049222b36ecfc1a5839e224bc570e59d9823751ca3dc2",
+      "cli": "codex-cli 0.153.2",
+      "effort": "medium",
+      "explicitSkill": true,
+      "skillDelivery": "exact SKILL.md in developerInstructions",
+      "skillEntryBytes": 5669,
+      "pluginIsolation": "process feature overrides; plugins and remote_plugin verified false",
+      "blockedReads": 0,
+      "failedCallSamples": [],
+      "reads": [],
+      "messages": [
+        "## 결론\n\n아니요. **‘혜택 유지’는 남은 상품의 기존 할인액을 회수하지 않는다는 환불액 계산 정책**입니다. 이것만으로 원 쿠폰 재발급까지 영구 금지할 근거는 없습니다.\n\n제시된 별도 정책에 따르면 쿠폰은 **PG 환불 성공이 확정된 뒤 한 번만 재발급**할 수 있습니다.\n\n### 현재 `UNKNOWN`에서 보류할 일\n\n- 쿠폰 재발급\n- 환불 성공을 전제로 한 고객 안내나 후속 보상\n- 해당 환불 대상을 겹쳐 청구하는 신규 환불\n- 다른 멱등키로 대체 환불을 생성하는 행위\n- `UNKNOWN` 환불이 점유한 금액·라인·수량 예약의 해제\n\nPG 응답 유실은 실패 확정이 아닙니다. 원 시도의 멱등키와 요청 지문을 유지하면서 PG 조회·웹훅·대사로 결과를 확인해야 합니다.\n\n### 결과 확정 뒤 처리\n\n- **성공 확정:**  \n  저장된 라인별 실결제액으로 부분 환불을 확정하고, 남은 상품 할인은 회수하지 않습니다. 이후 원 쿠폰을 **정책상 한 번만** 재발급할 수 있습니다.\n- **실패 확정:**  \n  환불 예약을 해제할 수 있습니다. 환불이 성공하지 않았으므로 이 환불을 근거로 쿠폰을 재발급하지 않습니다. 필요하면 같은 업무 요청을 정책에 맞게 재시도합니다.\n- **계속 미확정:**  \n  예약과 쿠폰 재발급 보류를 유지하고 대사를 계속합니다. 미확정을 실패로 간주해 새 환불이나 쿠폰 재발급을 진행하면 안 됩니다.\n\n쿠폰 재발급에는 최소한 **원 쿠폰과 성공한 환불 업무를 연결한 1회성 멱등 제약**이 필요합니다. 다만 코드가 제공되지 않아 현재 구현이 이를 보장하는지는 확인할 수 없습니다."
+      ],
+      "unexpectedTools": [],
+      "tokenUsageUpdates": [
+        {
+          "elapsedMs": 14625,
+          "total": {
+            "totalTokens": 7741,
+            "inputTokens": 7049,
+            "cachedInputTokens": 3712,
+            "cacheWriteInputTokens": 0,
+            "outputTokens": 692,
+            "reasoningOutputTokens": 237
+          },
+          "last": {
+            "totalTokens": 7741,
+            "inputTokens": 7049,
+            "cachedInputTokens": 3712,
+            "cacheWriteInputTokens": 0,
+            "outputTokens": 692,
+            "reasoningOutputTokens": 237
+          },
+          "modelContextWindow": 258400
+        }
+      ],
+      "startedAt": "2026-10-26T10:21:19.104Z",
+      "model": "gpt-5.6-sol",
+      "provider": "openai",
+      "otherInstructionSourceCount": 0,
+      "turnStartedAt": "2026-10-26T10:21:19.314Z",
+      "tokenUsage": {
+        "total": {
+          "totalTokens": 7741,
+          "inputTokens": 7049,
+          "cachedInputTokens": 3712,
+          "cacheWriteInputTokens": 0,
+          "outputTokens": 692,
+          "reasoningOutputTokens": 237
+        },
+        "last": {
+          "totalTokens": 7741,
+          "inputTokens": 7049,
+          "cachedInputTokens": 3712,
+          "cacheWriteInputTokens": 0,
+          "outputTokens": 692,
+          "reasoningOutputTokens": 237
+        },
+        "modelContextWindow": 258400
+      },
+      "status": "completed",
+      "error": null,
+      "elapsedMs": 14642,
+      "turnElapsedMs": 14432,
+      "cohort": "inventory-expanded",
+      "review": {
+        "cohort": "inventory-expanded",
+        "runId": "014",
+        "id": "benefit-policy",
+        "arm": "baseline",
+        "criteria": [
+          true,
+          true,
+          true,
+          true
+        ],
+        "criticalFindings": [],
+        "blockedReads": 0,
+        "notes": "Accepts separate post-success coupon policy, preserves unknown reservations and original reconciliation; no invented points or operational execution.",
+        "sourceResultSha256": "ee719c7c5a7674d6c60b7255b07e861cde16a700a618fddfd8841a28fa25e195"
+      }
+    },
+    {
+      "runId": "015",
+      "id": "lua-partial-write",
+      "arm": "baseline",
+      "repeat": 1,
+      "prompt": "합성 쿠폰 발급 장애를 검토해줘. Redis Lua에서 remaining=1인 키를 DECR해서 0으로 만든 뒤, 문자열 타입인 issued 키에 HSET을 호출해 WRONGTYPE 오류가 났어. 영속 발급 원장과 attempt 상태는 아직 대사하지 않았고 요청 결과는 미확정이야. 스크립트가 실패했으니 remaining은 자동으로 1로 돌아갔다고 보고 같은 요청을 바로 재실행해도 될까? 실제 코드는 수정하지 말고 남은 상태·안전한 복구·예방 방법을 구분해줘.",
+      "skill": "commerce-backend-expert",
+      "skillSha256": "7dd8d9ecea51feed7b0f135bb3776877ee41713b0cb612fa976228f12c38efa9",
+      "cli": "codex-cli 0.153.2",
+      "effort": "medium",
+      "explicitSkill": true,
+      "skillDelivery": "exact SKILL.md in developerInstructions",
+      "skillEntryBytes": 5533,
+      "pluginIsolation": "process feature overrides; plugins and remote_plugin verified false",
+      "blockedReads": 0,
+      "failedCallSamples": [],
+      "reads": [
+        {
+          "path": "skills/commerce-backend-expert/references/coupon/INDEX.md",
+          "sha256": "be989790fa7e9f9bb074e16f5f7ddb8f8791d79e62615f9f6e8079fac5d7c734",
+          "bytes": 1742
+        },
+        {
+          "path": "skills/commerce-backend-expert/references/coupon/coupon-issuance-compensation.md",
+          "sha256": "5abf03ae9543bd64e7c5aa2989b723976017e811119a48c60cc981174daec912",
+          "bytes": 6074
+        },
+        {
+          "path": "skills/commerce-backend-expert/references/coupon/coupon-issuance.md",
+          "sha256": "c3f75c395b1f2ab1bc29512cf7cd847ab16f908619e11bbc84e2d68b44663e99",
+          "bytes": 4842
+        }
+      ],
+      "messages": [
+        "## 결론\n\n**아니요.** Lua 스크립트의 원자성은 다른 명령이 중간에 끼어들지 못한다는 의미이지, 오류 발생 시 앞선 쓰기를 롤백한다는 의미가 아닙니다.\n\n설명한 실행 순서라면 일반적으로:\n\n- `remaining`: `1 → 0`으로 감소한 상태가 남음\n- `issued`: 기존 문자열 값과 타입이 그대로 유지됨\n- `HSET` 이후 명령: 최상위 Lua 오류였다면 실행되지 않음\n- DB 발급 원장·attempt: 아직 대사 전이므로 요청 결과는 **미확정**\n\n따라서 `remaining=1`로 자동 복구됐다고 간주하면 안 됩니다. 즉시 재실행하면 재고 확인 방식에 따라 품절로 처리되거나, 다시 감소시켜 음수가 되거나, 동일한 `WRONGTYPE`을 반복할 수 있습니다.\n\n## 남아 있을 상태\n\n현재 운영 상태는 최소 다음처럼 분류해야 합니다.\n\n| 항목 | 예상 상태 | 확정 방법 |\n|---|---|---|\n| Redis `remaining` | `0`일 가능성이 높음 | Redis primary에서 실제 값·타입 확인 |\n| Redis `issued` | 문자열 그대로, HSET 미적용 | `TYPE`과 값 확인 |\n| 다른 Redis 쓰기 | 오류 전에 실행된 것만 남을 수 있음 | 스크립트 명령 순서와 관련 키 조회 |\n| DB 발급 원장 | 성공·미생성 모두 가능 | 동일 업무키/attempt ID로 조회 |\n| attempt 상태 | 현재 미확정 | 원장과 Redis를 대사하여 결정 |\n\n`redis.pcall`로 오류를 잡았거나 오류 뒤에도 실행되는 별도 흐름이 있다면 후속 상태가 달라질 수 있으므로 실제 스크립트 구조 확인이 필요합니다.\n\n## 안전한 복구\n\n1. **동일 요청의 즉시 재실행과 무조건 `INCR`을 모두 중단**합니다.\n2. 해당 attempt ID와 발급 업무키로 DB 원장을 먼저 조회합니다.\n   - 원장이 존재하고 커밋됐다면 **발급 성공**입니다. 재고를 복구하지 말고 attempt를 성공으로 수렴시킵니다.\n   - 원장이 없다는 사실과 DB 실패가 확정됐다면 Redis의 유실된 1개를 복구할 후보가 됩니다.\n   - 커밋 여부가 불명확하면 계속 **미확정**으로 격리하고 재실행·보상하지 않습니다.\n3. Redis에서 `remaining`, `issued` 타입·값, 별도 선점 토큰 및 오류 전에 변경될 수 있었던 키를 함께 확인합니다.\n4. 실패가 확정되면 해당 attempt의 선점임을 검증한 뒤 **멱등 보상**합니다.\n   - 정상 설계에서는 `현재 토큰 == attempt ID`이고 아직 보상되지 않았을 때만 토큰 제거와 `INCR`을 한 Lua에서 수행합니다.\n   - 이번처럼 감소 후 토큰 기록 자체가 실패했다면 토큰 기반 귀속이 불가능할 수 있습니다. 이 경우 단순 `INCR`하지 말고 캠페인 발급을 잠시 직렬화·격리한 뒤, 총 한도와 DB 원장 및 유효 선점을 대사하여 기대 수량을 재구성해야 합니다.\n5. 같은 클라이언트 재요청은 새 발급 시도로 처리하지 말고, 기존 멱등키/attempt의 확정 결과를 반환하거나 대사 완료까지 `PENDING`으로 응답해야 합니다.\n\n## 예방 방법\n\n- `remaining`과 `issued`의 `TYPE`, 키 스키마, 필수 입력, 자격·한도를 **첫 쓰기 전에 전부 검증**\n- 문자열과 Hash가 충돌하지 않도록 키 namespace와 스키마 버전을 분리\n- 쓰기가 시작된 뒤에는 타입 오류가 날 수 있는 명령을 남기지 않도록 스크립트 구성\n- Redis 선점 전에 영속 attempt를 만들고, attempt ID가 포함된 선점 토큰을 기록\n- DB에는 발급 업무키 `UNIQUE`와 총 발급 한도의 원자적 방어 적용\n- 보상은 토큰 일치와 미보상 상태를 확인하여 `선점 제거 + 수량 복구`를 원자적·멱등적으로 수행\n- `WRONGTYPE`, 쓰기 후 오류, 응답 유실, 프로세스 중단을 주입한 테스트에서 **부분 반영이 남는지** 검증\n- 장기 미확정 attempt 대사 작업과 운영 경보 마련\n\n근거는 `coupon-issuance` 및 `coupon-issuance-compensation` 규칙입니다. 두 문서는 `needs-review` 상태이고 Redis 7.0.15 합성 시험에서 Lua 오류 후 쓰기 잔존을 확인했지만, 실제 운영 failover·클러스터와 현재 DB 제약은 미검증입니다. 프로젝트 코드가 제공되지 않아 실제 스크립트 분기와 영속 제약까지는 확인하지 못했습니다."
+      ],
+      "unexpectedTools": [],
+      "tokenUsageUpdates": [
+        {
+          "elapsedMs": 3251,
+          "total": {
+            "totalTokens": 7211,
+            "inputTokens": 7123,
+            "cachedInputTokens": 3712,
+            "cacheWriteInputTokens": 0,
+            "outputTokens": 88,
+            "reasoningOutputTokens": 21
+          },
+          "last": {
+            "totalTokens": 7211,
+            "inputTokens": 7123,
+            "cachedInputTokens": 3712,
+            "cacheWriteInputTokens": 0,
+            "outputTokens": 88,
+            "reasoningOutputTokens": 21
+          },
+          "modelContextWindow": 258400
+        },
+        {
+          "elapsedMs": 5176,
+          "total": {
+            "totalTokens": 14982,
+            "inputTokens": 14803,
+            "cachedInputTokens": 10624,
+            "cacheWriteInputTokens": 0,
+            "outputTokens": 179,
+            "reasoningOutputTokens": 40
+          },
+          "last": {
+            "totalTokens": 7771,
+            "inputTokens": 7680,
+            "cachedInputTokens": 6912,
+            "cacheWriteInputTokens": 0,
+            "outputTokens": 91,
+            "reasoningOutputTokens": 19
+          },
+          "modelContextWindow": 258400
+        },
+        {
+          "elapsedMs": 7038,
+          "total": {
+            "totalTokens": 24505,
+            "inputTokens": 24243,
+            "cachedInputTokens": 18176,
+            "cacheWriteInputTokens": 0,
+            "outputTokens": 262,
+            "reasoningOutputTokens": 53
+          },
+          "last": {
+            "totalTokens": 9523,
+            "inputTokens": 9440,
+            "cachedInputTokens": 7552,
+            "cacheWriteInputTokens": 0,
+            "outputTokens": 83,
+            "reasoningOutputTokens": 13
+          },
+          "modelContextWindow": 258400
+        },
+        {
+          "elapsedMs": 44988,
+          "total": {
+            "totalTokens": 37498,
+            "inputTokens": 35106,
+            "cachedInputTokens": 27392,
+            "cacheWriteInputTokens": 0,
+            "outputTokens": 2392,
+            "reasoningOutputTokens": 1069
+          },
+          "last": {
+            "totalTokens": 12993,
+            "inputTokens": 10863,
+            "cachedInputTokens": 9216,
+            "cacheWriteInputTokens": 0,
+            "outputTokens": 2130,
+            "reasoningOutputTokens": 1016
+          },
+          "modelContextWindow": 258400
+        }
+      ],
+      "startedAt": "2026-10-26T10:21:33.841Z",
+      "model": "gpt-5.6-sol",
+      "provider": "openai",
+      "otherInstructionSourceCount": 0,
+      "turnStartedAt": "2026-10-26T10:21:34.366Z",
+      "tokenUsage": {
+        "total": {
+          "totalTokens": 37498,
+          "inputTokens": 35106,
+          "cachedInputTokens": 27392,
+          "cacheWriteInputTokens": 0,
+          "outputTokens": 2392,
+          "reasoningOutputTokens": 1069
+        },
+        "last": {
+          "totalTokens": 12993,
+          "inputTokens": 10863,
+          "cachedInputTokens": 9216,
+          "cacheWriteInputTokens": 0,
+          "outputTokens": 2130,
+          "reasoningOutputTokens": 1016
+        },
+        "modelContextWindow": 258400
+      },
+      "status": "completed",
+      "error": null,
+      "elapsedMs": 45005,
+      "turnElapsedMs": 44480,
+      "cohort": "inventory-expanded",
+      "review": {
+        "cohort": "inventory-expanded",
+        "runId": "015",
+        "id": "lua-partial-write",
+        "arm": "baseline",
+        "criteria": [
+          true,
+          true,
+          true,
+          true
+        ],
+        "criticalFindings": [],
+        "blockedReads": 0,
+        "notes": "Retains pre-error DECR write, does not blindly rerun or compensate, requires definitive attempt/ledger outcome and controlled idempotent reconciliation; no actual Redis claims.",
+        "sourceResultSha256": "9a4a955997cae57e38e43a8998c444c8756c9ffd008792035f585a0e4907da97"
+      }
+    },
+    {
+      "runId": "016",
+      "id": "lua-partial-write",
+      "arm": "skill",
+      "repeat": 1,
+      "prompt": "합성 쿠폰 발급 장애를 검토해줘. Redis Lua에서 remaining=1인 키를 DECR해서 0으로 만든 뒤, 문자열 타입인 issued 키에 HSET을 호출해 WRONGTYPE 오류가 났어. 영속 발급 원장과 attempt 상태는 아직 대사하지 않았고 요청 결과는 미확정이야. 스크립트가 실패했으니 remaining은 자동으로 1로 돌아갔다고 보고 같은 요청을 바로 재실행해도 될까? 실제 코드는 수정하지 말고 남은 상태·안전한 복구·예방 방법을 구분해줘.",
+      "skill": "commerce-backend-expert",
+      "skillSha256": "df752e47635508b1f9e444a9ef0403a3f3b0136455953a1fba17a433d7853a93",
+      "cli": "codex-cli 0.153.2",
+      "effort": "medium",
+      "explicitSkill": true,
+      "skillDelivery": "exact SKILL.md in developerInstructions",
+      "skillEntryBytes": 3859,
+      "pluginIsolation": "process feature overrides; plugins and remote_plugin verified false",
+      "blockedReads": 0,
+      "failedCallSamples": [],
+      "reads": [
+        {
+          "path": "skills/commerce-backend-expert/references/coupon/coupon-issuance.md",
+          "sha256": "c3f75c395b1f2ab1bc29512cf7cd847ab16f908619e11bbc84e2d68b44663e99",
+          "bytes": 4842
+        },
+        {
+          "path": "skills/commerce-backend-expert/references/spring-commerce/spring-commerce-locking-idempotency.md",
+          "sha256": "d180b4a2ba5a9908f8fd8ef46649f027adfe577694ea8d4c5b22250838ad511d",
+          "bytes": 4327
+        }
+      ],
+      "messages": [
+        "## 결론\n\n**바로 재실행하면 안 됩니다.** Redis Lua의 원자성은 다른 명령의 끼어들기를 막을 뿐, 실행 중 오류가 발생했을 때 앞선 쓰기를 롤백하지 않습니다.\n\n따라서 별도의 failover나 데이터 유실이 없었다면:\n\n- `DECR remaining`: 반영되어 **1 → 0**\n- `HSET issued ...`: `WRONGTYPE`로 미반영\n- 오류 이후 명령: 일반적인 `redis.call` 오류라면 실행되지 않음\n\n즉, `remaining`이 자동으로 1로 복원됐다고 볼 수 없습니다.\n\n## 남은 상태\n\n1. **Redis**\n   - `remaining`은 0일 가능성이 높습니다.\n   - `issued`는 기존 문자열 타입과 값이 그대로 남습니다.\n   - HSET 이전에 다른 쓰기가 있었다면 그것도 남아 있을 수 있습니다.\n   - 즉, 재고만 소비되고 발급 표시는 없는 **부분 반영 상태**입니다.\n\n2. **영속 저장소**\n   - 발급 원장과 attempt를 아직 대사하지 않았으므로 실제 발급 확정 여부는 알 수 없습니다.\n   - “스크립트 오류”가 곧 “DB 발급 없음”을 뜻하지 않습니다. 호출 순서나 후속 처리에 따라 원장 반영이 이미 있었을 수도 있습니다.\n\n3. **요청**\n   - 업무 결과는 `FAILED`가 아니라 **미확정(UNKNOWN/PENDING_RECONCILIATION)** 으로 취급해야 합니다.\n   - 즉시 재시도하면:\n     - 다시 `DECR`하여 음수가 되거나,\n     - 0을 품절로 판단해 실제 가용 수량을 잃거나,\n     - 원장이 이미 존재한다면 중복 발급을 시도할 수 있습니다.\n\n## 안전한 복구\n\n1. 같은 멱등성 키·업무키의 재실행을 우선 차단합니다.\n2. 변경 전 증적을 확보합니다.\n   - Redis의 `remaining` 값\n   - `issued`의 `TYPE`과 현재 값\n   - 해당 스크립트의 오류·요청 로그\n   - 영속 attempt 상태, 요청 지문\n   - 사용자+캠페인 등의 발급 업무키로 원장 존재 여부\n3. 대사 결과에 따라 처리합니다.\n   - **원장에 발급 존재:** 새 발급을 하지 않고 기존 결과를 반환합니다. 감소된 수량은 유지하고, `issued` 타입 문제와 누락된 표시만 통제된 복구 절차로 보정합니다.\n   - **원장에 발급 없음:** 해당 감소가 이 요청 때문임을 확인한 뒤에만 정확히 한 번 보상합니다. 단순 `INCR`보다는 예상 값·attempt 상태·업무키를 함께 검증하는 조건부 Lua 또는 직렬화된 복구가 안전합니다.\n   - **판별 불가:** 재시도나 보상을 하지 말고 미확정 상태로 유지한 채 캠페인 발급을 제한하고 추가 대사합니다.\n4. 타입 오류를 수정하고 멱등성·DB 제약을 확인한 다음에만 제한적으로 재처리합니다.\n   - 같은 멱등성 키와 동일 요청 지문 사용\n   - 발급 업무키 `UNIQUE`\n   - 총 발급 한도에 대한 원자적 방어\n   - 기존 확정 결과가 있으면 재실행하지 않고 그 결과 재전달\n\n## 예방 방법\n\n- Lua의 **첫 쓰기 전에** 모든 오류 가능 조건을 검증합니다.\n  - `TYPE remaining`과 정수 변환 가능 여부\n  - `TYPE issued`가 `none` 또는 기대한 `hash`인지\n  - 잔여 수량, 사용자 중복, 자격 및 한도\n- 검증 단계와 쓰기 단계를 분리하고, 쓰기 단계에는 타입 오류가 날 명령을 남기지 않습니다.\n- 키 이름에 캠페인·스키마 버전을 포함하고, 동일 키를 문자열과 해시 용도로 재사용하지 않습니다.\n- 영속 attempt에 멱등성 키, 요청 지문, `PENDING/CONFIRMED/FAILED/UNKNOWN` 상태와 확정 결과를 저장합니다.\n- DB 원장에 사용자+캠페인 등 실제 발급 범위의 `UNIQUE` 제약을 둡니다.\n- Redis 성공을 최종 발급 확정으로 간주하지 말고, 부분 반영을 탐지·대사하는 운영 절차와 경보를 둡니다.\n- 명령 순서를 `HSET → DECR`로 바꾸는 것만으로는 충분하지 않습니다. 뒤 명령 실패 시 반대 방향의 부분 반영이 생길 뿐입니다.\n\n실제 코드와 운영 상태 자료가 제공되지 않아 호출 순서, 다른 선행 쓰기, DB 반영 여부 및 Redis failover 영향은 확인하지 못했습니다. 검토 근거 문서는 `needs-review`, `external-source`이며 Redis 7.0.15 격리 사례에서 Lua 오류 전 쓰기 잔존이 확인된 범위입니다. 코드 수정이나 실제 복구 작업은 수행하지 않았습니다."
+      ],
+      "unexpectedTools": [],
+      "tokenUsageUpdates": [
+        {
+          "elapsedMs": 2935,
+          "total": {
+            "totalTokens": 6798,
+            "inputTokens": 6704,
+            "cachedInputTokens": 3712,
+            "cacheWriteInputTokens": 0,
+            "outputTokens": 94,
+            "reasoningOutputTokens": 25
+          },
+          "last": {
+            "totalTokens": 6798,
+            "inputTokens": 6704,
+            "cachedInputTokens": 3712,
+            "cacheWriteInputTokens": 0,
+            "outputTokens": 94,
+            "reasoningOutputTokens": 25
+          },
+          "modelContextWindow": 258400
+        },
+        {
+          "elapsedMs": 4896,
+          "total": {
+            "totalTokens": 15032,
+            "inputTokens": 14842,
+            "cachedInputTokens": 10240,
+            "cacheWriteInputTokens": 0,
+            "outputTokens": 190,
+            "reasoningOutputTokens": 48
+          },
+          "last": {
+            "totalTokens": 8234,
+            "inputTokens": 8138,
+            "cachedInputTokens": 6528,
+            "cacheWriteInputTokens": 0,
+            "outputTokens": 96,
+            "reasoningOutputTokens": 23
+          },
+          "modelContextWindow": 258400
+        },
+        {
+          "elapsedMs": 43263,
+          "total": {
+            "totalTokens": 26611,
+            "inputTokens": 24255,
+            "cachedInputTokens": 10240,
+            "cacheWriteInputTokens": 0,
+            "outputTokens": 2356,
+            "reasoningOutputTokens": 1082
+          },
+          "last": {
+            "totalTokens": 11579,
+            "inputTokens": 9413,
+            "cachedInputTokens": 0,
+            "cacheWriteInputTokens": 0,
+            "outputTokens": 2166,
+            "reasoningOutputTokens": 1034
+          },
+          "modelContextWindow": 258400
+        }
+      ],
+      "startedAt": "2026-10-26T10:22:18.940Z",
+      "model": "gpt-5.6-sol",
+      "provider": "openai",
+      "otherInstructionSourceCount": 0,
+      "turnStartedAt": "2026-10-26T10:22:19.138Z",
+      "tokenUsage": {
+        "total": {
+          "totalTokens": 26611,
+          "inputTokens": 24255,
+          "cachedInputTokens": 10240,
+          "cacheWriteInputTokens": 0,
+          "outputTokens": 2356,
+          "reasoningOutputTokens": 1082
+        },
+        "last": {
+          "totalTokens": 11579,
+          "inputTokens": 9413,
+          "cachedInputTokens": 0,
+          "cacheWriteInputTokens": 0,
+          "outputTokens": 2166,
+          "reasoningOutputTokens": 1034
+        },
+        "modelContextWindow": 258400
+      },
+      "status": "completed",
+      "error": null,
+      "elapsedMs": 43278,
+      "turnElapsedMs": 43080,
+      "cohort": "inventory-expanded",
+      "review": {
+        "cohort": "inventory-expanded",
+        "runId": "016",
+        "id": "lua-partial-write",
+        "arm": "skill",
+        "criteria": [
+          true,
+          true,
+          true,
+          true
+        ],
+        "criticalFindings": [],
+        "blockedReads": 0,
+        "notes": "Explains partial Redis writes and rejects automatic rollback, checks attempt/ledger/state before controlled recovery, validates before writes and keeps unverifiable state unknown.",
+        "sourceResultSha256": "b19efc016f8e72c6cbbc95064ff50effc0a1f8b06e3e05107800abc224f283cc"
+      }
+    },
+    {
+      "runId": "017",
+      "id": "refund-no-defect",
+      "arm": "skill",
+      "repeat": 1,
+      "prompt": "refund-safe.js의 주어진 입력 실행 경로를 리뷰해줘. 단일 인스턴스에서 await 없이 순차 실행하는 메모리 함수뿐이고 DB·PG·분산 실행은 없어. 외부에서 배열·반환 객체를 변경하지 않아. 기존 X-1 환불 6,669원은 UNKNOWN이며 새 키로 겹치지 않는 X-2 6,670원을 요청해. 이 경로의 확정된 결함과 운영 확장 시 추가 확인을 구분하고, 제공 코드에 없는 결함을 추정하거나 코드를 수정하지 마.",
+      "skill": "commerce-review",
+      "skillSha256": "3a931dc5ed84973c1feba53299a19b65133def31b13958a36308dbab0a631010",
+      "cli": "codex-cli 0.153.2",
+      "effort": "medium",
+      "explicitSkill": true,
+      "skillDelivery": "exact SKILL.md in developerInstructions",
+      "skillEntryBytes": 3910,
+      "pluginIsolation": "process feature overrides; plugins and remote_plugin verified false",
+      "blockedReads": 0,
+      "failedCallSamples": [],
+      "reads": [
+        {
+          "path": "workspace/refund-safe.js",
+          "sha256": "1b530cf309372a314f4f6683e09cc27efa5b00bd6091f06a1f944b0f7acd5199",
+          "bytes": 1683
+        }
+      ],
+      "messages": [
+        "## 확정된 결함\n\n**주어진 실행 경로에서는 확인된 결함이 없습니다.**\n\n- 요청 검증을 통과합니다.\n  - `refund-2`: 유효한 새 키\n  - `6,670원`: `X-2`의 결제액과 일치\n  - `X-2`: 유효하며 중복 없는 단위\n- 기존 `X-1` 환불은 `UNKNOWN`이므로 예약 금액에 포함됩니다.\n- 예약 합계는 `6,669 + 6,670 = 13,339원`으로 결제액 `20,009원`을 초과하지 않습니다.\n- `X-1`과 `X-2`는 겹치지 않아 단위 예약 충돌도 없습니다.\n- 따라서 새 환불이 다음 상태로 `refunds`에 추가되고 반환됩니다.\n\n```js\n{\n  key: \"refund-2\",\n  units: [\"X-2\"],\n  amount: 6670,\n  status: \"REQUESTED\"\n}\n```\n\n특히 기존 `UNKNOWN` 거래를 실패로 간주해 점유를 해제하지 않고 금액 및 단위 예약에 계속 포함한 처리는 안전합니다.\n\n## 운영 환경으로 확장할 때 추가 확인\n\n아래는 현재 메모리·순차 실행 경로의 결함이 아니라, DB·PG·분산 실행을 도입할 경우 확인할 사항입니다.\n\n- 업무키 조회, 환불 한도 및 단위 중복 검증, `REQUESTED` 저장이 하나의 원자적 선점으로 보장되는지\n- 동일 업무키가 다른 결제·통화·대상에 재사용될 수 있다면 지문에 해당 식별자도 포함되는지\n- PG 타임아웃이나 응답 유실 후 `UNKNOWN`을 유지하고 원 거래 조회·웹훅·대사로 확정하는지\n- PG 호출 성공과 로컬 상태 저장 사이의 실패 구간을 복구할 수 있는지\n- 확정 성공 시 점유를 확정 상태로 전환하고, 확정 실패일 때만 점유를 해제하는지\n- 중복·역순 웹훅과 여러 인스턴스의 동시 요청에서도 저장소 제약으로 동일 불변식을 지키는지\n\n검토는 제공된 파일의 정적 실행 경로만 대상으로 했으며 실제 DB·PG 동작은 제공되지 않아 검증하지 않았습니다."
+      ],
+      "unexpectedTools": [],
+      "tokenUsageUpdates": [
+        {
+          "elapsedMs": 3153,
+          "total": {
+            "totalTokens": 6756,
+            "inputTokens": 6688,
+            "cachedInputTokens": 3712,
+            "cacheWriteInputTokens": 0,
+            "outputTokens": 68,
+            "reasoningOutputTokens": 10
+          },
+          "last": {
+            "totalTokens": 6756,
+            "inputTokens": 6688,
+            "cachedInputTokens": 3712,
+            "cacheWriteInputTokens": 0,
+            "outputTokens": 68,
+            "reasoningOutputTokens": 10
+          },
+          "modelContextWindow": 258400
+        },
+        {
+          "elapsedMs": 18708,
+          "total": {
+            "totalTokens": 14845,
+            "inputTokens": 13888,
+            "cachedInputTokens": 10240,
+            "cacheWriteInputTokens": 0,
+            "outputTokens": 957,
+            "reasoningOutputTokens": 366
+          },
+          "last": {
+            "totalTokens": 8089,
+            "inputTokens": 7200,
+            "cachedInputTokens": 6528,
+            "cacheWriteInputTokens": 0,
+            "outputTokens": 889,
+            "reasoningOutputTokens": 356
+          },
+          "modelContextWindow": 258400
+        }
+      ],
+      "startedAt": "2026-10-26T10:23:02.233Z",
+      "model": "gpt-5.6-sol",
+      "provider": "openai",
+      "otherInstructionSourceCount": 0,
+      "turnStartedAt": "2026-10-26T10:23:02.443Z",
+      "tokenUsage": {
+        "total": {
+          "totalTokens": 14845,
+          "inputTokens": 13888,
+          "cachedInputTokens": 10240,
+          "cacheWriteInputTokens": 0,
+          "outputTokens": 957,
+          "reasoningOutputTokens": 366
+        },
+        "last": {
+          "totalTokens": 8089,
+          "inputTokens": 7200,
+          "cachedInputTokens": 6528,
+          "cacheWriteInputTokens": 0,
+          "outputTokens": 889,
+          "reasoningOutputTokens": 356
+        },
+        "modelContextWindow": 258400
+      },
+      "status": "completed",
+      "error": null,
+      "elapsedMs": 18725,
+      "turnElapsedMs": 18515,
+      "cohort": "inventory-expanded",
+      "review": {
+        "cohort": "inventory-expanded",
+        "runId": "017",
+        "id": "refund-no-defect",
+        "arm": "skill",
+        "criteria": [
+          true,
+          true,
+          true,
+          true
+        ],
+        "criticalFindings": [],
+        "blockedReads": 0,
+        "notes": "Accepts the valid nonoverlapping X-2 request while UNKNOWN X-1 stays reserved; recognizes fingerprint/unit checks and keeps DB/PG expansion outside confirmed defects.",
+        "sourceResultSha256": "2f7064a86cd5446133242dacfda0119d1ddfb60a5d189465366a87f99d03964f"
+      }
+    },
+    {
+      "runId": "018",
+      "id": "refund-no-defect",
+      "arm": "baseline",
+      "repeat": 1,
+      "prompt": "refund-safe.js의 주어진 입력 실행 경로를 리뷰해줘. 단일 인스턴스에서 await 없이 순차 실행하는 메모리 함수뿐이고 DB·PG·분산 실행은 없어. 외부에서 배열·반환 객체를 변경하지 않아. 기존 X-1 환불 6,669원은 UNKNOWN이며 새 키로 겹치지 않는 X-2 6,670원을 요청해. 이 경로의 확정된 결함과 운영 확장 시 추가 확인을 구분하고, 제공 코드에 없는 결함을 추정하거나 코드를 수정하지 마.",
+      "skill": "commerce-review",
+      "skillSha256": "daee540f06f2481c237049222b36ecfc1a5839e224bc570e59d9823751ca3dc2",
+      "cli": "codex-cli 0.153.2",
+      "effort": "medium",
+      "explicitSkill": true,
+      "skillDelivery": "exact SKILL.md in developerInstructions",
+      "skillEntryBytes": 5669,
+      "pluginIsolation": "process feature overrides; plugins and remote_plugin verified false",
+      "blockedReads": 0,
+      "failedCallSamples": [],
+      "reads": [
+        {
+          "path": "workspace/refund-safe.js",
+          "sha256": "1b530cf309372a314f4f6683e09cc27efa5b00bd6091f06a1f944b0f7acd5199",
+          "bytes": 1683
+        }
+      ],
+      "messages": [
+        "## 확정된 결함\n\n**주어진 실행 경로에서는 확정된 결함이 없습니다.**\n\n실행 흐름은 다음과 같습니다.\n\n1. 요청 검증 통과  \n   - 키: `\"refund-2\"`\n   - 금액: `6,670원`\n   - 대상: `[\"X-2\"]`\n   - `unitPaid[\"X-2\"]`와 요청 금액이 일치합니다.  \n   (`refund-safe.js:7-10`)\n\n2. 동일 키 환불 없음  \n   기존 키는 `\"refund-1\"`이므로 멱등 재시도 경로가 아닙니다.  \n   (`refund-safe.js:11-15`)\n\n3. `UNKNOWN` 환불을 예약 금액으로 포함  \n   기존 X-1 환불 `6,669원`은 예약 상태로 유지됩니다.  \n   (`refund-safe.js:16`)\n\n4. 총액 한도 통과  \n   `6,669 + 6,670 = 13,339원`으로 결제액 `20,009원`을 초과하지 않습니다.  \n   (`refund-safe.js:17`)\n\n5. 대상 단위가 겹치지 않음  \n   기존 예약 대상은 `X-1`, 신규 요청은 `X-2`이므로 `UNIT_RESERVED`가 발생하지 않습니다.  \n   (`refund-safe.js:18`)\n\n6. `{key:\"refund-2\", units:[\"X-2\"], amount:6670, status:\"REQUESTED\"}`가 배열에 추가되고 같은 객체가 반환됩니다.  \n   (`refund-safe.js:19-21`)\n\n따라서 `UNKNOWN`을 실패로 간주하거나 예약에서 해제하지 않고, 겹치지 않는 신규 단위만 추가로 예약하는 현재 결과는 주어진 조건에 부합합니다.\n\n## 운영 확장 시 추가 확인\n\n이는 현재 코드의 결함 판정이 아니라 DB·PG·분산 처리를 도입할 때 확인할 사항입니다.\n\n- 금액 한도 검사, 단위 중복 검사, 환불 생성이 하나의 원자적 트랜잭션으로 처리되는지\n- 멱등 키의 고유 범위와 DB 고유 제약이 무엇인지\n- 동시 요청에서도 총액과 동일 단위를 이중 예약할 수 없는지\n- `UNKNOWN` 결과를 확정 실패 전에 해제하지 않고, 원 시도와 같은 PG 키로 조회·대사하는지\n- 상태 전이와 예약 해제가 확정 실패에만 허용되는지\n- 반환 객체나 저장 배열이 외부 경계를 넘을 경우 변경으로 내부 상태가 훼손되지 않는지\n\n현재는 단일 인스턴스 순차 실행이며 외부 변경도 없다는 전제이므로, 위 운영 조건을 제공 코드의 결함으로 보지는 않았습니다. 별도 테스트는 실행하지 않았고 제공된 코드 경로를 직접 추적했습니다."
+      ],
+      "unexpectedTools": [],
+      "tokenUsageUpdates": [
+        {
+          "elapsedMs": 3131,
+          "total": {
+            "totalTokens": 7099,
+            "inputTokens": 7028,
+            "cachedInputTokens": 0,
+            "cacheWriteInputTokens": 0,
+            "outputTokens": 71,
+            "reasoningOutputTokens": 13
+          },
+          "last": {
+            "totalTokens": 7099,
+            "inputTokens": 7028,
+            "cachedInputTokens": 0,
+            "cacheWriteInputTokens": 0,
+            "outputTokens": 71,
+            "reasoningOutputTokens": 13
+          },
+          "modelContextWindow": 258400
+        },
+        {
+          "elapsedMs": 23789,
+          "total": {
+            "totalTokens": 15788,
+            "inputTokens": 14571,
+            "cachedInputTokens": 6912,
+            "cacheWriteInputTokens": 0,
+            "outputTokens": 1217,
+            "reasoningOutputTokens": 529
+          },
+          "last": {
+            "totalTokens": 8689,
+            "inputTokens": 7543,
+            "cachedInputTokens": 6912,
+            "cacheWriteInputTokens": 0,
+            "outputTokens": 1146,
+            "reasoningOutputTokens": 516
+          },
+          "modelContextWindow": 258400
+        }
+      ],
+      "startedAt": "2026-10-26T10:23:20.974Z",
+      "model": "gpt-5.6-sol",
+      "provider": "openai",
+      "otherInstructionSourceCount": 0,
+      "turnStartedAt": "2026-10-26T10:23:21.196Z",
+      "tokenUsage": {
+        "total": {
+          "totalTokens": 15788,
+          "inputTokens": 14571,
+          "cachedInputTokens": 6912,
+          "cacheWriteInputTokens": 0,
+          "outputTokens": 1217,
+          "reasoningOutputTokens": 529
+        },
+        "last": {
+          "totalTokens": 8689,
+          "inputTokens": 7543,
+          "cachedInputTokens": 6912,
+          "cacheWriteInputTokens": 0,
+          "outputTokens": 1146,
+          "reasoningOutputTokens": 516
+        },
+        "modelContextWindow": 258400
+      },
+      "status": "completed",
+      "error": null,
+      "elapsedMs": 23803,
+      "turnElapsedMs": 23581,
+      "cohort": "inventory-expanded",
+      "review": {
+        "cohort": "inventory-expanded",
+        "runId": "018",
+        "id": "refund-no-defect",
+        "arm": "baseline",
+        "criteria": [
+          true,
+          true,
+          true,
+          true
+        ],
+        "criticalFindings": [],
+        "blockedReads": 0,
+        "notes": "Traces key/amount/unit guards and 13339 reserved total in the synchronous scope; no invented DB/locking defect or actual execution claim.",
+        "sourceResultSha256": "0c659154852ef29e0807d0e192dec11e9723ed7f56b062fa4dedcc828b6f27b0"
+      }
+    },
+    {
+      "runId": "019",
+      "id": "coupon-multi-grant",
+      "arm": "baseline",
+      "repeat": 1,
+      "prompt": "합성 캠페인은 사용자 1명당 서로 다른 발급권을 최대 3개 허용해. grantId는 논리 발급 요청마다 고정되고 재전달에도 같아. A 사용자의 grant-1이 DB에 확정된 뒤 ack 전에 종료돼 재전달됐고, 같은 A의 정상 grant-2와 다른 사용자의 요청도 동시에 와. 전역 한도는 100개이고 grant-1을 포함한 원장은 99개야. UNIQUE(campaignId,userId)만 추가하면 될까? 재전달·사용자 한도·전역 한도를 함께 지키는 최소 변경과 검증 방법을 설명해줘. 코드·운영 접근은 없어.",
+      "skill": "commerce-backend-expert",
+      "skillSha256": "7dd8d9ecea51feed7b0f135bb3776877ee41713b0cb612fa976228f12c38efa9",
+      "cli": "codex-cli 0.153.2",
+      "effort": "medium",
+      "explicitSkill": true,
+      "skillDelivery": "exact SKILL.md in developerInstructions",
+      "skillEntryBytes": 5533,
+      "pluginIsolation": "process feature overrides; plugins and remote_plugin verified false",
+      "blockedReads": 0,
+      "failedCallSamples": [],
+      "reads": [
+        {
+          "path": "skills/commerce-backend-expert/references/coupon/INDEX.md",
+          "sha256": "be989790fa7e9f9bb074e16f5f7ddb8f8791d79e62615f9f6e8079fac5d7c734",
+          "bytes": 1742
+        },
+        {
+          "path": "skills/commerce-backend-expert/references/coupon/coupon-issuance.md",
+          "sha256": "c3f75c395b1f2ab1bc29512cf7cd847ab16f908619e11bbc84e2d68b44663e99",
+          "bytes": 4842
+        }
+      ],
+      "messages": [
+        "아니요. `UNIQUE(campaignId, userId)`는 사용자당 **1개만** 허용하므로 “서로 다른 발급권 최대 3개” 정책과 충돌하며, 전역 100개 제한도 보호하지 못합니다.\n\n## 최소 변경안\n\n### 1. 재전달 멱등성 제약\n\n`grantId`가 캠페인 안에서 유일하다면 발급 원장에 다음 제약을 둡니다.\n\n```sql\nUNIQUE (campaign_id, grant_id)\n```\n\n중복 키가 발견되면 기존 발급 결과를 반환하되, 기존 행의 `user_id`가 요청과 같은지 반드시 확인합니다. 다른 사용자로 바뀌었다면 성공으로 처리하지 말고 요청 충돌로 거절해야 합니다.\n\n`grantId`가 사용자 안에서만 유일하다는 계약이라면 `(campaign_id, user_id, grant_id)`가 필요하지만, 가능한 경우 캠페인 단위 유일성을 권장합니다.\n\n### 2. 전역·사용자 한도를 같은 트랜잭션에서 조건부 확보\n\n권장되는 최소 영속 모델은 다음과 같습니다.\n\n- 캠페인 행: `issued_count`, 최대 100\n- 사용자별 카운터 행:\n  - `campaign_id`\n  - `user_id`\n  - `issued_count`\n  - `UNIQUE(campaign_id, user_id)`\n  - 최대 3\n- 발급 원장: `UNIQUE(campaign_id, grant_id)`\n\n처리 순서는 다음과 같습니다.\n\n1. 같은 `grantId`의 기존 원장을 확인하거나 충돌 없는 방식으로 원장 삽입을 시도한다.\n2. 중복이면 사용자와 요청 내용이 동일한지 확인하고 **기존 성공 결과를 반환한다**. 한도를 다시 차감하지 않는다.\n3. 신규 요청이면 캠페인 카운터를 `issued_count < 100` 조건으로 1 증가시킨다.\n4. 사용자 카운터를 `issued_count < 3` 조건으로 1 증가시킨다.\n5. 둘 중 하나라도 확보하지 못하면 예외를 발생시켜 원장 삽입과 모든 카운터 변경을 함께 롤백한다.\n6. DB 커밋이 성공한 뒤에만 메시지를 ack한다.\n\n락 순서는 모든 처리 경로에서 `캠페인 → 사용자`로 고정해야 합니다. 단순히 카운트를 조회한 뒤 별도로 증가시키면 동시 요청에서 초과 발급될 수 있습니다.\n\nDB가 PostgreSQL이라면 개념적으로 다음과 같은 조건부 갱신을 사용할 수 있습니다.\n\n```sql\nUPDATE campaign\nSET issued_count = issued_count + 1\nWHERE campaign_id = :campaignId\n  AND issued_count < 100;\n```\n\n사용자 카운터는 `(campaign_id, user_id)` 기준 UPSERT와 `issued_count < 3` 조건을 결합합니다. 영향받은 행이 없으면 한도 초과입니다. 구체 문법은 실제 DBMS 확인이 필요합니다.\n\n카운터 테이블을 추가하지 않는 더 단순한 대안은 캠페인 행을 `FOR UPDATE`로 잠근 뒤 원장의 전체/사용자별 건수를 세는 것입니다. 모든 발급 경로가 같은 캠페인 락을 반드시 거쳐야 하며, 캠페인별 완전 직렬화와 DB 커넥션 병목이 생기므로 트래픽이 작을 때만 적합합니다.\n\n## 제시된 상황의 결과\n\n원장이 99개이고 `grant-1`이 이미 포함되어 있다면:\n\n- 재전달된 `A/grant-1`: 기존 원장을 반환하며 카운터를 증가시키지 않음\n- 신규 `A/grant-2`와 다른 사용자 요청: 전역 마지막 1개를 두고 경쟁\n- A가 아직 3개 미만이라면 둘 중 정확히 하나만 성공해 총 100개\n- A가 이미 3개라면 `grant-2`는 사용자 한도로 롤백되고, 다른 사용자 요청이 마지막 수량을 확보할 수 있음\n- 커밋 후 ack 전 재종료되어도 다음 재전달은 동일한 기존 결과를 반환\n\n## 검증 방법\n\n실제 사용하는 DB로 동시성 통합 테스트를 해야 합니다.\n\n1. **질문의 재현**\n   - 원장 99개를 준비하고 `A/grant-1` 포함\n   - 배리어로 `grant-1` 재전달, `A/grant-2`, 다른 사용자 신규 요청을 동시에 시작\n   - `grant-1`은 같은 원장 ID를 반환\n   - 신규 요청은 정확히 하나만 성공\n   - 최종 전체 원장은 정확히 100개\n\n2. **사용자 한도**\n   - A에게 2개가 있는 상태에서 서로 다른 신규 `grantId` 2개를 동시에 요청\n   - 정확히 하나만 성공하고 A의 원장은 3개\n   - A가 3개인 상태에서도 기존 grant 재전달은 성공 결과를 반환하고 신규 grant만 거절\n\n3. **동일 요청 동시 재전달**\n   - 같은 `(campaignId, grantId)`를 여러 소비자가 동시에 처리\n   - 원장은 한 행만 존재하고 모든 성공 응답이 같은 발급을 가리킴\n\n4. **장애 주입**\n   - 커밋 전 실패: 원장과 두 카운터가 모두 롤백\n   - 커밋 후 ack 전 종료: 재전달 시 추가 차감 없이 기존 결과 반환\n\n5. **사후 불변식 조회**\n   - 캠페인별 원장 수 `<= 100`\n   - 사용자별 원장 수 `<= 3`\n   - `(campaign_id, grant_id)` 중복 없음\n   - 원장 집계와 캠페인/사용자 카운터 일치\n\n기존 데이터에 제약과 카운터를 추가하기 전에는 원장을 기준으로 중복 여부를 검사하고 카운터를 백필해야 합니다.\n\n근거는 `coupon-issuance` 규칙이며, 메시지는 DB 확정 후 ack하고 재전달을 업무키로 멱등 처리하며 한도를 원자적으로 확보하도록 안내합니다. 다만 해당 문서는 `needs-review` 상태이고 실제 사업 정책·운영 DB는 검증되지 않았습니다. 제공된 코드와 운영 접근이 없어 위 변경의 실제 적용 및 테스트 실행은 확인하지 못했습니다."
+      ],
+      "unexpectedTools": [],
+      "tokenUsageUpdates": [
+        {
+          "elapsedMs": 3295,
+          "total": {
+            "totalTokens": 7234,
+            "inputTokens": 7142,
+            "cachedInputTokens": 3712,
+            "cacheWriteInputTokens": 0,
+            "outputTokens": 92,
+            "reasoningOutputTokens": 25
+          },
+          "last": {
+            "totalTokens": 7234,
+            "inputTokens": 7142,
+            "cachedInputTokens": 3712,
+            "cacheWriteInputTokens": 0,
+            "outputTokens": 92,
+            "reasoningOutputTokens": 25
+          },
+          "modelContextWindow": 258400
+        },
+        {
+          "elapsedMs": 5457,
+          "total": {
+            "totalTokens": 15019,
+            "inputTokens": 14845,
+            "cachedInputTokens": 7424,
+            "cacheWriteInputTokens": 0,
+            "outputTokens": 174,
+            "reasoningOutputTokens": 37
+          },
+          "last": {
+            "totalTokens": 7785,
+            "inputTokens": 7703,
+            "cachedInputTokens": 3712,
+            "cacheWriteInputTokens": 0,
+            "outputTokens": 82,
+            "reasoningOutputTokens": 12
+          },
+          "modelContextWindow": 258400
+        },
+        {
+          "elapsedMs": 82034,
+          "total": {
+            "totalTokens": 28568,
+            "inputTokens": 23970,
+            "cachedInputTokens": 14976,
+            "cacheWriteInputTokens": 0,
+            "outputTokens": 4598,
+            "reasoningOutputTokens": 3056
+          },
+          "last": {
+            "totalTokens": 13549,
+            "inputTokens": 9125,
+            "cachedInputTokens": 7552,
+            "cacheWriteInputTokens": 0,
+            "outputTokens": 4424,
+            "reasoningOutputTokens": 3019
+          },
+          "modelContextWindow": 258400
+        }
+      ],
+      "startedAt": "2026-10-26T10:23:44.865Z",
+      "model": "gpt-5.6-sol",
+      "provider": "openai",
+      "otherInstructionSourceCount": 0,
+      "turnStartedAt": "2026-10-26T10:23:45.057Z",
+      "tokenUsage": {
+        "total": {
+          "totalTokens": 28568,
+          "inputTokens": 23970,
+          "cachedInputTokens": 14976,
+          "cacheWriteInputTokens": 0,
+          "outputTokens": 4598,
+          "reasoningOutputTokens": 3056
+        },
+        "last": {
+          "totalTokens": 13549,
+          "inputTokens": 9125,
+          "cachedInputTokens": 7552,
+          "cacheWriteInputTokens": 0,
+          "outputTokens": 4424,
+          "reasoningOutputTokens": 3019
+        },
+        "modelContextWindow": 258400
+      },
+      "status": "completed",
+      "error": null,
+      "elapsedMs": 82048,
+      "turnElapsedMs": 81856,
+      "cohort": "inventory-expanded",
+      "review": {
+        "cohort": "inventory-expanded",
+        "runId": "019",
+        "id": "coupon-multi-grant",
+        "arm": "baseline",
+        "criteria": [
+          true,
+          true,
+          true,
+          true
+        ],
+        "criticalFindings": [],
+        "blockedReads": 0,
+        "notes": "Rejects the one-per-user key, distinguishes grant identity/per-user three/global hundred caps, preserves duplicate result and same-transaction durability before ack.",
+        "sourceResultSha256": "6471683eb8dea4f2d8fe4549089971382723b4475046d35c5f075e4c5886373d"
+      }
+    },
+    {
+      "runId": "020",
+      "id": "coupon-multi-grant",
+      "arm": "skill",
+      "repeat": 1,
+      "prompt": "합성 캠페인은 사용자 1명당 서로 다른 발급권을 최대 3개 허용해. grantId는 논리 발급 요청마다 고정되고 재전달에도 같아. A 사용자의 grant-1이 DB에 확정된 뒤 ack 전에 종료돼 재전달됐고, 같은 A의 정상 grant-2와 다른 사용자의 요청도 동시에 와. 전역 한도는 100개이고 grant-1을 포함한 원장은 99개야. UNIQUE(campaignId,userId)만 추가하면 될까? 재전달·사용자 한도·전역 한도를 함께 지키는 최소 변경과 검증 방법을 설명해줘. 코드·운영 접근은 없어.",
+      "skill": "commerce-backend-expert",
+      "skillSha256": "df752e47635508b1f9e444a9ef0403a3f3b0136455953a1fba17a433d7853a93",
+      "cli": "codex-cli 0.153.2",
+      "effort": "medium",
+      "explicitSkill": true,
+      "skillDelivery": "exact SKILL.md in developerInstructions",
+      "skillEntryBytes": 3859,
+      "pluginIsolation": "process feature overrides; plugins and remote_plugin verified false",
+      "blockedReads": 0,
+      "failedCallSamples": [],
+      "reads": [
+        {
+          "path": "skills/commerce-backend-expert/references/coupon/coupon-issuance.md",
+          "sha256": "c3f75c395b1f2ab1bc29512cf7cd847ab16f908619e11bbc84e2d68b44663e99",
+          "bytes": 4842
+        },
+        {
+          "path": "skills/commerce-backend-expert/references/spring-commerce/spring-commerce-locking-idempotency.md",
+          "sha256": "d180b4a2ba5a9908f8fd8ef46649f027adfe577694ea8d4c5b22250838ad511d",
+          "bytes": 4327
+        }
+      ],
+      "messages": [
+        "아니요. `UNIQUE(campaignId, userId)`는 사용자당 1개만 허용하므로 정상적인 `grant-2`, `grant-3`까지 차단합니다.\n\n## 최소 변경안\n\n### 1. 재전달 멱등성\n\n발급 원장에 다음 제약을 둡니다.\n\n```sql\nUNIQUE (campaign_id, grant_id)\n```\n\n`grantId`가 시스템 전체에서 유일하다는 계약이 확실하다면 `UNIQUE(grant_id)`도 가능하지만, 현재 조건만으로는 캠페인 범위를 포함하는 편이 안전합니다.\n\n원장에는 최소한 다음을 저장합니다.\n\n- `campaign_id`\n- `grant_id`\n- `user_id`\n- 확정 상태와 반환할 발급 결과\n- 필요하면 요청 지문\n\n같은 `(campaignId, grantId)`가 다시 오면:\n\n- 동일 사용자·동일 요청이면 기존 확정 결과 반환\n- 다른 사용자 또는 다른 불변 파라미터면 키 재사용 오류\n- 사용자 한도와 전역 한도를 다시 차감하지 않음\n\n### 2. 사용자 3개 한도와 전역 100개 한도\n\n사전 `COUNT` 후 애플리케이션에서 판단하면 동시 요청에 취약합니다. 다음 세 변경을 **하나의 DB 트랜잭션**에서 수행해야 합니다.\n\n1. 캠페인 전역 카운터를 `issued_count < 100` 조건으로 1 증가\n2. `(campaignId, userId)` 사용자 카운터를 `issued_count < 3` 조건으로 1 증가\n3. 발급 원장 삽입\n\n개념적인 흐름은 다음과 같습니다.\n\n```text\n트랜잭션 시작\n\n1. (campaignId, grantId) 원장 조회\n   - 존재하면 요청 지문 검증 후 기존 결과 반환\n\n2. 캠페인 카운터를 조건부 증가\n   UPDATE campaign\n      SET issued_count = issued_count + 1\n    WHERE campaign_id = ?\n      AND issued_count < 100\n   - 갱신 0건이면 전역 한도 초과\n\n3. 사용자 카운터 생성/잠금 후 조건부 증가\n   - 키: (campaign_id, user_id)\n   - issued_count < 3인 경우에만 증가\n   - 실패하면 사용자 한도 초과\n\n4. 발급 원장 INSERT\n   - UNIQUE(campaign_id, grant_id)\n\n커밋\n```\n\n2~4 중 하나라도 실패하면 전체를 롤백합니다. 명시적 잠금을 사용한다면 모든 요청이 `campaign → campaign-user` 순서로 잠가야 교착 위험을 줄일 수 있습니다.\n\n동일 `grantId` 두 건이 동시에 최초 처리되는 경쟁에서는 한 건만 UNIQUE 삽입에 성공해야 합니다. 패배한 트랜잭션은 전체 롤백한 뒤 **새 트랜잭션에서** 기존 원장을 조회해 같은 결과를 반환해야 합니다. 실패한 트랜잭션 안에서 그대로 재시도하면 안 됩니다.\n\n## 제시된 상황의 결과\n\n원장 99개에 `grant-1`이 이미 포함되어 있으므로:\n\n- `grant-1` 재전달: 기존 확정 결과 반환, 카운터 변화 없음\n- A의 `grant-2`: 사용자 한도가 남아 있으므로 전역 마지막 1개에 경쟁\n- 다른 사용자의 요청: 동일하게 마지막 1개에 경쟁\n- 두 신규 요청 중 정확히 하나만 성공\n- 최종 전역 발급 수는 100\n- 나머지 요청은 전역 한도 초과로 종료\n\n누가 성공하는지는 락 획득/커밋 순서에 따르며 별도의 공정성 계약이 없다면 보장하지 않습니다.\n\n## 검증 방법\n\n동일 DB 엔진을 사용하는 동시성 통합시험에서 최소한 다음을 확인해야 합니다.\n\n1. **ack 유실 재전달**\n   - `grant-1` 확정 후 같은 요청을 여러 번 병렬 실행\n   - 원장 행, 전역 카운터, 사용자 카운터가 모두 한 번만 반영되는지 확인\n\n2. **마지막 1개 경쟁**\n   - 전역 원장/카운터를 99로 준비\n   - `grant-1` 재전달, A의 `grant-2`, 다른 사용자의 신규 요청을 동시에 시작\n   - 신규 발급 성공이 정확히 1건이고 최종 카운터가 100인지 확인\n\n3. **사용자 한도 경쟁**\n   - 한 사용자가 이미 2개를 보유한 상태에서 서로 다른 여러 `grantId`를 병렬 처리\n   - 추가 성공이 정확히 1건이고 사용자 원장이 3개인지 확인\n\n4. **grantId 오용**\n   - 같은 `(campaignId, grantId)`를 다른 `userId` 또는 다른 요청 지문으로 전송\n   - 기존 성공으로 오인하지 않고 충돌로 거부하는지 확인\n\n5. **중간 실패 롤백**\n   - 전역 증가 후 사용자 한도 실패, 또는 원장 UNIQUE 충돌을 유도\n   - 전역·사용자 카운터에 잔여 증가가 없는지 확인\n\n항상 다음 불변식도 대조합니다.\n\n```text\n캠페인 확정 원장 수 <= 100\n사용자별 확정 원장 수 <= 3\n동일 (campaignId, grantId)의 확정 원장 수 = 1\n저장된 카운터 = 확정 원장 집계\n```\n\n프로젝트 코드와 운영 DB 접근이 제공되지 않아 실제 스키마, 트랜잭션 경계 및 테스트 실행 여부는 확인하지 못했습니다. 참고 규칙도 `needs-review` 상태이므로, 실제 DB 격리 수준과 기존 카운터 갱신 경로를 구현 시 함께 확인해야 합니다."
+      ],
+      "unexpectedTools": [],
+      "tokenUsageUpdates": [
+        {
+          "elapsedMs": 3718,
+          "total": {
+            "totalTokens": 6888,
+            "inputTokens": 6723,
+            "cachedInputTokens": 3712,
+            "cacheWriteInputTokens": 0,
+            "outputTokens": 165,
+            "reasoningOutputTokens": 22
+          },
+          "last": {
+            "totalTokens": 6888,
+            "inputTokens": 6723,
+            "cachedInputTokens": 3712,
+            "cacheWriteInputTokens": 0,
+            "outputTokens": 165,
+            "reasoningOutputTokens": 22
+          },
+          "modelContextWindow": 258400
+        },
+        {
+          "elapsedMs": 42465,
+          "total": {
+            "totalTokens": 18787,
+            "inputTokens": 16300,
+            "cachedInputTokens": 10240,
+            "cacheWriteInputTokens": 0,
+            "outputTokens": 2487,
+            "reasoningOutputTokens": 1056
+          },
+          "last": {
+            "totalTokens": 11899,
+            "inputTokens": 9577,
+            "cachedInputTokens": 6528,
+            "cacheWriteInputTokens": 0,
+            "outputTokens": 2322,
+            "reasoningOutputTokens": 1034
+          },
+          "modelContextWindow": 258400
+        }
+      ],
+      "startedAt": "2026-10-26T10:25:06.997Z",
+      "model": "gpt-5.6-sol",
+      "provider": "openai",
+      "otherInstructionSourceCount": 0,
+      "turnStartedAt": "2026-10-26T10:25:07.196Z",
+      "tokenUsage": {
+        "total": {
+          "totalTokens": 18787,
+          "inputTokens": 16300,
+          "cachedInputTokens": 10240,
+          "cacheWriteInputTokens": 0,
+          "outputTokens": 2487,
+          "reasoningOutputTokens": 1056
+        },
+        "last": {
+          "totalTokens": 11899,
+          "inputTokens": 9577,
+          "cachedInputTokens": 6528,
+          "cacheWriteInputTokens": 0,
+          "outputTokens": 2322,
+          "reasoningOutputTokens": 1034
+        },
+        "modelContextWindow": 258400
+      },
+      "status": "completed",
+      "error": null,
+      "elapsedMs": 42480,
+      "turnElapsedMs": 42281,
+      "cohort": "inventory-expanded",
+      "review": {
+        "cohort": "inventory-expanded",
+        "runId": "020",
+        "id": "coupon-multi-grant",
+        "arm": "skill",
+        "criteria": [
+          true,
+          true,
+          true,
+          true
+        ],
+        "criticalFindings": [],
+        "blockedReads": 0,
+        "notes": "Uses grant-specific deduplication and atomic per-user/global counters with the ledger, commits before the supplied ack-loss/redelivery scenario and invents no broker guarantee. The answer retains the supplied post-commit acknowledgment contract but does not restate a final ACK step explicitly; this semantic inference is not a keyword check.",
+        "sourceResultSha256": "d46dff892f0838ac167d9d37f2d2b3728841845eace4fa0f92e6d037abd1f519"
+      }
+    },
+    {
+      "runId": "021",
+      "id": "frontend-scope",
+      "arm": "skill",
+      "repeat": 1,
+      "prompt": "index.html의 button padding을 12px, .buttons gap을 8px로 바꾼 HTML을 보여줘. 나머지는 그대로 두고 파일은 저장하지 마.",
+      "skill": "commerce-backend-expert",
+      "skillSha256": "df752e47635508b1f9e444a9ef0403a3f3b0136455953a1fba17a433d7853a93",
+      "cli": "codex-cli 0.153.2",
+      "effort": "medium",
+      "explicitSkill": true,
+      "skillDelivery": "exact SKILL.md in developerInstructions",
+      "skillEntryBytes": 3859,
+      "pluginIsolation": "process feature overrides; plugins and remote_plugin verified false",
+      "blockedReads": 0,
+      "failedCallSamples": [],
+      "reads": [
+        {
+          "path": "workspace/index.html",
+          "sha256": "4916a72c74a2ad23fbe4b23093cdc62a385ab2515931ca6734f1ddbed97a73cb",
+          "bytes": 392
+        }
+      ],
+      "messages": [
+        "```html\n<!doctype html>\n<html lang=\"ko\">\n<head><meta charset=\"utf-8\"><title>버튼</title><style>button { padding: 12px; color: navy; } .buttons { display: flex; gap: 8px; }</style></head>\n<body><div class=\"buttons\"><button id=\"buy\">구매</button><button id=\"cancel\">취소</button></div><script>document.querySelector('#buy').addEventListener('click', () => console.log('buy'));</script></body>\n</html>\n```"
+      ],
+      "unexpectedTools": [],
+      "tokenUsageUpdates": [
+        {
+          "elapsedMs": 3013,
+          "total": {
+            "totalTokens": 6680,
+            "inputTokens": 6612,
+            "cachedInputTokens": 3712,
+            "cacheWriteInputTokens": 0,
+            "outputTokens": 68,
+            "reasoningOutputTokens": 11
+          },
+          "last": {
+            "totalTokens": 6680,
+            "inputTokens": 6612,
+            "cachedInputTokens": 3712,
+            "cacheWriteInputTokens": 0,
+            "outputTokens": 68,
+            "reasoningOutputTokens": 11
+          },
+          "modelContextWindow": 258400
+        },
+        {
+          "elapsedMs": 6044,
+          "total": {
+            "totalTokens": 13621,
+            "inputTokens": 13429,
+            "cachedInputTokens": 10112,
+            "cacheWriteInputTokens": 0,
+            "outputTokens": 192,
+            "reasoningOutputTokens": 11
+          },
+          "last": {
+            "totalTokens": 6941,
+            "inputTokens": 6817,
+            "cachedInputTokens": 6400,
+            "cacheWriteInputTokens": 0,
+            "outputTokens": 124,
+            "reasoningOutputTokens": 0
+          },
+          "modelContextWindow": 258400
+        }
+      ],
+      "startedAt": "2026-10-26T10:25:49.548Z",
+      "model": "gpt-5.6-sol",
+      "provider": "openai",
+      "otherInstructionSourceCount": 0,
+      "turnStartedAt": "2026-10-26T10:25:50.080Z",
+      "tokenUsage": {
+        "total": {
+          "totalTokens": 13621,
+          "inputTokens": 13429,
+          "cachedInputTokens": 10112,
+          "cacheWriteInputTokens": 0,
+          "outputTokens": 192,
+          "reasoningOutputTokens": 11
+        },
+        "last": {
+          "totalTokens": 6941,
+          "inputTokens": 6817,
+          "cachedInputTokens": 6400,
+          "cacheWriteInputTokens": 0,
+          "outputTokens": 124,
+          "reasoningOutputTokens": 0
+        },
+        "modelContextWindow": 258400
+      },
+      "status": "completed",
+      "error": null,
+      "elapsedMs": 6059,
+      "turnElapsedMs": 5527,
+      "cohort": "inventory-expanded",
+      "review": {
+        "cohort": "inventory-expanded",
+        "runId": "021",
+        "id": "frontend-scope",
+        "arm": "skill",
+        "criteria": [
+          true,
+          true,
+          true,
+          true
+        ],
+        "criticalFindings": [],
+        "blockedReads": 0,
+        "notes": "Exact HTML body and one input-file read; no commerce references, writes or claimed runtime test.",
+        "sourceResultSha256": "9598745a9516d7042f288b08c65eddb9f7720235bc8a1c403f397dae26d2fce6"
+      }
+    },
+    {
+      "runId": "022",
+      "id": "frontend-scope",
+      "arm": "baseline",
+      "repeat": 1,
+      "prompt": "index.html의 button padding을 12px, .buttons gap을 8px로 바꾼 HTML을 보여줘. 나머지는 그대로 두고 파일은 저장하지 마.",
+      "skill": "commerce-backend-expert",
+      "skillSha256": "7dd8d9ecea51feed7b0f135bb3776877ee41713b0cb612fa976228f12c38efa9",
+      "cli": "codex-cli 0.153.2",
+      "effort": "medium",
+      "explicitSkill": true,
+      "skillDelivery": "exact SKILL.md in developerInstructions",
+      "skillEntryBytes": 5533,
+      "pluginIsolation": "process feature overrides; plugins and remote_plugin verified false",
+      "blockedReads": 0,
+      "failedCallSamples": [],
+      "reads": [
+        {
+          "path": "workspace/index.html",
+          "sha256": "4916a72c74a2ad23fbe4b23093cdc62a385ab2515931ca6734f1ddbed97a73cb",
+          "bytes": 392
+        }
+      ],
+      "messages": [
+        "```html\n<!doctype html>\n<html lang=\"ko\">\n<head><meta charset=\"utf-8\"><title>버튼</title><style>button { padding: 12px; color: navy; } .buttons { display: flex; gap: 8px; }</style></head>\n<body><div class=\"buttons\"><button id=\"buy\">구매</button><button id=\"cancel\">취소</button></div><script>document.querySelector('#buy').addEventListener('click', () => console.log('buy'));</script></body>\n</html>\n```"
+      ],
+      "unexpectedTools": [],
+      "tokenUsageUpdates": [
+        {
+          "elapsedMs": 3021,
+          "total": {
+            "totalTokens": 7113,
+            "inputTokens": 7031,
+            "cachedInputTokens": 0,
+            "cacheWriteInputTokens": 0,
+            "outputTokens": 82,
+            "reasoningOutputTokens": 25
+          },
+          "last": {
+            "totalTokens": 7113,
+            "inputTokens": 7031,
+            "cachedInputTokens": 0,
+            "cacheWriteInputTokens": 0,
+            "outputTokens": 82,
+            "reasoningOutputTokens": 25
+          },
+          "modelContextWindow": 258400
+        },
+        {
+          "elapsedMs": 5475,
+          "total": {
+            "totalTokens": 14487,
+            "inputTokens": 14281,
+            "cachedInputTokens": 6912,
+            "cacheWriteInputTokens": 0,
+            "outputTokens": 206,
+            "reasoningOutputTokens": 25
+          },
+          "last": {
+            "totalTokens": 7374,
+            "inputTokens": 7250,
+            "cachedInputTokens": 6912,
+            "cacheWriteInputTokens": 0,
+            "outputTokens": 124,
+            "reasoningOutputTokens": 0
+          },
+          "modelContextWindow": 258400
+        }
+      ],
+      "startedAt": "2026-10-26T10:25:55.690Z",
+      "model": "gpt-5.6-sol",
+      "provider": "openai",
+      "otherInstructionSourceCount": 0,
+      "turnStartedAt": "2026-10-26T10:25:55.923Z",
+      "tokenUsage": {
+        "total": {
+          "totalTokens": 14487,
+          "inputTokens": 14281,
+          "cachedInputTokens": 6912,
+          "cacheWriteInputTokens": 0,
+          "outputTokens": 206,
+          "reasoningOutputTokens": 25
+        },
+        "last": {
+          "totalTokens": 7374,
+          "inputTokens": 7250,
+          "cachedInputTokens": 6912,
+          "cacheWriteInputTokens": 0,
+          "outputTokens": 124,
+          "reasoningOutputTokens": 0
+        },
+        "modelContextWindow": 258400
+      },
+      "status": "completed",
+      "error": null,
+      "elapsedMs": 5493,
+      "turnElapsedMs": 5260,
+      "cohort": "inventory-expanded",
+      "review": {
+        "cohort": "inventory-expanded",
+        "runId": "022",
+        "id": "frontend-scope",
+        "arm": "baseline",
+        "criteria": [
+          true,
+          true,
+          true,
+          true
+        ],
+        "criticalFindings": [],
+        "blockedReads": 0,
+        "notes": "Exact HTML body and one input-file read; no commerce references, writes or claimed runtime test.",
+        "sourceResultSha256": "07d4dcf2726dcde5980a43cec87f446d208af95b437a875e758b4381adb0d27a"
+      }
+    }
+  ],
+  "limitations": [
+    "One run per arm/case; no statistical or general quality/latency/billing claim",
+    "First-condition counts are reported explicitly in comparison",
+    "Cloud weights, cache state and provider routing are not fully controlled",
+    "Failed file reads remain counted; body retrieval is not semantic success",
+    "OpenClaw native application and actual PG/business validation remain unresolved"
+  ],
+  "correctedDesign": {
+    "date": "2026-10-26",
+    "reason": "The preliminary matrix exposed excessive unavailable read attempts; the shared evaluation context now states the complete task inventory and aborts at eight failures.",
+    "sameSkillCandidates": true,
+    "sourceSizes": [
+      {
+        "name": "commerce-backend-expert",
+        "beforeBytes": 5533,
+        "afterBytes": 3859,
+        "byteReductionPct": 30.254834628592082,
+        "baselineSha256": "7dd8d9ecea51feed7b0f135bb3776877ee41713b0cb612fa976228f12c38efa9",
+        "candidateSha256": "df752e47635508b1f9e444a9ef0403a3f3b0136455953a1fba17a433d7853a93"
+      },
+      {
+        "name": "commerce-review",
+        "beforeBytes": 5669,
+        "afterBytes": 3910,
+        "byteReductionPct": 31.028400070559183,
+        "baselineSha256": "daee540f06f2481c237049222b36ecfc1a5839e224bc570e59d9823751ca3dc2",
+        "candidateSha256": "3a931dc5ed84973c1feba53299a19b65133def31b13958a36308dbab0a631010"
+      }
+    ],
+    "rubricSha256": "895ca27eea05ab19d894711bd47132c9e1fb24e87cef583163c97d3ff5b795d8",
+    "casesSha256": "e2514810b5fee7dfa29f7d65c76870cf706961426731ee4a53e29c1a4a000bf3",
+    "pilot": [
+      "webhook-async"
+    ],
+    "remaining": [
+      "refund-overlap",
+      "webhook-sync",
+      "lock-watchdog",
+      "payment-uncertain",
+      "coupon-redelivery",
+      "retry-rollback-only",
+      "benefit-policy",
+      "lua-partial-write",
+      "refund-no-defect",
+      "coupon-multi-grant",
+      "frontend-scope"
+    ],
+    "remainingOrderOffset": 1,
+    "plannedTaskRuns": 24,
+    "alreadyCompletedPilotRuns": 2,
+    "additionalTaskRuns": 22,
+    "expectedFirstArmCounts": {
+      "baseline": 6,
+      "skill": 6
+    },
+    "scoring": "Same frozen rubric v3 and critical-error gate. Report all failures; no pass for incomplete/contaminated/aborted turns.",
+    "limits": "One run per condition/case. Separate this corrected-harness cohort from the preliminary matrix and the aborted diagnostic. No generic accuracy or billing claim.",
+    "evaluatorSha256": "fbfb399a1629a3ab31127bfb3d07f7c9b40c65a513cb77943df4af6e6326d860"
+  },
+  "adoption": {
+    "commerceBackendExpert": {
+      "variant": "compressed",
+      "sha256": "df752e47635508b1f9e444a9ef0403a3f3b0136455953a1fba17a433d7853a93",
+      "reason": "All seven core-skill case pairs meet frozen criteria and acceptance gate; direct rule routing lowers successful reads."
+    },
+    "commerceReview": {
+      "variant": "baseline retained",
+      "sha256": "daee540f06f2481c237049222b36ecfc1a5839e224bc570e59d9823751ca3dc2",
+      "reason": "Compressed review candidate has one unresolved benefit-policy wording ambiguity. Retain the exact pre-optimization review skill rather than accept a financial-policy clarity regression."
+    },
+    "sessionHook": {
+      "variant": "shorter routing text",
+      "sha256": "6a3b28925fd1e0c32fb44ecb2efdc4815c90f76e29ba075787b5dbb4f948e4eb",
+      "stateAndDispatchLogicChanged": false
+    },
+    "committed": false,
+    "pushed": false
+  },
+  "qualityInterpretation": "Case criteria can pass while acceptance is held for ambiguous policy wording. A hold is not a measured accuracy percentage or a confirmed permanent-ban claim.",
+  "relatedRecords": {
+    "preliminary": "2026-10-26-token-optimization-preliminary.json",
+    "diagnostic": "2026-10-26-evaluation-diagnostic.json",
+    "hook": "2026-10-26-hooks-optimized.json"
+  },
+  "taskAccounting": {
+    "preliminaryCompleted": 24,
+    "diagnosticAborted": 1,
+    "correctedCompleted": 24,
+    "totalStartedTaskTurns": 49,
+    "preflightInferenceTurns": 0,
+    "providerRequestCount": null
+  }
+}

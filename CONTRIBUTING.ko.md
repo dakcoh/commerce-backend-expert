@@ -157,7 +157,7 @@ Claude Code 실행 파일이 있으면 실제 훅 검사를 별도로 반복할 
 node scripts/smoke-claude-hooks.js /absolute/path/to/claude
 ```
 
-새 설정 폴더와 플러그인 복사본을 사용하고 모델 도구를 끈 뒤, 임시 키로 localhost의 고정 Messages 응답 대역에 요청합니다. 인증 정보를 복사하거나 원격 모델을 호출하지 않습니다. 실제 훅 응답·압축 경계·전달 문맥을 assert로 검사하며 증거는 무시되는 `output/claude-hooks-*`에 남습니다. 오프라인 테스트 37개와 별도이며 Claude Code 2.1.114의 훅 이벤트 출력을 사용합니다. 클라이언트 실행 파일은 자동 설치하지 않습니다.
+새 설정 폴더와 플러그인 복사본을 사용하고 모델 도구를 끈 뒤, 임시 키로 localhost의 고정 Messages 응답 대역에 요청합니다. 인증 정보를 복사하거나 원격 모델을 호출하지 않습니다. 실제 훅 응답·압축 경계·전달 문맥을 assert로 검사하며 증거는 무시되는 `output/claude-hooks-*`에 남습니다. 기본 오프라인 테스트와 별도이며 Claude Code 2.1.114의 훅 이벤트 출력을 사용합니다. 클라이언트 실행 파일은 자동 설치하지 않습니다.
 
 OpenClaw 설치·발견은 로그인·모델 호출 없이 별도로 반복할 수 있습니다. 이미 설치된 클라이언트의 `openclaw.mjs` 경로를 전달합니다.
 
@@ -167,7 +167,7 @@ node scripts/smoke-openclaw.js /absolute/path/to/openclaw/openclaw.mjs
 
 새 상태·설정·작업 폴더에서 extraDirs 개별/동시 설치와 번들 링크 설치·제거를 검사하고 `output/openclaw-discovery-*`에 기록합니다. 번들은 시험용 복사본을 사용하며 `--force --accept-capabilities`는 이 로컬 소스를 검토한 뒤 주는 클라이언트의 기본 설치 동의입니다. 게이트웨이·모델·세션 훅을 실행하지 않으며 평소 설정을 변경하지 않습니다. 검증한 OpenClaw 버전 자체는 Node 24.22.1 이상을 요구하므로 저장소의 Node 22 검사와 구분합니다.
 
-실제 로컬 파일 읽기·원문 보존은 별도 [probe](scripts/probe-openclaw-model.js)로 검사합니다. 이미 실행한 loopback Ollama와 설치된 모델을 사용하며, 스킬 없이 제어 파일을 읽고 두 스킬을 제공한 CSS 입력을 원문과 대조합니다. **재현 예시이며 시험한 구성의 합격을 뜻하지 않습니다.** [관찰한 실패와 판정 기준](validation/openclaw-model-2026-10-26.md)을 함께 확인하세요.
+실제 로컬 파일 읽기·원문 보존은 별도 [probe](scripts/probe-openclaw-model.js)로 검사합니다. 이미 실행한 loopback Ollama와 설치된 모델을 사용하며, 스킬 없이 제어 파일을 읽은 뒤 두 스킬을 제공한 임시 HTML 파일의 두 CSS 값만 `edit`로 수정합니다. 결과 파일 전체와 실제 native 도구 경로를 검사하며 사용자 프로젝트 파일은 수정하지 않습니다. 각 모델 작업의 제한 시간은 120초이고 제어 시험 실패 시 후속 추론을 중단합니다. Node.js 24.22.1 이상과 OpenClaw 2026.10.7의 세션 DB 형식을 사용합니다. [관찰한 실패·수정과 판정 범위](validation/openclaw-model-2026-10-26.md)를 함께 확인하세요.
 
 ```bash
 node scripts/probe-openclaw-model.js /path/to/openclaw/openclaw.mjs http://127.0.0.1:11434 qwen3-coder:30b 0 off

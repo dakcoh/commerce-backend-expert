@@ -14,7 +14,8 @@ npm test
 | [skills.test.js](skills.test.js) | YAML frontmatter, 독립 설치, 로컬 링크·앵커·경로 경계 |
 | [plugins.test.js](plugins.test.js) | 클라이언트 manifest·marketplace, 문서, 호환성·제거된 런타임 경로 |
 | [hooks.test.js](hooks.test.js) | 세션 상태·명령·입력 제한·실패 처리, 선택적 지식 편집 검사 |
-| [evaluation.test.js](evaluation.test.js) | 모델 평가용 파일 읽기의 실제 경로·크기 제한 |
+| [evaluation.test.js](evaluation.test.js) | 평가 읽기 경계·비교 순서·소스 고정·사용량 집계·실패 한도 |
+| [openclaw-model.test.js](openclaw-model.test.js) | 로컬 모델 제한, 스킬 격리, 실패 응답 보존, 실제 파일 최소 편집·원문 보존·도구 경로 판정 |
 
 [helpers.js](helpers.js)는 임시 폴더·스킬 복사·저장소 복사본을 준비합니다. 검증할 분기와 기대 결과는 각 테스트에 둡니다. 새 동작은 해당 파일에 추가하고, 기존 항목의 정상·실패 조건을 함께 확인합니다.
 

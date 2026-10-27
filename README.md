@@ -110,13 +110,19 @@ The [Claude](hooks/claude.json) and [Cursor](hooks/cursor.json) edit hooks are *
 
 ## Interpret the results
 
+The [validation record index](validation/README.md) explains the installation, model and synthetic runtime evidence. These are development records, separate from the runtime skills and hooks.
+
 Check each rule's conditions, exceptions, evidence scope, and review state. `active` means in use, not certified accurate. All 19 `needs-review` rules have recorded AI document reviews, with integration and business-policy checks remaining. See the [follow-up reviews and client checks without authentication](validation/followup-review.md). `not-recorded` under `verifiedBy` or `lastReviewedAt` means there is no recorded review.
 
 An optional [15-case isolated runtime fixture](validation/runtime/README.md) exercises PostgreSQL/Redis/Spring/JPA failure boundaries and informed the Lua-error recovery guidance. These synthetic checks are separate from actual PG, business-policy, and model-application verification.
 
-The [public behavior evaluation](benchmarks/README.md) uses fixed synthetic inputs and the actual skill text. It does not establish live DB/PG behavior, automatic skill selection after installation, or correctness across all tasks. No token or response-time improvement is claimed. See [validation and its limits](CONTRIBUTING.md#validation).
+The [public behavior evaluation](benchmarks/README.md) uses fixed synthetic inputs and the actual skill text. It does not establish live DB/PG behavior, automatic skill selection after installation, or correctness across all tasks. Interpret performance figures within each study's comparison and scope. See [validation and its limits](CONTRIBUTING.md#validation).
 
 In a [48-run skill/no-skill comparison](benchmarks/comparison-2026-10-26.md), both arms met the predefined criteria in 24/24 runs. The median paired time difference was +2.5% with the skill; total input tokens increased 65.5%. This sample does not establish general quality, speed or billing gains. An additional policy assumption was corrected and checked in a separate 12-run regression.
+
+The [plugin suitability review](validation/plugin-fit-review-2026-10-26.md) separates useful commerce review/reference workflows from unmeasured benefits. Start with selected design or review tasks and check code evidence, false positives and unresolved policies in the results.
+
+A [later token optimization study](benchmarks/token-optimization-2026-10-26.md) shortened the main skill and added direct rule routing. Its seven explicit original/candidate pairs used 35.4% fewer total input and 33.1% fewer uncached input tokens. Review-skill compression was withheld after an ambiguous policy statement. This small sample does not guarantee general quality or billing gains.
 
 ## Existing MCP users
 

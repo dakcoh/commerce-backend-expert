@@ -1,0 +1,846 @@
+{
+  "date": "2026-10-26",
+  "source": "af62b8d6df2fd50a2edc47830f6c570920aed1fa",
+  "appliedUncommittedSkillSha256": "7dd8d9ecea51feed7b0f135bb3776877ee41713b0cb612fa976228f12c38efa9",
+  "client": "OpenClaw 2026.10.7",
+  "ollama": "0.40.10",
+  "node": "v24.22.1",
+  "scope": "Four natural-selection diagnostic tasks and two explicit skill-read tasks; one coupon case, not a general success rate or speed comparison. Original 48-run benchmark unchanged. Candidate first tried in isolated copies; only the path clarification was then applied locally without a commit.",
+  "trials": [
+    {
+      "cohort": "natural",
+      "arm": "baseline",
+      "seed": 42,
+      "source": "af62b8d6df2fd50a2edc47830f6c570920aed1fa",
+      "prompt": "쿠폰 소비자 A가 발급 원장을 DB에 커밋한 직후 ack 전에 종료됐어. 소비자 B가 같은 요청을 다시 받았고 다른 파티션에도 같은 캠페인의 발급 요청이 있어. 캠페인 발급 한도는 100개이고 현재 원장에는 99개야. 큐는 파티션 안에서만 순서를 보장해. 이 구조에서 중복 발급과 총 한도 초과를 막으려면 무엇을 확인하고 바꿔야 할까? 코드·운영 환경은 제공하지 않았어.",
+      "modelDigest": "f38aa0c53da5f8c49d08c43a99df24ff53167fe68e24664a7777288e7656fdfe",
+      "baselineSha256": "92d58964d805c5659b7061e4b391fd4bb976f8eb6428207b304030e83fc29061",
+      "candidateSha256": "7dd8d9ecea51feed7b0f135bb3776877ee41713b0cb612fa976228f12c38efa9",
+      "candidateInstruction": "OpenClaw: use the skill directory supplied as `{baseDir}` for file reads. For example, read `{baseDir}/references/coupon/INDEX.md`, never `references/coupon/INDEX.md` relative to the project workspace. In other clients, resolve links against the directory containing this SKILL.md.\n\n",
+      "startedAt": "2026-10-25T23:55:38.691Z",
+      "finishedAt": "2026-10-25T23:57:44.430Z",
+      "native": {
+        "ok": true,
+        "status": "ok",
+        "final": "**중복 발급 방지와 캠페인 총 한도 초과 방지를 위해 확인·수정해야 할 핵심 항목**\n\n| # | 항목 | 현재 상태(가정) | 확인/수정 내용 | 기대 효과 |\n|---|------|----------------|----------------|-----------|\n| 1 | **컨슈머 offset 커밋 타이밍** | 자동 커밋 혹은 DB 커밋 뒤에 offset을 커밋하도록 설정되어 있지 않을 수 있음 | • `auto.commit.enable=false` 로 설정하고, **DB 트랜잭션 성공 후** `consumer.commitSync()` (또는 `Ack`를 수동으로 호출) <br>• Spring‑Kafka 사용 시 `AckMode.MANUAL_IMMEDIATE` 로 설정 | 소비자가 DB에 기록 후 ack 전에 죽어도 offset이 커밋되지 않아 재처리 시 중복 체크가 가능해짐 |\n| 2 | **메시지별 Idempotency Key** | 메시지에 고유 ID(예: request‑id)가 없거나 사용되지 않을 수 있음 | • 메시지에 `request_id` 혹은 `coupon_issue_id` 필드 삽입 <br>• DB에 **unique key**(예: `UNIQUE (request_id)`) 를 추가 | 같은 요청이 재전송되어도 DB에서 중복 INSERT 가 방지되고, 컨슈머는 이미 처리된 메시지를 건너뛸 수 있음 |\n| 3 | **트랜잭션 범위** | DB 커밋과 Kafka offset 커밋이 서로 다른 트랜잭션으로 분리 | • **Outbox 패턴** 사용: 비즈니스 로직 → outbox 테이블에 이벤트 저장 → Kafka 프로듀서가 outbox를 읽어 전송 후, DB 트랜잭션을 commit <br>• 또는 **Kafka transactional API**(`producer.initTransactions()`, `producer.sendAndCommit()`) 를 활용 | DB와 Kafka 간 원자성을 확보해, 하나의 트랜잭션 안에서 두 시스템이 모두 일관되게 변화 |\n| 4 | **캠페인 한도(100) 제어** | 단순 `SELECT COUNT(*)` 로 한도 확인 후 INSERT 수행 → race condition 발생 가능 | • 캠페인 별 **계산용 Counter 테이블**(campaign_id, issued_count) 생성 <br>• `SELECT ... FOR UPDATE` 로 행 잠금 → `issued_count < 100` 확인 후 `INSERT` 및 `UPDATE issued_count` 수행 <br>• 혹은 DB **atomic increment**(PostgreSQL: `RETURNING` + `CHECK` constraint, MySQL: `ON DUPLICATE KEY UPDATE`) 사용 | 여러 파티션에서 동시 발급 시에도 한도 초과가 발생하지 않음 |\n| 5 | **분산 락 / 전역 동기화** | 파티션 간에 한도 정보를 공유하지 않음 → 동시 접근 시 한도 초과 가능 | • Redis/ZooKeeper/Etcd 등 **분산 락**(Redlock) 도입 후, 한도 체크와 증가를 락 안에서 수행 <br>• 또는 DB에서 **row‑level lock**(`SELECT FOR UPDATE`) 으로 전역적으로 동기화 | 파티션이 분리돼 있어도 한도 초과를 막음 |\n| 6 | **중복/실패 처리 로직** | 재처리 시 중복이 발생하거나, 중단된 트랜잭션이 재시도될 때 문제 | • 컨슈머에서 `request_id` 를 **first‑seen** 테이블에 저장 (처리 중/완료 표시) <br>• 재처리 시 해당 ID가 존재하면 바로 `skip` <br>• 실패 시 트랜잭션 롤백과 함께 offset은 커밋하지 않음 | 재시도 시 실제로 중복 발급이 발생하지 않음 |\n| 7 | **감시·경고** | 한도 초과 직전/초과 시 자동 알림 부재 | • `issued_count` 를 모니터링해 `>= 95` 시 경보 <br>• 한도 초과 시 즉시 서비스 중지 신호를 전송 | 운영팀이 조기 대응 가능 |\n| 8 | **테스트·시뮬레이션** | 실제 트랜잭션 경계와 락이 제대로 동작하는지 확인 부재 | • **테스트 스크립트**(다중 파티션, 동시에 여러 컨슈머) 로 한도 초과 시나리오 재현 <br>• **Chaos Monkey** 같은 접근으로 컨슈머 중단 시 재처리 테스트 | 실제 운영 환경에서도 한도 초과 및 중복이 방지됨 |\n\n---\n\n### 핵심 변경 포인트 요약\n\n1. **컨슈머 offset을 DB 커밋 직후에만 커밋** → 재시도 시 중복 체크가 가능.\n2. **메시지에 고유 Idempotency Key 삽입** 및 DB에 unique 제약.\n3. **트랜잭션 범위 확장**(Outbox 또는 Kafka transactional API) → DB와 Kafka를 한 트랜잭션으로 묶음.\n4. **캠페인 한도 제어**를 위한 **전역 카운터**(row‑level lock 또는 atomic increment).\n5. **분산 락** 혹은 DB 락으로 파티션 간 동기화 보장.\n6. **중복 처리 로직**(first‑seen 테이블)으로 재시도 시 중복 방지.\n7. **모니터링/경고** 설정으로 한도 초과 사전 감지.\n8. **테스트/시뮬레이션**을 통한 사전 검증.\n\n이 8가지 항목을 차례대로 확인·수정하면,  \n- **쿠폰 소비자 A의 crash 후**에도 중복 발급이 방지되고,  \n- **다수 파티션에서 동시 요청**이 발생하더라도 **총 한도 100개를 초과**하지 않도록 할 수 있습니다.  \n\n필요에 따라 DB 종류(Oracle, PostgreSQL, MySQL 등)에 맞는 구체적 SQL 문법(SELECT … FOR UPDATE, atomic increment 등)을 적용하시고, 운영 환경에 맞는 Kafka/Redis 등 도구의 설정을 조정해 주세요.",
+        "model": "gpt-oss:20b",
+        "provider": "ollama",
+        "assistantTurns": 1,
+        "usage": {
+          "input": 2462,
+          "output": 3284,
+          "cacheRead": 0,
+          "cacheWrite": 0,
+          "total": 5746,
+          "cost": {
+            "total": 0
+          }
+        }
+      },
+      "requests": [
+        {
+          "sha256": "7a9339bf757a939e021decbdff8c9d0df5807dbbfe1a1b1278fd1b5d64d2a480",
+          "model": "gpt-oss:20b",
+          "think": "high",
+          "options": {
+            "temperature": 1,
+            "seed": 42,
+            "num_predict": 4096,
+            "num_ctx": 32768
+          },
+          "tools": [
+            "read",
+            "skills_read"
+          ],
+          "candidateInstructionDelivered": false
+        }
+      ],
+      "calls": [],
+      "toolReplies": [],
+      "verifiedFiles": [],
+      "skillRead": false,
+      "couponRuleRead": false,
+      "sourceGatePassed": false,
+      "semanticReview": {
+        "reviewer": "Implementing Codex session, not independent or blinded",
+        "kind": "Qualitative follow-up, not the original 48-run rubric",
+        "verdict": "not scored; required source retrieval failed"
+      },
+      "rawResultSha256": "ae878649242d9cf73ad043e8c472699563c1e7d81d46554e86d4be12a09edd1a"
+    },
+    {
+      "cohort": "natural",
+      "arm": "candidate",
+      "seed": 42,
+      "source": "af62b8d6df2fd50a2edc47830f6c570920aed1fa",
+      "prompt": "쿠폰 소비자 A가 발급 원장을 DB에 커밋한 직후 ack 전에 종료됐어. 소비자 B가 같은 요청을 다시 받았고 다른 파티션에도 같은 캠페인의 발급 요청이 있어. 캠페인 발급 한도는 100개이고 현재 원장에는 99개야. 큐는 파티션 안에서만 순서를 보장해. 이 구조에서 중복 발급과 총 한도 초과를 막으려면 무엇을 확인하고 바꿔야 할까? 코드·운영 환경은 제공하지 않았어.",
+      "modelDigest": "f38aa0c53da5f8c49d08c43a99df24ff53167fe68e24664a7777288e7656fdfe",
+      "baselineSha256": "92d58964d805c5659b7061e4b391fd4bb976f8eb6428207b304030e83fc29061",
+      "candidateSha256": "7dd8d9ecea51feed7b0f135bb3776877ee41713b0cb612fa976228f12c38efa9",
+      "candidateInstruction": "OpenClaw: use the skill directory supplied as `{baseDir}` for file reads. For example, read `{baseDir}/references/coupon/INDEX.md`, never `references/coupon/INDEX.md` relative to the project workspace. In other clients, resolve links against the directory containing this SKILL.md.\n\n",
+      "startedAt": "2026-10-25T23:57:55.931Z",
+      "finishedAt": "2026-10-25T23:59:30.844Z",
+      "native": {
+        "ok": true,
+        "status": "ok",
+        "final": "**핵심 목표**  \n1. **중복 발급 방지** – 같은 쿠폰 발급 요청이 여러 소비자에게 전달되었을 때, 한 번만 처리하도록 한다.  \n2. **총 한도 초과 방지** – 캠페인 전체(모든 파티션)에서 100개를 넘기지 않도록 정확히 체크한다.  \n\n아래 단계별로 확인·수정할 사항을 정리했습니다.  \n\n---\n\n## 1. 큐(예: Kafka) 설정 확인 & 수정\n\n| 항목 | 현재 가정 | 권장 설정 | 이유 |\n|------|-----------|-----------|------|\n| **파티션 키** | 임의 또는 순차적 키 | `campaign_id` (혹은 `campaign_id:request_id` 등) | 같은 캠페인 요청은 같은 파티션으로 보냄 → 파티션 내부 순서 보장으로 중복이 덜 발생 |\n| **오토 커밋** | **ON** (기본) | **OFF** (`enable.auto.commit=false`) | DB에 commit 한 뒤에만 offset 커밋하도록, `consumer.commitSync()`을 사용 |\n| **트랜잭션** | 없음 | **Kafka Transaction** 사용 (producer & consumer) | `producer.send()`와 `consumer.commitSync()`를 하나의 트랜잭션으로 묶어 1차원 중복 방지 |\n| **Offset 관리** | 자동 커밋 | 수동 커밋 → DB 트랜잭션 성공 시 commit | “DB 커밋 → ACK” 순서가 보장됨 |\n\n> **Tip**  \n> Kafka가 파티션 내부만 순서를 보장하므로, `campaign_id`를 key 로 사용해 파티션을 균일하게 분산시키면 같은 캠페인 요청이 여러 파티션에 흩어지는 것을 막아 중복 가능성을 줄입니다.  \n\n---\n\n## 2. 소비자(Consumer) 로직 검토\n\n| 항목 | 현재 가정 | 수정 방안 | 비고 |\n|------|-----------|-----------|------|\n| **중복 제거** | 없음 | **idempotent consumer** 도입 | *고유 request id* 를 DB에 저장한 뒤, 같은 id가 들어오면 바로 ACK 반환 |\n| **거래 처리** | DB commit → ACK | **Outbox Pattern** 사용 | DB에 *outbox* 테이블에 `INSERT` → Kafka에 메시지 발송 → 트랜잭션 커밋 |\n| **트랜잭션** | 단일 트랜잭션 | `SELECT ... FOR UPDATE` + `INSERT` | 캠페인 테이블(또는 별도 카운터 테이블)에서 현재 issued 수를 잠그고 증가시킴 |\n| **오류 처리** | 예외 시 재시도 | 재시도 로직에 **idempotency key** 사용 | 재시도 시 동일한 request id 로 중복 INSERT 방지 |\n\n> **핵심**  \n> *중복 체크*와 *한도 체크*를 같은 트랜잭션 안에서 수행해야 합니다.  \n> - `SELECT count(*) FROM coupons WHERE campaign_id=? FOR UPDATE;`  \n> - `if (count >= limit) throw;`  \n> - `INSERT INTO coupons …;`  \n> - `COMMIT;`\n\n---\n\n## 3. DB 설계 및 제약조건\n\n| 항목 | 현재 가정 | 수정 방안 | 이유 |\n|------|-----------|-----------|------|\n| **고유 제약** | 없음 | `UNIQUE (campaign_id, request_id)` | 같은 캠페인·요청이 중복으로 들어오는 것을 DB에서 차단 |\n| **한도 컬럼** | `campaign.limit` + `COUNT` 계산 | `campaign.issued_count` + `SELECT ... FOR UPDATE` | 한도 초과 여부를 빠르게 판단 |\n| **트랜잭션 격리** | READ COMMITTED | REPEATABLE READ / SERIALIZABLE | 동시성으로 인한 count 초과 방지 |\n| **행 레벨 락** | 없음 | `SELECT ... FOR UPDATE` | 동시 트랜잭션이 같은 캠페인 row 를 잠그어 한도 초과 방지 |\n\n> **Tip**  \n> `campaign.issued_count` 를 `UPDATE campaign SET issued_count = issued_count + 1 WHERE id=? AND issued_count < limit;` 로 한 번에 증가시키면, DB가 실패를 반환하면 “limit exceeded” 처리를 할 수 있습니다.\n\n---\n\n## 4. 전역 한도 관리 (옵션)\n\n| 방법 | 장점 | 단점 |\n|------|------|------|\n| **DB 트랜잭션** (위 항목) | 가장 직관적이고 일관적 | 파티션 간 동기화는 DB에 의존 |\n| **분산 락(Etcd/Consul/Redis)** | 파티션이 분리된 서비스에서도 동기화 가능 | 추가 인프라 필요, 락 경합 시 성능 저하 |\n| **Atomic Counter(REDIS INCRBY)** | 빠른 비동기 처리 | 정확한 한도 체크를 보장하려면 트랜잭션 필요 |\n\n> **권장**  \n> 작은 규모(수백 ~ 수천 쿠폰)라면 DB 트랜잭션만으로 충분합니다.  \n> 대규모(수십만 쿠폰)라면 Redis의 `INCRBY` + `WATCH`를 사용해 한도 초과 시 롤백하도록 구현합니다.\n\n---\n\n## 5. 운영 체크리스트\n\n| 체크 | 확인 포인트 | 구현 여부 |\n|------|--------------|-----------|\n| **Consumer 재시작 시** | 재시작 시 offset이 커밋된 위치인지 | `auto.offset.reset` = `latest` |\n| **Ack 정책** | DB commit 후 ack | `commitSync()` 사용 |\n| **중복 요청** | 요청 헤더에 `request_id` 포함 여부 | `request_id` 생성 규칙(예: UUID) |\n| **파티션 수** | 캠페인별 파티션 수 | `campaign_id` key 로 균일 분산 |\n| **모니터링** | 한도 초과 이벤트 | 메트릭(예: `coupon_issued_total`) |\n| **테스트** | 중복 요청, 파티션 재밸런싱 시나리오 | 통합 테스트(End‑to‑End) |\n\n---\n\n## 6. 요약\n\n1. **큐 설정**  \n   * 파티션 키를 `campaign_id` 로 맞추고, auto‑commit 끈 뒤 DB commit 후에 offset commit.  \n   * Kafka 트랜잭션 활용(옵션).\n\n2. **Consumer 로직**  \n   * `request_id` 기반 idempotent consumer.  \n   * `SELECT ... FOR UPDATE` 로 한도와 중복을 한 트랜잭션 안에서 확인·증가.  \n   * Outbox Pattern으로 DB와 Kafka 연동.\n\n3. **DB 제약**  \n   * `UNIQUE (campaign_id, request_id)`  \n   * `campaign.issued_count` 를 갱신하면서 한도 초과 체크.\n\n4. **운영**  \n   * 재시작 시 offset 검증, 모니터링, 테스트 자동화.\n\n이렇게 구성하면  \n- **중복 발급**: `UNIQUE` 제약과 idempotent consumer가 같은 요청을 두 번 처리하지 못하게 함.  \n- **총 한도 초과**: `SELECT ... FOR UPDATE` + `issued_count` 업데이트가 트랜잭션 안에서 수행되므로 동시 요청이 한도 초과를 유발할 수 없음.  \n\n필요한 코드 예시나 상세 설정은 실제 사용 중인 메시지 브로커(Kafka)와 DB(예: PostgreSQL, MySQL) 문서를 참고해 추가 구현하시면 됩니다.",
+        "model": "gpt-oss:20b",
+        "provider": "ollama",
+        "assistantTurns": 1,
+        "usage": {
+          "input": 2462,
+          "output": 2462,
+          "cacheRead": 0,
+          "cacheWrite": 0,
+          "total": 4924,
+          "cost": {
+            "total": 0
+          }
+        }
+      },
+      "requests": [
+        {
+          "sha256": "2620ade39fd3e516920d51d0b0d6fe33ea5e3c19adc8cd501650e0cb604c926d",
+          "model": "gpt-oss:20b",
+          "think": "high",
+          "options": {
+            "temperature": 1,
+            "seed": 42,
+            "num_predict": 4096,
+            "num_ctx": 32768
+          },
+          "tools": [
+            "read",
+            "skills_read"
+          ],
+          "candidateInstructionDelivered": false
+        }
+      ],
+      "calls": [],
+      "toolReplies": [],
+      "verifiedFiles": [],
+      "skillRead": false,
+      "couponRuleRead": false,
+      "sourceGatePassed": false,
+      "semanticReview": {
+        "reviewer": "Implementing Codex session, not independent or blinded",
+        "kind": "Qualitative follow-up, not the original 48-run rubric",
+        "verdict": "not scored; required source retrieval failed"
+      },
+      "rawResultSha256": "ae878649242d9cf73ad043e8c472699563c1e7d81d46554e86d4be12a09edd1a"
+    },
+    {
+      "cohort": "natural",
+      "arm": "candidate",
+      "seed": 43,
+      "source": "af62b8d6df2fd50a2edc47830f6c570920aed1fa",
+      "prompt": "쿠폰 소비자 A가 발급 원장을 DB에 커밋한 직후 ack 전에 종료됐어. 소비자 B가 같은 요청을 다시 받았고 다른 파티션에도 같은 캠페인의 발급 요청이 있어. 캠페인 발급 한도는 100개이고 현재 원장에는 99개야. 큐는 파티션 안에서만 순서를 보장해. 이 구조에서 중복 발급과 총 한도 초과를 막으려면 무엇을 확인하고 바꿔야 할까? 코드·운영 환경은 제공하지 않았어.",
+      "modelDigest": "f38aa0c53da5f8c49d08c43a99df24ff53167fe68e24664a7777288e7656fdfe",
+      "baselineSha256": "92d58964d805c5659b7061e4b391fd4bb976f8eb6428207b304030e83fc29061",
+      "candidateSha256": "7dd8d9ecea51feed7b0f135bb3776877ee41713b0cb612fa976228f12c38efa9",
+      "candidateInstruction": "OpenClaw: use the skill directory supplied as `{baseDir}` for file reads. For example, read `{baseDir}/references/coupon/INDEX.md`, never `references/coupon/INDEX.md` relative to the project workspace. In other clients, resolve links against the directory containing this SKILL.md.\n\n",
+      "startedAt": "2026-10-25T23:59:42.193Z",
+      "finishedAt": "2026-10-26T00:01:14.991Z",
+      "native": {
+        "ok": true,
+        "status": "ok",
+        "final": "쿠폰 발급 시 가장 먼저 확인해야 할 것은 **중복 처리와 전역 한도 집행**가 Kafka 파티션 경계를 넘어서는 두 가지 요구사항을 충족하도록 구현됐는가입니다. 아래 항목을 체크하고 필요 시 수정해 보세요.\n\n1. **메시지 중복 방지 (Idempotency)**\n   - **고유 요청 ID 삽입**: 메시지 본문(또는 헤더)에 ‘request_id’ 같은 전역 고유 식별자를 넣습니다.  \n   - **데이터베이스 중복 검사**: 쿠폰을 발급하기 전에 `INSERT … ON CONFLICT DO NOTHING`(PostgreSQL) 또는 `unique constraint`(MySQL)로 이미 발급된 `request_id`를 확인합니다.  \n   - **Idempotent Producer**: 프로듀서에서 `enable.idempotence=true`를 설정해 같은 메시지가 중복 전송되지 않게 합니다.  \n   - **Kafka Transaction**: 프로듀서와 컨슈머를 같은 트랜잭션 안에서 실행해 DB 쓰기와 오프셋 커밋을 원자적으로 처리합니다.  \n\n2. **전역 발급 한도(100개) 집행**\n   - **원자적 카운터**: Redis의 `INCRBY`와 Lua 스크립트, 혹은 DB row에 `FOR UPDATE` 락을 사용해 한도를 집행합니다.  \n   - **분산 락**: Zookeeper, etcd, 혹은 Redis‑Redlock 같은 분산 락을 활용해 동시에 여러 파티션에서 한도를 초과하지 않도록 합니다.  \n   - **Kafka Streams Aggregation**: 모든 파티션의 발급 요청을 한 스트림으로 집계해 `count()` 으로 한도 초과 여부를 판단하고, 초과 시 바로 롤백하도록 구현합니다.  \n   - **트랜잭션과 결합**: 한도 체크와 쿠폰 발급을 같은 트랜잭션(또는 Kafka Streams 트랜잭션) 안에서 수행하면 한도 초과 시 전부 롤백됩니다.  \n\n3. **컨슈머 오프셋 커밋 전략**\n   - **오프셋 커밋 시점**: DB 트랜잭션이 커밋된 후에만 `commitSync()` 혹은 Kafka 트랜잭션에 오프셋을 포함시켜 커밋합니다.  \n   - **자동 커밋 비활성화**: `enable.auto.commit=false`로 설정하고, 수동 커밋만 사용합니다.  \n   - **컨슈머 그룹 재조정**: 세션 타임아웃이 너무 길면 다른 인스턴스가 파티션을 재할당할 때 메시지가 중복 처리됩니다. 적절히 조정하세요.  \n\n4. **파티션 설계 검토**\n   - **키 기반 파티셔닝**: 같은 캠페인(또는 같은 쿠폰 종류)의 메시지를 같은 파티션으로 보내기 위해 `campaign_id` 를 키로 사용합니다. 파티션 수가 많아도 같은 캠페인 메시지는 하나의 파티션에 집중됩니다.  \n   - **단일 파티션 검토**: 한도 집행이 특히 중요하다면, 캠페인 발급 요청 전용으로 별도의 단일 파티션(혹은 단일 토픽)을 만들고, 순서를 보장받을 수 있도록 합니다.  \n\n5. **추가 운영 제어**\n   - **메시지 재시도 로직**: 컨슈머가 실패하면 메시지를 바로 재시도하거나, `DLQ`(Dead Letter Queue)로 보내고 운영자가 확인하도록 합니다.  \n   - **모니터링**: Kafka 오프셋, DB 트랜잭션 성공률, Redis 카운터 값을 모니터링하고 알람을 설정합니다.  \n   - **재시작 시 시퀀스 일관성**: 컨슈머가 재시작될 때 `auto.offset.reset=earliest` 혹은 `latest` 를 상황에 맞게 설정하고, DB와 Kafka 오프셋이 일치하도록 정규화 프로세스를 두세요.  \n\n**정리**  \n- **중복 방지** → 메시지에 `request_id` 부여 + DB 중복 검사 + idempotent producer/transaction.  \n- **전역 한도** → Redis/DB 카운터와 분산 락, 혹은 Kafka Streams 집계 + 트랜잭션.  \n- **오프셋 커밋** → DB 커밋 후 오프셋 커밋, 자동 커밋 끔.  \n- **파티션 설계** → 캠페인 ID를 키로 사용하거나, 전용 단일 파티션 활용.  \n\n위 항목들을 한 번 점검하고, 특히 **트랜잭션 기반으로 DB 커밋과 Kafka offset 커밋을 연결**하면 A 컨슈머가 종료된 뒤 B가 같은 메시지를 재수신해도 중복 발급이 없고, 다른 파티션에서도 한도 초과가 방지됩니다.",
+        "model": "gpt-oss:20b",
+        "provider": "ollama",
+        "assistantTurns": 1,
+        "usage": {
+          "input": 2461,
+          "output": 2398,
+          "cacheRead": 0,
+          "cacheWrite": 0,
+          "total": 4859,
+          "cost": {
+            "total": 0
+          }
+        }
+      },
+      "requests": [
+        {
+          "sha256": "3868566ad44c1de4c3f008afb9bc9167e3749a8d87f7128006df44db5d3add07",
+          "model": "gpt-oss:20b",
+          "think": "high",
+          "options": {
+            "temperature": 1,
+            "seed": 43,
+            "num_predict": 4096,
+            "num_ctx": 32768
+          },
+          "tools": [
+            "read",
+            "skills_read"
+          ],
+          "candidateInstructionDelivered": false
+        }
+      ],
+      "calls": [],
+      "toolReplies": [],
+      "verifiedFiles": [],
+      "skillRead": false,
+      "couponRuleRead": false,
+      "sourceGatePassed": false,
+      "semanticReview": {
+        "reviewer": "Implementing Codex session, not independent or blinded",
+        "kind": "Qualitative follow-up, not the original 48-run rubric",
+        "verdict": "not scored; required source retrieval failed"
+      },
+      "rawResultSha256": "ae878649242d9cf73ad043e8c472699563c1e7d81d46554e86d4be12a09edd1a"
+    },
+    {
+      "cohort": "natural",
+      "arm": "baseline",
+      "seed": 43,
+      "source": "af62b8d6df2fd50a2edc47830f6c570920aed1fa",
+      "prompt": "쿠폰 소비자 A가 발급 원장을 DB에 커밋한 직후 ack 전에 종료됐어. 소비자 B가 같은 요청을 다시 받았고 다른 파티션에도 같은 캠페인의 발급 요청이 있어. 캠페인 발급 한도는 100개이고 현재 원장에는 99개야. 큐는 파티션 안에서만 순서를 보장해. 이 구조에서 중복 발급과 총 한도 초과를 막으려면 무엇을 확인하고 바꿔야 할까? 코드·운영 환경은 제공하지 않았어.",
+      "modelDigest": "f38aa0c53da5f8c49d08c43a99df24ff53167fe68e24664a7777288e7656fdfe",
+      "baselineSha256": "92d58964d805c5659b7061e4b391fd4bb976f8eb6428207b304030e83fc29061",
+      "candidateSha256": "7dd8d9ecea51feed7b0f135bb3776877ee41713b0cb612fa976228f12c38efa9",
+      "candidateInstruction": "OpenClaw: use the skill directory supplied as `{baseDir}` for file reads. For example, read `{baseDir}/references/coupon/INDEX.md`, never `references/coupon/INDEX.md` relative to the project workspace. In other clients, resolve links against the directory containing this SKILL.md.\n\n",
+      "startedAt": "2026-10-26T00:01:26.490Z",
+      "finishedAt": "2026-10-26T00:03:12.648Z",
+      "native": {
+        "ok": true,
+        "status": "ok",
+        "final": "**중복 발급과 총 한도 초과를 방지하기 위한 체크·수정 포인트**\n\n| # | 체크·수정 항목 | 왜 필요한가? | 어떻게 적용할까? |\n|---|----------------|--------------|-----------------|\n| 1 | **소비자 전송·수신 순서 보장** | 파티션 내부만 순서를 보장하므로, 다른 파티션에서 같은 캠페인 요청이 동시에 처리될 수 있다. | ① 파티션 수를 최소화(예: 1개) 혹은 <br>② 파티션이 많을 경우, **전역 리더**(분산 락) 를 두어 한 번에 한 파티션만 처리하도록 한다. |\n| 2 | **오프셋 커밋 타이밍** | A 소비자가 DB에 커밋 후 ack 전 종료하면 B 소비자가 같은 메시지를 재수신한다. | - Kafka consumer 옵션 **enable.auto.commit=false** 로 수동 커밋 설정.<br>- DB 트랜잭션이 **완전** 커밋된 뒤에 **offset commit** 수행.<br>- 트랜잭션과 offset을 같은 DB 트랜잭션(2PC) 혹은 Kafka **transactional consumer** 로 묶는다. |\n| 3 | **메시지 Idempotency** | 같은 메시지가 재수신되면 중복 발급이 일어날 수 있다. | - 메시지에 **dedup key**(예: `campaign_id+user_id+coupon_id`) 를 포함.<br>- DB에 **고유 인덱스**를 설정하여 중복 INSERT 시 오류 발생.<br>- `INSERT … ON CONFLICT DO NOTHING` 혹은 `MERGE` 를 사용해 idempotent 처리. |\n| 4 | **전역 한도(100개) 관리** | 다른 파티션에서 동시에 카운트가 증가하면 100초과가 발생할 수 있다. | - **캠페인 테이블**에 `limit`, `issued_count` 컬럼 두고, <br>   `UPDATE campaign SET issued_count = issued_count + 1 WHERE id = ? AND issued_count < limit` 를 트랜잭션에서 실행.<br>   이 때 **SELECT … FOR UPDATE** 로 해당 행을 잠그거나, 위 UPDATE 문 자체가 조건을 만족하면 행이 변경되는 원자적 연산을 사용.<br>- DB 레벨 **CHECK CONSTRAINT**(`issued_count <= limit`) 로 마지막 방어막 마련. |\n| 5 | **분산 락 / 원자성 보장** | 파티션이 여러 개인 경우, 동시에 두 소비자가 같은 캠페인 카운트 증가를 시도할 수 있다. | - Redis **SETNX** / RedLock, Zookeeper **ZNode lock**, 혹은 DB의 `SELECT … FOR UPDATE` 로 분산 락 구현.<br>- 락 범위는 **캠페인 단위**이며, 획득 시 `issued_count` 를 업데이트 후 락 해제. |\n| 6 | **전용 발행 서비스 / Outbox 패턴** | 비즈니스 로직과 DB, 메시지 브로커를 분리해 일관성을 확보. | - DB 트랜잭션 내부에 **Outbox 이벤트**를 삽입(예: `insert into outbox(...)` ).<br>- 별도 프로세스가 Outbox 를 읽어 Kafka/Queue 에 메시지를 전송. <br>  이때, DB 트랜잭션이 커밋되면 Outbox 이벤트가 보관되고, Outbox 프로세스가 ack 를 담당. |\n| 7 | **Kafka Exactly‑Once Semantics (EOS)** | Kafka에서 프로듀서와 소비자 모두 트랜잭션을 사용해 중복 없이 처리. | - 프로듀서 설정 `enable.idempotence=true` 및 `transactional.id=…`.<br>- 소비자는 `isolation.level=read_committed` 와 함께 **transactional consumer** 로 설정. |\n| 8 | **감시/알림** | 한도 초과나 중복 발급이 발생했을 때 즉시 대응. | - DB 트리거/애플리케이션 로직에서 한도 초과 시 **알림**(Slack/Email 등) 발송.<br>- 중복 발급이 감지되면 로깅과 경고. |\n\n---\n\n### 핵심 요약\n\n1. **오프셋 커밋을 DB 트랜잭션 직후에** 수행하도록 설정해, 커밋이 되지 않은 메시지가 재처리되지 않도록 한다.  \n2. **메시지 idempotency** 를 보장해 중복 실행 시 아무 일도 하지 않도록 한다.  \n3. **캠페인 한도** 를 DB 레벨에서 **원자적**으로 관리(SELECT FOR UPDATE / UPDATE WHERE count<limit).  \n4. 파티션이 여러 개이면 **분산 락**(Redis, Zookeeper, DB 락 등) 으로 한 번에 한 파티션만 처리하도록 하거나, **EOS** 를 사용해 전역 순서를 보장한다.  \n5. 운영 관점에서는 **Outbox 패턴**이나 **카운터 테이블**을 활용해 비즈니스 로직과 메시징을 분리하고, **알림/로그**를 통해 문제를 조기에 포착한다.\n\n위 항목들을 검토·수정하면, 소비자 A가 종료돼도 중복 발급이 없고, 파티션 간 동시 실행에서도 총 100개의 한도를 초과하지 않도록 할 수 있습니다. 필요에 따라 현재 사용 중인 메시징/DB 솔루션에 맞게 세부 구현을 조정해 주세요.",
+        "model": "gpt-oss:20b",
+        "provider": "ollama",
+        "assistantTurns": 1,
+        "usage": {
+          "input": 2462,
+          "output": 2887,
+          "cacheRead": 0,
+          "cacheWrite": 0,
+          "total": 5349,
+          "cost": {
+            "total": 0
+          }
+        }
+      },
+      "requests": [
+        {
+          "sha256": "744a68eb2c6a3f052dffc97979c42d384bb49b97f9daa19b0123ee83fbe6dfda",
+          "model": "gpt-oss:20b",
+          "think": "high",
+          "options": {
+            "temperature": 1,
+            "seed": 43,
+            "num_predict": 4096,
+            "num_ctx": 32768
+          },
+          "tools": [
+            "read",
+            "skills_read"
+          ],
+          "candidateInstructionDelivered": false
+        }
+      ],
+      "calls": [],
+      "toolReplies": [],
+      "verifiedFiles": [],
+      "skillRead": false,
+      "couponRuleRead": false,
+      "sourceGatePassed": false,
+      "semanticReview": {
+        "reviewer": "Implementing Codex session, not independent or blinded",
+        "kind": "Qualitative follow-up, not the original 48-run rubric",
+        "verdict": "not scored; required source retrieval failed"
+      },
+      "rawResultSha256": "ae878649242d9cf73ad043e8c472699563c1e7d81d46554e86d4be12a09edd1a"
+    },
+    {
+      "cohort": "explicit",
+      "arm": "baseline",
+      "seed": 42,
+      "source": "af62b8d6df2fd50a2edc47830f6c570920aed1fa",
+      "prompt": "commerce-backend-expert 스킬을 사용해줘. 먼저 skills_read로 그 스킬의 전체 본문을 읽고 해당 지침을 따라 아래 질문에 답해줘.\n\n쿠폰 소비자 A가 발급 원장을 DB에 커밋한 직후 ack 전에 종료됐어. 소비자 B가 같은 요청을 다시 받았고 다른 파티션에도 같은 캠페인의 발급 요청이 있어. 캠페인 발급 한도는 100개이고 현재 원장에는 99개야. 큐는 파티션 안에서만 순서를 보장해. 이 구조에서 중복 발급과 총 한도 초과를 막으려면 무엇을 확인하고 바꿔야 할까? 코드·운영 환경은 제공하지 않았어.",
+      "modelDigest": "f38aa0c53da5f8c49d08c43a99df24ff53167fe68e24664a7777288e7656fdfe",
+      "baselineSha256": "92d58964d805c5659b7061e4b391fd4bb976f8eb6428207b304030e83fc29061",
+      "candidateSha256": "7dd8d9ecea51feed7b0f135bb3776877ee41713b0cb612fa976228f12c38efa9",
+      "candidateInstruction": "OpenClaw: use the skill directory supplied as `{baseDir}` for file reads. For example, read `{baseDir}/references/coupon/INDEX.md`, never `references/coupon/INDEX.md` relative to the project workspace. In other clients, resolve links against the directory containing this SKILL.md.\n\n",
+      "startedAt": "2026-10-26T00:03:29.814Z",
+      "finishedAt": "2026-10-26T00:06:12.429Z",
+      "native": {
+        "ok": true,
+        "status": "ok",
+        "final": "I have read the entire **commerce-backend-expert** skill.  \nThe skill stresses the following when dealing with coupon issuance:\n\n* Always read the relevant rule section for coupons/promotions.  \n* Verify idempotency, concurrency, and global limits through the database.  \n* Use transactional consumer/producer patterns and proper offset‑commit timing.  \n* If a reference file is missing, the skill notes that you should rely on the documented rules instead.\n\nBelow is a concise checklist of what to **inspect** and **modify** in order to stop duplicate coupon issuance and to guarantee that the 100‑coupon limit is never exceeded, even when multiple consumers read the same request from different Kafka partitions.\n\n| # | What to check | Why it matters | What to change / add |\n|---|---------------|----------------|----------------------|\n| 1 | **Idempotency key in the message** | Two consumers may receive the exact same event (consumer A and consumer B). Without a unique key the second consumer could create a second coupon. | Ensure each coupon‑request message contains a globally unique request ID (e.g., UUID). Add a field `request_id` to the event schema. |\n| 2 | **Database unique constraint on (campaign_id, request_id) or coupon_id** | Guarantees that a duplicate insertion fails, protecting against race conditions across partitions. | Add a unique index on the coupon issuance table: `UNIQUE (campaign_id, request_id)` (or on coupon_id if that is the unique business key). |\n| 3 | **Atomic counter for the campaign limit** | Two consumers can read a counter of 99 and both try to insert a 100th coupon, leading to 101 issued. | Create a single‑row `campaign_limits` table with columns `campaign_id, issued_count`. Use a transaction that: <br> a) `SELECT issued_count FROM campaign_limits WHERE campaign_id = ? FOR UPDATE` <br> b) Checks `issued_count < 100` <br> c) Inserts the coupon <br> d) Increments `issued_count` <br> e) Commits. <br> If the count is already 100, abort the transaction and return a “limit reached” response. |\n| 4 | **Transaction isolation / locking** | Prevents lost‑update anomalies when multiple consumers run concurrently. | Use row‑level locking (`FOR UPDATE`) or an optimistic lock (e.g., `issued_count` with version column). Set the transaction isolation level to at least READ COMMITTED. |\n| 5 | **Offset commit timing** | If the consumer commits the Kafka offset *before* the DB commit, a crash will cause a duplicate retry that may slip past the idempotency guard. | Commit the Kafka offset *after* the successful database transaction (or, even better, use Kafka’s transactional producer/consumer API to tie offset commit to the DB transaction). |\n| 6 | **Consumer failure handling** | A crash after DB commit but before offset commit will produce a duplicate request; after recovery it will be retried. | Make the consumer’s processing idempotent (rule #1 & #2) and ensure that any exception during DB commit causes a rollback and a retry. |\n| 7 | **Monitoring and alerting** | Detect when the counter is close to the limit or when duplicate insertion errors spike. | Add metrics for `issued_count` per campaign and for `duplicate_issuance_errors`. Configure alerts when count > 90 or errors > N per hour. |\n| 8 | **Kafka partition strategy** | If the same campaign is spread across many partitions, the order of processing is not guaranteed. | Keep the global limit enforcement in the database as described above; Kafka partitioning does not need to be changed, but optionally use a single partition per campaign if ordering matters for business logic. |\n\n### Summary of changes to implement\n\n1. **Add a `request_id` (or similar idempotency field) to the coupon‑request event.**  \n2. **Create a unique index** on the coupon issuance table that includes `campaign_id` and `request_id`.  \n3. **Introduce a `campaign_limits` table** with one row per campaign, containing `issued_count`.  \n4. **Wrap the issuance flow in a database transaction** that selects the row `FOR UPDATE`, checks the limit, inserts the coupon, and increments the counter.  \n5. **Move the Kafka offset commit to after the transaction commits** (or use Kafka transactions).  \n6. **Add monitoring** for issued count and duplicate errors.\n\nWith these safeguards, duplicate coupon creation is prevented even when consumer A crashes before acknowledging, and the total issuance cannot exceed the 100‑coupon campaign limit across all partitions.",
+        "model": "gpt-oss:20b",
+        "provider": "ollama",
+        "assistantTurns": 5,
+        "toolSummary": {
+          "calls": 4,
+          "tools": [
+            "skills_read",
+            "read"
+          ],
+          "failures": 1
+        },
+        "usage": {
+          "input": 4155,
+          "output": 4455,
+          "cacheRead": 15677,
+          "cacheWrite": 0,
+          "total": 24287,
+          "cost": {
+            "total": 0
+          }
+        }
+      },
+      "requests": [
+        {
+          "sha256": "60ba48bca63a8565879e66f9c5a193b42c7acd29293949810ff93e919da61bf6",
+          "model": "gpt-oss:20b",
+          "think": "high",
+          "options": {
+            "temperature": 1,
+            "seed": 42,
+            "num_predict": 4096,
+            "num_ctx": 32768
+          },
+          "tools": [
+            "read",
+            "skills_read"
+          ],
+          "candidateInstructionDelivered": false
+        },
+        {
+          "sha256": "9ad769b1370fded2b744adcb0f9c617ae95ac529b2e64b2c92fe1e19773b6152",
+          "model": "gpt-oss:20b",
+          "think": "high",
+          "options": {
+            "temperature": 1,
+            "seed": 42,
+            "num_predict": 4096,
+            "num_ctx": 32768
+          },
+          "tools": [
+            "read",
+            "skills_read"
+          ],
+          "candidateInstructionDelivered": false
+        },
+        {
+          "sha256": "58405c018cd4274c49577bc45eeeaef72067a94e739e1308a4f8ac1e3c80e0dc",
+          "model": "gpt-oss:20b",
+          "think": "high",
+          "options": {
+            "temperature": 1,
+            "seed": 42,
+            "num_predict": 4096,
+            "num_ctx": 32768
+          },
+          "tools": [
+            "read",
+            "skills_read"
+          ],
+          "candidateInstructionDelivered": false
+        },
+        {
+          "sha256": "c648324f9653b911ffa9da082031be050109d199c12b1a96b74622fbdb23f262",
+          "model": "gpt-oss:20b",
+          "think": "high",
+          "options": {
+            "temperature": 1,
+            "seed": 42,
+            "num_predict": 4096,
+            "num_ctx": 32768
+          },
+          "tools": [
+            "read",
+            "skills_read"
+          ],
+          "candidateInstructionDelivered": false
+        },
+        {
+          "sha256": "61a08af279b1d8763fa306e91ef219d61d7f5b56f809620db996e78b0ff694cf",
+          "model": "gpt-oss:20b",
+          "think": "high",
+          "options": {
+            "temperature": 1,
+            "seed": 42,
+            "num_predict": 4096,
+            "num_ctx": 32768
+          },
+          "tools": [
+            "read",
+            "skills_read"
+          ],
+          "candidateInstructionDelivered": false
+        }
+      ],
+      "calls": [
+        {
+          "name": "skills_read",
+          "arguments": {
+            "name": "commerce-backend-expert"
+          }
+        },
+        {
+          "name": "read",
+          "arguments": {
+            "path": "references/coupon/INDEX.md",
+            "offset": 1,
+            "limit": 200,
+            "cursor": 0,
+            "optional": false
+          }
+        },
+        {
+          "name": "read",
+          "arguments": {
+            "cursor": 0,
+            "limit": 200,
+            "offset": 1,
+            "optional": true,
+            "path": "references/coupon/INDEX.md"
+          }
+        },
+        {
+          "name": "read",
+          "arguments": {
+            "cursor": 0,
+            "limit": 200,
+            "offset": 1,
+            "optional": true,
+            "path": "references"
+          }
+        }
+      ],
+      "toolReplies": [
+        {
+          "tool": "skills_read",
+          "sha256": "92d58964d805c5659b7061e4b391fd4bb976f8eb6428207b304030e83fc29061",
+          "bytes": 5250,
+          "verifiedFiles": [
+            "skills/commerce-backend-expert/SKILL.md"
+          ],
+          "unavailable": false
+        },
+        {
+          "tool": "read",
+          "sha256": "aae11611acebadd76d8f729c695d394601674608d75553b525af88dd9d4cfbce",
+          "bytes": 218,
+          "verifiedFiles": [],
+          "unavailable": true,
+          "excerpt": "[tool error] Validation failed for tool \"read\":\n  - optional: must be equal to constant\n\nReceived arguments:\n{\n  \"path\": \"references/coupon/INDEX.md\",\n  \"offset\": 1,\n  \"limit\": 200,\n  \"cursor\": 0,\n  \"optional\": false\n}"
+        },
+        {
+          "tool": "read",
+          "sha256": "1a129be167e98927f0fc55906c7c796c5c6e718e2f340d99f52e742bea17cd71",
+          "bytes": 127,
+          "verifiedFiles": [],
+          "unavailable": true,
+          "excerpt": "Optional file not found: <home>\\AppData\\Local\\Temp\\commerce-base-dir-fxZwx6\\1-baseline\\work\\references\\coupon\\INDEX.md."
+        },
+        {
+          "tool": "read",
+          "sha256": "affaf97549d975d0f23701290e14bf86cc1bc888bf278c108b39b182d5c5c4dd",
+          "bytes": 111,
+          "verifiedFiles": [],
+          "unavailable": true,
+          "excerpt": "Optional file not found: <home>\\AppData\\Local\\Temp\\commerce-base-dir-fxZwx6\\1-baseline\\work\\references."
+        }
+      ],
+      "verifiedFiles": [
+        {
+          "path": "skills/commerce-backend-expert/SKILL.md",
+          "sha256": "92d58964d805c5659b7061e4b391fd4bb976f8eb6428207b304030e83fc29061"
+        }
+      ],
+      "skillRead": true,
+      "couponRuleRead": false,
+      "sourceGatePassed": false,
+      "semanticReview": {
+        "reviewer": "Implementing Codex session, not independent or blinded",
+        "kind": "Qualitative follow-up, not the original 48-run rubric",
+        "verdict": "not scored; required source retrieval failed"
+      },
+      "rawResultSha256": "8be4b58d37c6d6f43731748022ab773fb095dfa65cdd0d841a3630c6a15e6d28"
+    },
+    {
+      "cohort": "explicit",
+      "arm": "candidate",
+      "seed": 42,
+      "source": "af62b8d6df2fd50a2edc47830f6c570920aed1fa",
+      "prompt": "commerce-backend-expert 스킬을 사용해줘. 먼저 skills_read로 그 스킬의 전체 본문을 읽고 해당 지침을 따라 아래 질문에 답해줘.\n\n쿠폰 소비자 A가 발급 원장을 DB에 커밋한 직후 ack 전에 종료됐어. 소비자 B가 같은 요청을 다시 받았고 다른 파티션에도 같은 캠페인의 발급 요청이 있어. 캠페인 발급 한도는 100개이고 현재 원장에는 99개야. 큐는 파티션 안에서만 순서를 보장해. 이 구조에서 중복 발급과 총 한도 초과를 막으려면 무엇을 확인하고 바꿔야 할까? 코드·운영 환경은 제공하지 않았어.",
+      "modelDigest": "f38aa0c53da5f8c49d08c43a99df24ff53167fe68e24664a7777288e7656fdfe",
+      "baselineSha256": "92d58964d805c5659b7061e4b391fd4bb976f8eb6428207b304030e83fc29061",
+      "candidateSha256": "7dd8d9ecea51feed7b0f135bb3776877ee41713b0cb612fa976228f12c38efa9",
+      "candidateInstruction": "OpenClaw: use the skill directory supplied as `{baseDir}` for file reads. For example, read `{baseDir}/references/coupon/INDEX.md`, never `references/coupon/INDEX.md` relative to the project workspace. In other clients, resolve links against the directory containing this SKILL.md.\n\n",
+      "startedAt": "2026-10-26T00:06:23.795Z",
+      "finishedAt": "2026-10-26T00:09:04.890Z",
+      "native": {
+        "ok": true,
+        "status": "ok",
+        "final": "**핵심 확인·수정 포인트**  \n(코드·운영 환경이 없으므로 “어디에 두고, 어떤 값을 넣어야 할지”는 실제 구현에 따라 달라집니다.)\n\n| 항목 | 확인 내용 | 변경·추가 권고 | 근거 |\n|------|-----------|---------------|------|\n| **1. 비즈니스 키(unique 제약)** | `<campaign_id> + <user_id>` (또는 `coupon_id`) 가 DB에 UNIQUE 인덱스/제약이 있는지 확인 | **추가** – 해당 컬럼에 UNIQUE 제약을 만들고, 인서트 실패 시 “중복 발급” 에러를 반환하도록 처리 | **[쿠폰 발급 – 동시성 제어]**: “발급 업무키 UNIQUE를 같은 트랜잭션에서 처리하는 DB‑only 방식도 가능” |\n| **2. 인수/인증(ack) 타이밍** | 소비자 A가 DB 커밋 직후 ack 이전에 종료되었으므로, **ack는 DB 트랜잭션 성공 이후에만** 해야 함 | **수정** – 트랜잭션 커밋 직후, `ack()` 를 호출하도록 로직 재배치 | **[쿠폰 발급 – 동시성 제어]**: “메시지 큐(비동기 발급): 접수와 발급 확정을 구분한다… 소비자도 업무키 제약과 원자적 한도 확보를 적용하고 DB 확정 뒤 ack” |\n| **3. 중복 메시지 멱등 처리** | 동일 메시지가 파티션(또는 다른 파티션)에서 재전달될 때, 이미 발급 기록이 존재하면 “스킵”하도록 구현 | **추가** – 수신 시 `SELECT ... WHERE campaign_id=? AND user_id=?` 로 먼저 조회하고, 존재하면 ack 후 종료 | **[쿠폰 발급 – 동시성 제어]**: “중복 방어: 1인 1매 캠페인은 userId + campaignId 등을 업무키로” |\n| **4. 전역 한도(총 100개) 제어** | 현재 원장에 99개가 있으므로 1개 남음. 다른 파티션에서 동시에 1개 이상이 발급될 위험이 있음 | **수정** – `total_issued` 를 트랜잭션에 포함시키고, **SELECT ... FOR UPDATE** 로 행 잠금 후 `current + 1 <= limit` 체크 → UPDATE | **[쿠폰 발급 – 동시성 제어]**: “DB 비관락: SELECT ... FOR UPDATE → 발급 수량 체크 + 업데이트 원자적 처리” |\n| **5. Redis Lua 사용 시** (옵션) | Redis 를 사전 예약 단계로 사용하는 경우, DECR + SETNX 를 하나의 Lua 스크립트로 묶고, 오류 시 원자적으로 롤백 가능하도록 설계 | **추가** – Lua 스크립트는 `ERR` 가 발생하면 스크립트 내부에서 DECR 를 다시 수행(rollback)하고, 실패 시 DB 인서트는 수행하지 않음 | **[쿠폰 발급 – 동시성 제어]**: “Redis 사용 시 재고 확인·감소와 사용자 중복 선점을 하나의 Lua Script로 처리한다” |\n| **6. 메시지 큐 구성** | 파티션 간 순서가 보장되지 않으므로, **캠페인 별로 파티션을 분리**하거나, **한 파티션당 하나의 consumer** 로 설정하면 교차 충돌을 줄일 수 있음 | **옵션** – 파티션을 비동기 발급이 아닌, “캠페인 ID 를 파티션 키” 로 설정해 같은 캠페인 메시지는 같은 파티션에 분배 | **[쿠폰 발급 – 동시성 제어]**: “파티션 안에서만 순서를 보장” 이라는 제약을 활용 |\n| **7. 트랜잭션 롤백 / 재시도** | 메시지 재전송 시 DB 삽입이 실패하면 (예: UNIQUE 제약) 트랜잭션은 롤백되므로, 소비자는 재시도 로직이 필요 | **수정** – 실패 시 `retry()` 로 재시도하거나, “스킵 + ack” 로 처리 | **[쿠폰 발급 – 동시성 제어]**: “중복 방어 로직이 있는가?” 체크 항목 |\n\n---\n\n### 구현 단계 요약\n\n1. **DB 스키마**  \n   - `coupon_issuance` 테이블에 `campaign_id`, `user_id` 컬럼을 포함하고,  \n   - `(campaign_id, user_id)` 를 **UNIQUE** 제약으로 추가.  \n   - `total_issued` 와 `limit` 를 저장할 행(예: `campaign_limits`)에 **CHECK (total_issued <= limit)** 제약을 두고, `SELECT ... FOR UPDATE` 로 잠금.\n\n2. **메시지 처리 흐름**  \n   1. 메시지 수신 → 파티션 ID 확인.  \n   2. DB 트랜잭션 시작.  \n   3. `SELECT ... FOR UPDATE` 로 캠페인 한도 행 잠금.  \n   4. `SELECT 1 FROM coupon_issuance WHERE campaign_id=? AND user_id=?` 로 중복 여부 확인.  \n   5. 중복이면 트랜잭션 롤백(혹은 바로 ack).  \n   6. 한도 초과 체크: `current_issued + 1 <= limit`.  \n   7. `INSERT INTO coupon_issuance …` 및 `UPDATE campaign_limits SET total_issued = total_issued + 1`.  \n   8. 트랜잭션 커밋.  \n   9. **ACK** 전송.  \n   10. 종료.\n\n3. **Redis (선택)**  \n   - 사전 예약 단계에서 `EVAL` 스크립트로 `DECR` + `SETNX` 수행.  \n   - 스크립트가 실패하면 Redis에 남은 수량을 복구하고, DB 단계는 실행하지 않음.\n\n4. **오류 처리**  \n   - **UNIQUE 제약**에 의해 `INSERT` 실패 시, **중복** 메시지로 판단해 `ack` 후 종료.  \n   - **한도 초과** 시, 별도 오류 응답(“LimitExceeded”)을 반환하고, **ack** 전 재시도 금지.\n\n---\n\n### 체크리스트\n\n- [ ] DB에 `(campaign_id, user_id)` UNIQUE 제약이 있는가?  \n- [ ] `campaign_limits`에 CHECK( total_issued <= limit ) 가 있는가?  \n- [ ] `SELECT ... FOR UPDATE` 로 한도 행을 잠금하고 있는가?  \n- [ ] ack 타이밍이 DB 커밋 직후인지?  \n- [ ] 중복 메시지에 대해 DB 삽입 실패를 정상적으로 처리(ack)하고 있는가?  \n- [ ] Redis Lua 사용 시 스크립트가 원자적이며 오류 시 롤백 가능하도록 설계되었는가?  \n- [ ] 메시지 큐가 파티션 별로 캠페인 ID를 분산하고 있는가?  \n\n이 항목들을 확인하고 필요한 부분을 추가·수정하면, **중복 발급**과 **전역 한도 초과**를 방지할 수 있습니다.",
+        "model": "gpt-oss:20b",
+        "provider": "ollama",
+        "assistantTurns": 5,
+        "toolSummary": {
+          "calls": 4,
+          "tools": [
+            "skills_read",
+            "read"
+          ],
+          "failures": 1
+        },
+        "usage": {
+          "input": 6025,
+          "output": 4655,
+          "cacheRead": 16360,
+          "cacheWrite": 0,
+          "total": 27040,
+          "cost": {
+            "total": 0
+          }
+        }
+      },
+      "requests": [
+        {
+          "sha256": "687037fcf5f2eb10b8d8fac8c34cb5c8ebb0bd18d34b157d086e8879a31bbc54",
+          "model": "gpt-oss:20b",
+          "think": "high",
+          "options": {
+            "temperature": 1,
+            "seed": 42,
+            "num_predict": 4096,
+            "num_ctx": 32768
+          },
+          "tools": [
+            "read",
+            "skills_read"
+          ],
+          "candidateInstructionDelivered": false
+        },
+        {
+          "sha256": "9f3e6275ddca6eb1c173b13edeb7e0c6417b5b82200a04853b1c1933691c2562",
+          "model": "gpt-oss:20b",
+          "think": "high",
+          "options": {
+            "temperature": 1,
+            "seed": 42,
+            "num_predict": 4096,
+            "num_ctx": 32768
+          },
+          "tools": [
+            "read",
+            "skills_read"
+          ],
+          "candidateInstructionDelivered": true
+        },
+        {
+          "sha256": "d9799d4b6ee43566c9aed3755773c0a257b3f9cb63491e378c57c202962a6d61",
+          "model": "gpt-oss:20b",
+          "think": "high",
+          "options": {
+            "temperature": 1,
+            "seed": 42,
+            "num_predict": 4096,
+            "num_ctx": 32768
+          },
+          "tools": [
+            "read",
+            "skills_read"
+          ],
+          "candidateInstructionDelivered": true
+        },
+        {
+          "sha256": "87552db0581f2cc309f5fe90912aa3240fa7114f00a42a7424924c674839088c",
+          "model": "gpt-oss:20b",
+          "think": "high",
+          "options": {
+            "temperature": 1,
+            "seed": 42,
+            "num_predict": 4096,
+            "num_ctx": 32768
+          },
+          "tools": [
+            "read",
+            "skills_read"
+          ],
+          "candidateInstructionDelivered": true
+        },
+        {
+          "sha256": "e63fbc1aef0ac990705459182117bf7215eca3aa8a9c8f53601f7b3d57e9232c",
+          "model": "gpt-oss:20b",
+          "think": "high",
+          "options": {
+            "temperature": 1,
+            "seed": 42,
+            "num_predict": 4096,
+            "num_ctx": 32768
+          },
+          "tools": [
+            "read",
+            "skills_read"
+          ],
+          "candidateInstructionDelivered": true
+        }
+      ],
+      "calls": [
+        {
+          "name": "skills_read",
+          "arguments": {
+            "name": "commerce-backend-expert"
+          }
+        },
+        {
+          "name": "read",
+          "arguments": {
+            "path": "~/AppData/Local/Temp/commerce-base-dir-fxZwx6/2-candidate/work/skills/commerce-backend-expert/references/coupon/INDEX.md",
+            "offset": 1,
+            "limit": 2000,
+            "cursor": 0,
+            "optional": false
+          }
+        },
+        {
+          "name": "read",
+          "arguments": {
+            "cursor": 0,
+            "limit": 2000,
+            "offset": 1,
+            "path": "~/AppData/Local/Temp/commerce-base-dir-fxZwx6/2-candidate/work/skills/commerce-backend-expert/references/coupon/INDEX.md"
+          }
+        },
+        {
+          "name": "read",
+          "arguments": {
+            "cursor": 0,
+            "limit": 2000,
+            "offset": 1,
+            "path": "~/AppData/Local/Temp/commerce-base-dir-fxZwx6/2-candidate/work/skills/commerce-backend-expert/references/coupon/coupon-issuance.md"
+          }
+        }
+      ],
+      "toolReplies": [
+        {
+          "tool": "skills_read",
+          "sha256": "7dd8d9ecea51feed7b0f135bb3776877ee41713b0cb612fa976228f12c38efa9",
+          "bytes": 5533,
+          "verifiedFiles": [
+            "skills/commerce-backend-expert/SKILL.md"
+          ],
+          "unavailable": false
+        },
+        {
+          "tool": "read",
+          "sha256": "517671c8181539c330e9653c698bc6d6a2ca255973f339dbd9601c45ba0a3b32",
+          "bytes": 313,
+          "verifiedFiles": [],
+          "unavailable": true,
+          "excerpt": "[tool error] Validation failed for tool \"read\":\n  - optional: must be equal to constant\n\nReceived arguments:\n{\n  \"path\": \"~/AppData/Local/Temp/commerce-base-dir-fxZwx6/2-candidate/work/skills/commerce-backend-expert/references/coupon/INDEX.md\",\n  \"offset\": 1,\n  \"limit\": 2000,\n  \"cursor\": 0,\n  \"optional\": false\n}"
+        },
+        {
+          "tool": "read",
+          "sha256": "be989790fa7e9f9bb074e16f5f7ddb8f8791d79e62615f9f6e8079fac5d7c734",
+          "bytes": 1742,
+          "verifiedFiles": [
+            "skills/commerce-backend-expert/references/coupon/INDEX.md"
+          ],
+          "unavailable": false
+        },
+        {
+          "tool": "read",
+          "sha256": "c3f75c395b1f2ab1bc29512cf7cd847ab16f908619e11bbc84e2d68b44663e99",
+          "bytes": 4842,
+          "verifiedFiles": [
+            "skills/commerce-backend-expert/references/coupon/coupon-issuance.md"
+          ],
+          "unavailable": false
+        }
+      ],
+      "verifiedFiles": [
+        {
+          "path": "skills/commerce-backend-expert/SKILL.md",
+          "sha256": "7dd8d9ecea51feed7b0f135bb3776877ee41713b0cb612fa976228f12c38efa9"
+        },
+        {
+          "path": "skills/commerce-backend-expert/references/coupon/INDEX.md",
+          "sha256": "be989790fa7e9f9bb074e16f5f7ddb8f8791d79e62615f9f6e8079fac5d7c734"
+        },
+        {
+          "path": "skills/commerce-backend-expert/references/coupon/coupon-issuance.md",
+          "sha256": "c3f75c395b1f2ab1bc29512cf7cd847ab16f908619e11bbc84e2d68b44663e99"
+        }
+      ],
+      "skillRead": true,
+      "couponRuleRead": true,
+      "sourceGatePassed": true,
+      "semanticReview": {
+        "reviewer": "Implementing Codex session, not independent or blinded",
+        "kind": "Qualitative follow-up, not the original 48-run rubric",
+        "verdict": "not passed despite successful source retrieval",
+        "observations": [
+          {
+            "rule": "coupon-issuance",
+            "finding": "The response proposes a script-level rollback after ERR and even describes DECR again as rollback. The returned rule explicitly distinguishes atomic execution from rollback and requires pre-write validation plus reconciliation after partial writes."
+          },
+          {
+            "rule": "coupon-issuance",
+            "finding": "The response imposes campaign_id+user_id uniqueness without a supplied one-per-user policy. The returned rule restricts that key to one-per-person campaigns and separates repeated-round and N-per-person policies."
+          }
+        ]
+      },
+      "rawResultSha256": "8be4b58d37c6d6f43731748022ab773fb095dfa65cdd0d841a3630c6a15e6d28"
+    }
+  ],
+  "portabilityRegressions": {
+    "scope": "Two separate explicit-skill Codex checks after the path edit; not OpenClaw execution, automatic selection or a new effectiveness comparison",
+    "records": [
+      {
+        "id": "coupon-redelivery",
+        "prompt": "쿠폰 소비자 A가 발급 원장을 DB에 커밋한 직후 ack 전에 종료됐어. 소비자 B가 같은 요청을 다시 받았고 다른 파티션에도 같은 캠페인의 발급 요청이 있어. 캠페인 발급 한도는 100개이고 현재 원장에는 99개야. 큐는 파티션 안에서만 순서를 보장해. 이 구조에서 중복 발급과 총 한도 초과를 막으려면 무엇을 확인하고 바꿔야 할까? 코드·운영 환경은 제공하지 않았어.",
+        "skill": "commerce-backend-expert",
+        "skillSha256": "7dd8d9ecea51feed7b0f135bb3776877ee41713b0cb612fa976228f12c38efa9",
+        "cli": "codex-cli 0.153.2",
+        "model": "gpt-5.6-sol",
+        "provider": "openai",
+        "effort": "medium",
+        "skillDelivery": "exact SKILL.md in developerInstructions",
+        "status": "completed",
+        "reads": [
+          {
+            "path": "skills/commerce-backend-expert/references/coupon/INDEX.md",
+            "sha256": "be989790fa7e9f9bb074e16f5f7ddb8f8791d79e62615f9f6e8079fac5d7c734",
+            "bytes": 1742
+          },
+          {
+            "path": "skills/commerce-backend-expert/references/spring-commerce/INDEX.md",
+            "sha256": "aaf71251da59bd2ab5844863a5eb6e11bf225573779ae294b7f8a28b0250ef20",
+            "bytes": 5198
+          },
+          {
+            "path": "skills/commerce-backend-expert/references/spring-commerce/spring-commerce-locking-idempotency.md",
+            "sha256": "d180b4a2ba5a9908f8fd8ef46649f027adfe577694ea8d4c5b22250838ad511d",
+            "bytes": 4327
+          },
+          {
+            "path": "skills/commerce-backend-expert/references/coupon/coupon-issuance.md",
+            "sha256": "c3f75c395b1f2ab1bc29512cf7cd847ab16f908619e11bbc84e2d68b44663e99",
+            "bytes": 4842
+          },
+          {
+            "path": "skills/commerce-backend-expert/references/spring-commerce/spring-commerce-testing-observability.md",
+            "sha256": "2c2562d1feea61c633afffd50007863a7c9d724a48ba22bf0916e8d405bb1c61",
+            "bytes": 2785
+          }
+        ],
+        "blockedReads": 0,
+        "unexpectedTools": [],
+        "otherInstructionSourceCount": 0,
+        "messages": [
+          "핵심은 **큐 순서가 아니라 DB가 “동일 요청은 한 번, 캠페인은 최대 100개”를 원자적으로 보장**하게 만드는 것입니다. 코드·스키마·브로커 설정이 없으므로 현재 구조의 안전 여부는 확정할 수 없습니다.\n\n## 확인·변경할 사항\n\n### 1. 동일 요청을 식별하는 안정적인 업무키\n\n재전달되어도 바뀌지 않는 `issuanceRequestId`가 필요합니다.\n\n- `UNIQUE(campaign_id, issuance_request_id)`\n- 1인 1매 정책이면 별도로 `UNIQUE(campaign_id, user_id)`  \n  회차가 있다면 회차도 키에 포함합니다.\n- 메시지를 다시 발행할 때 달라질 수 있는 broker message ID만 사용하면 안 됩니다.\n- 동일 키인데 사용자·캠페인 등 요청 내용이 다르면 성공으로 재사용하지 말고 충돌로 처리합니다.\n\n애플리케이션의 `SELECT 후 INSERT`만으로는 부족하고, **DB UNIQUE 제약이 최종 방어선**이어야 합니다.\n\n### 2. 캠페인 전체 한도를 DB에서 원자적으로 확보\n\n파티션별 소비자는 동시에 실행되므로 `COUNT(*) = 99 확인 → INSERT` 방식은 두 요청이 모두 통과할 수 있습니다.\n\n권장 DB 트랜잭션 예시는 다음과 같습니다.\n\n```text\nBEGIN\n\n1. 멱등 업무키로 발급 원장 INSERT 시도\n   - UNIQUE 충돌: 기존 확정 결과를 조회해 반환하고 COMMIT\n   - 신규 삽입: 계속\n\n2. 캠페인 수량을 조건부 갱신\n   UPDATE campaign\n      SET issued_count = issued_count + 1\n    WHERE campaign_id = ?\n      AND issued_count < issue_limit;\n\n3. 갱신 건수 = 0이면\n   - 신규 원장 삽입도 함께 ROLLBACK\n   - 한도 소진 결과 반환\n\n4. 발급 원장을 확정 상태로 저장\nCOMMIT\n```\n\n`issued_count <= issue_limit`을 보조하는 `CHECK` 제약도 두는 편이 좋습니다. 다른 대안은 캠페인 행을 `SELECT ... FOR UPDATE`로 잠그고, 멱등 확인·한도 확인·원장 삽입·수량 갱신을 한 트랜잭션에서 직렬화하는 것입니다. 트래픽이 높으면 락 대기와 커넥션 소진을 검증해야 합니다.\n\n중요한 점은:\n\n- 업무키 확보와 한도 확보가 **같은 DB 트랜잭션**이어야 합니다.\n- 모든 발급 경로가 동일한 제약과 한도 갱신을 사용해야 합니다.\n- 원장 `COUNT(*)`와 별도 `issued_count`를 함께 사용한다면 무엇이 기준인지 정하고 불일치 대사·복구 절차를 둬야 합니다.\n\n### 3. ack 시점과 재전달 처리\n\n- DB 커밋이 성공한 뒤에만 ack/offset commit\n- 커밋 실패나 결과 미확정이면 ack하지 않고 재전달\n- A처럼 **커밋 후 ack 전 종료**되면 B는 UNIQUE 충돌 또는 기존 처리 결과를 통해 성공으로 종결한 뒤 ack\n- 중복 키 예외를 일반 장애로 재시도하지 말고 “기존 확정 결과 반환”으로 분류\n- 무한 재시도 대신 제한, backoff, DLQ 및 수동 재처리 기준 설정\n\n큐의 파티션 내 순서는 이 문제를 해결하지 않습니다. 다른 파티션의 같은 캠페인 요청은 DB에서 경쟁해야 합니다.\n\n## 주어진 99개 상황의 기대 결과\n\n현재 원장 99개가 A의 커밋 결과까지 포함한다면:\n\n1. B의 재전달은 기존 A 발급을 찾아 **추가 발급 없이 성공 처리**\n2. 다른 파티션의 신규 요청들 중 **한 요청만** 100번째 슬롯 확보\n3. 나머지는 한도 소진\n4. 최종 원장과 캠페인 수량은 100\n\n## 반드시 검증할 테스트·운영 항목\n\n- A의 `커밋 직후/ack 직전` 강제 종료 후 재전달\n- 같은 업무키를 여러 소비자가 동시에 처리\n- 서로 다른 업무키로 99→100 경계 동시 처리\n- UNIQUE 충돌, 락 타임아웃, 데드락 재시도\n- 실제 운영 DB 종류·버전·격리 수준에서의 동시성 테스트\n- `issued_count`, 원장 수, 중복 충돌, 한도 거절, 재전달/DLQ 지표와 대사 작업\n- 기존 데이터의 중복 및 `issued_count != 유효 원장 수` 여부\n\n근거 규칙은 `coupon-issuance`, `spring-commerce-locking-idempotency`입니다. 두 문서는 `needs-review` 상태이며, 실제 DB·브로커 설정과 사업상 발급 단위는 제공되지 않아 운영 안전성은 별도 검증이 필요합니다."
+        ],
+        "tokenUsage": {
+          "total": {
+            "totalTokens": 41783,
+            "inputTokens": 39280,
+            "cachedInputTokens": 20096,
+            "cacheWriteInputTokens": 0,
+            "outputTokens": 2503,
+            "reasoningOutputTokens": 1104
+          },
+          "last": {
+            "totalTokens": 18266,
+            "inputTokens": 16111,
+            "cachedInputTokens": 4864,
+            "cacheWriteInputTokens": 0,
+            "outputTokens": 2155,
+            "reasoningOutputTokens": 1034
+          },
+          "modelContextWindow": 258400
+        },
+        "assessment": {
+          "criteria": [
+            true,
+            true,
+            true,
+            true
+          ],
+          "method": "Implementing Codex semantic review against existing coupon-redelivery criteria; not independent/blinded",
+          "reasons": [
+            "Durable business key and DB uniqueness; one-per-user policy explicitly conditional",
+            "Shared campaign count updated in the same transaction and only one new 100th slot across partitions",
+            "A committed duplicate terminates safely after redelivery; ack follows DB commitment",
+            "Partition order does not solve concurrency; no standalone Redis global guarantee is claimed"
+          ],
+          "allPassed": true
+        },
+        "sourceResultSha256": "e75db25c98a536897e6c574b137ab13e4385e687fb05a26095994db63d8d876e"
+      },
+      {
+        "id": "frontend-scope",
+        "prompt": "index.html의 button padding을 12px, .buttons gap을 8px로 바꾼 HTML을 보여줘. 나머지는 그대로 두고 파일은 저장하지 마.",
+        "skill": "commerce-backend-expert",
+        "skillSha256": "7dd8d9ecea51feed7b0f135bb3776877ee41713b0cb612fa976228f12c38efa9",
+        "cli": "codex-cli 0.153.2",
+        "model": "gpt-5.6-sol",
+        "provider": "openai",
+        "effort": "medium",
+        "skillDelivery": "exact SKILL.md in developerInstructions",
+        "status": "completed",
+        "reads": [
+          {
+            "path": "workspace/index.html",
+            "sha256": "4916a72c74a2ad23fbe4b23093cdc62a385ab2515931ca6734f1ddbed97a73cb",
+            "bytes": 392
+          }
+        ],
+        "blockedReads": 0,
+        "unexpectedTools": [],
+        "otherInstructionSourceCount": 0,
+        "messages": [
+          "```html\n<!doctype html>\n<html lang=\"ko\">\n<head><meta charset=\"utf-8\"><title>버튼</title><style>button { padding: 12px; color: navy; } .buttons { display: flex; gap: 8px; }</style></head>\n<body><div class=\"buttons\"><button id=\"buy\">구매</button><button id=\"cancel\">취소</button></div><script>document.querySelector('#buy').addEventListener('click', () => console.log('buy'));</script></body>\n</html>\n```"
+        ],
+        "tokenUsage": {
+          "total": {
+            "totalTokens": 21323,
+            "inputTokens": 21131,
+            "cachedInputTokens": 15104,
+            "cacheWriteInputTokens": 0,
+            "outputTokens": 192,
+            "reasoningOutputTokens": 11
+          },
+          "last": {
+            "totalTokens": 10792,
+            "inputTokens": 10668,
+            "cachedInputTokens": 10240,
+            "cacheWriteInputTokens": 0,
+            "outputTokens": 124,
+            "reasoningOutputTokens": 0
+          },
+          "modelContextWindow": 258400
+        },
+        "assessment": {
+          "criteria": [
+            true,
+            true,
+            true,
+            true
+          ],
+          "method": "HTML exact comparison and tool trace, same frozen frontend-scope criteria",
+          "allPassed": true
+        },
+        "sourceResultSha256": "9756d928d26b919aabf9d0a66ee938ad9ca989619c646f1ee9e10dfe81777db5"
+      }
+    ]
+  },
+  "cleanup": {
+    "stoppedAt": "2026-10-26T00:10:12.9876551Z",
+    "modelsUnloaded": true,
+    "ownedServerStopped": true,
+    "ownedProxyStopped": true,
+    "portsClosed": true,
+    "ports": [
+      50369,
+      59230
+    ],
+    "normalSettingsChanged": false,
+    "binariesAndWeightsRetained": true
+  },
+  "normalSettingsChanged": false
+}

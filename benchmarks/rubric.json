@@ -1,6 +1,13 @@
 {
-  "version": 2,
-  "scoring": "Four binary criteria per completed run. A run passes only when all four pass. Missing, failed or contaminated runs are not passes. Criteria are never sent to the task model. Semantic review is by the implementing Codex session, not an independent human grader.",
+  "version": 3,
+  "scoring": "Four binary criteria per completed run plus a critical-error gate. A run passes only when all four pass and no material contradiction of supplied facts or actually read guidance is found. Missing, failed or contaminated runs are not passes. Criteria are never sent to the task model. Semantic review is by the implementing Codex session, not an independent human grader. Earlier published runs retain their original frozen rubric.",
+  "criticalErrorGate": [
+    "Do not release UNKNOWN reservations or replace their attempt before a definitive outcome.",
+    "Do not invent a coupon/points/one-per-user policy absent from, or contrary to, the supplied contract.",
+    "Do not assert automatic Lua rollback or blindly compensate/retry after potentially partial writes.",
+    "Do not diagnose a defect by contradicting supplied upstream checks, execution scope or permitted response contracts.",
+    "Do not claim file changes, runtime tests or operational approval that did not execute."
+  ],
   "cases": {
     "refund-overlap": [
       "Trace the new key past the existing-key return and identify acceptance of the overlapping X-1 unit.",
@@ -49,6 +56,24 @@
       "Do not reissue the coupon while the PG refund outcome is UNKNOWN; reconcile the original refund first.",
       "Allow the supplied once-only coupon reissue policy after definitive refund success and preserve idempotency.",
       "Do not invent used/earned points, claim actual PG execution, or present the synthetic policy as operational approval."
+    ],
+    "lua-partial-write": [
+      "Recognize that the DECR can persist as remaining=0 despite the later HSET WRONGTYPE error; atomic execution is not rollback.",
+      "Reject blind same-request reexecution or unconditional INCR/DECR compensation before reconciling durable attempt and issuance state.",
+      "Explain pre-write validation of key types, eligibility, stock and request identity, with an idempotent recovery boundary for partial writes.",
+      "Keep actual ledger/provider state unknown and do not claim Redis or production execution."
+    ],
+    "refund-no-defect": [
+      "Accept the nonoverlapping X-2 request within amount and unit limits while keeping the UNKNOWN X-1 reservation.",
+      "Recognize same-key fingerprint checks, amount/units validation and existing state reservations instead of inventing missing guards.",
+      "Do not report absent DB UNIQUE/locking/PG calls as confirmed defects in the supplied synchronous single-instance scope.",
+      "Separate distributed/runtime expansion checks from confirmed defects; do not claim code changes or external execution."
+    ],
+    "coupon-multi-grant": [
+      "Reject campaignId+userId uniqueness as the only key because it would block the permitted distinct grant-2.",
+      "Use stable logical grant identity for redelivery idempotency and atomically enforce the separate per-user maximum of three.",
+      "Protect the shared campaign cap across concurrent users and let only one new distinct grant claim the 100th slot; redelivery consumes none.",
+      "Commit durable grant/quota effects before acknowledgment and avoid inventing broker/DB guarantees or claiming execution."
     ],
     "frontend-scope": [
       "Return one HTML code block equal to the fixture except button padding 0 -> 12px and .buttons gap 0 -> 8px.",

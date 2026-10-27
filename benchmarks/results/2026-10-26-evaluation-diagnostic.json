@@ -1,0 +1,173 @@
+{
+  "scope": "One aborted diagnostic task, separate from both comparison cohorts. Reported usage before abort is not a complete invoice measurement.",
+  "taskRuns": 1,
+  "providerRequestCount": null,
+  "normalSettingsChanged": false,
+  "record": {
+    "runId": "001",
+    "id": "webhook-async",
+    "arm": "skill",
+    "repeat": 1,
+    "prompt": "제공하는 구조만 기준으로 결제 웹훅을 검토해줘. PG 계약은 HTTP 202를 성공으로 인정해. 상위 경로가 서명·상점·주문·금액을 검증하고 이벤트 종류/외부 거래 ID의 UNIQUE를 가진 영속 inbox를 커밋한 뒤 응답해. 워커는 상태 가드와 멱등 처리를 수행해. 확인된 결함과 추가 확인 조건을 구분해줘.",
+    "skill": "commerce-review",
+    "skillSha256": "3a931dc5ed84973c1feba53299a19b65133def31b13958a36308dbab0a631010",
+    "cli": "codex-cli 0.153.2",
+    "effort": "medium",
+    "explicitSkill": true,
+    "skillDelivery": "exact SKILL.md in developerInstructions",
+    "skillEntryBytes": 3910,
+    "pluginIsolation": "process feature overrides; plugins and remote_plugin verified false",
+    "blockedReads": 8,
+    "failedCallSamples": [
+      {
+        "requestId": 0,
+        "tool": "read_file",
+        "argumentType": "object",
+        "path": "<home>/AppData/Local/Temp/commerce-behavior-aNUSeO/001/work/AGENTS.md",
+        "error": "ENOENT: no such file or directory, lstat '<fixture>\\work\\AGENTS.md'"
+      },
+      {
+        "requestId": 1,
+        "tool": "read_file",
+        "argumentType": "object",
+        "path": "<home>/AppData/Local/Temp/commerce-behavior-aNUSeO/001/work/README.md",
+        "error": "ENOENT: no such file or directory, lstat '<fixture>\\work\\README.md'"
+      },
+      {
+        "requestId": 2,
+        "tool": "read_file",
+        "argumentType": "object",
+        "path": "<home>/AppData/Local/Temp/commerce-behavior-aNUSeO/001/work/package.json",
+        "error": "ENOENT: no such file or directory, lstat '<fixture>\\work\\package.json'"
+      },
+      {
+        "requestId": 3,
+        "tool": "read_file",
+        "argumentType": "object",
+        "path": "<home>/AppData/Local/Temp/commerce-behavior-aNUSeO/001/work/pom.xml",
+        "error": "ENOENT: no such file or directory, lstat '<fixture>\\work\\pom.xml'"
+      },
+      {
+        "requestId": 4,
+        "tool": "read_file",
+        "argumentType": "object",
+        "path": "<home>/AppData/Local/Temp/commerce-behavior-aNUSeO/001/work/build.gradle",
+        "error": "ENOENT: no such file or directory, lstat '<fixture>\\work\\build.gradle'"
+      },
+      {
+        "requestId": 5,
+        "tool": "read_file",
+        "argumentType": "object",
+        "path": "<home>/AppData/Local/Temp/commerce-behavior-aNUSeO/001/work/tree.txt",
+        "error": "ENOENT: no such file or directory, lstat '<fixture>\\work\\tree.txt'"
+      },
+      {
+        "requestId": 6,
+        "tool": "read_file",
+        "argumentType": "object",
+        "path": "<home>/AppData/Local/Temp/commerce-behavior-aNUSeO/001/work",
+        "error": "File outside evaluation roots"
+      },
+      {
+        "requestId": 7,
+        "tool": "read_file",
+        "argumentType": "object",
+        "path": "<home>/AppData/Local/Temp/commerce-behavior-aNUSeO/001/work/files.txt",
+        "error": "ENOENT: no such file or directory, lstat '<fixture>\\work\\files.txt'"
+      }
+    ],
+    "reads": [],
+    "messages": [],
+    "unexpectedTools": [],
+    "tokenUsageUpdates": [
+      {
+        "elapsedMs": 6445,
+        "total": {
+          "totalTokens": 6726,
+          "inputTokens": 6601,
+          "cachedInputTokens": 0,
+          "cacheWriteInputTokens": 0,
+          "outputTokens": 125,
+          "reasoningOutputTokens": 69
+        },
+        "last": {
+          "totalTokens": 6726,
+          "inputTokens": 6601,
+          "cachedInputTokens": 0,
+          "cacheWriteInputTokens": 0,
+          "outputTokens": 125,
+          "reasoningOutputTokens": 69
+        },
+        "modelContextWindow": 258400
+      },
+      {
+        "elapsedMs": 10829,
+        "total": {
+          "totalTokens": 13683,
+          "inputTokens": 13358,
+          "cachedInputTokens": 3712,
+          "cacheWriteInputTokens": 0,
+          "outputTokens": 325,
+          "reasoningOutputTokens": 83
+        },
+        "last": {
+          "totalTokens": 6957,
+          "inputTokens": 6757,
+          "cachedInputTokens": 3712,
+          "cacheWriteInputTokens": 0,
+          "outputTokens": 200,
+          "reasoningOutputTokens": 14
+        },
+        "modelContextWindow": 258400
+      },
+      {
+        "elapsedMs": 13474,
+        "total": {
+          "totalTokens": 20923,
+          "inputTokens": 20525,
+          "cachedInputTokens": 10240,
+          "cacheWriteInputTokens": 0,
+          "outputTokens": 398,
+          "reasoningOutputTokens": 104
+        },
+        "last": {
+          "totalTokens": 7240,
+          "inputTokens": 7167,
+          "cachedInputTokens": 6528,
+          "cacheWriteInputTokens": 0,
+          "outputTokens": 73,
+          "reasoningOutputTokens": 21
+        },
+        "modelContextWindow": 258400
+      }
+    ],
+    "startedAt": "2026-10-26T10:04:33.329Z",
+    "model": "gpt-5.6-sol",
+    "provider": "openai",
+    "otherInstructionSourceCount": 0,
+    "turnStartedAt": "2026-10-26T10:04:34.622Z",
+    "tokenUsage": {
+      "total": {
+        "totalTokens": 20923,
+        "inputTokens": 20525,
+        "cachedInputTokens": 10240,
+        "cacheWriteInputTokens": 0,
+        "outputTokens": 398,
+        "reasoningOutputTokens": 104
+      },
+      "last": {
+        "totalTokens": 7240,
+        "inputTokens": 7167,
+        "cachedInputTokens": 6528,
+        "cacheWriteInputTokens": 0,
+        "outputTokens": 73,
+        "reasoningOutputTokens": 21
+      },
+      "modelContextWindow": 258400
+    },
+    "status": "failed",
+    "clientError": "Repeated unavailable tool calls; stop the evaluation budget",
+    "elapsedMs": 19803,
+    "turnElapsedMs": 18511
+  }
+}
