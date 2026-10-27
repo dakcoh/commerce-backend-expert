@@ -45,13 +45,16 @@ try {
   let baselineRoot;
   if (baselineRef) {
     baselineRoot = path.join(output, "baseline"); fs.mkdirSync(baselineRoot);
+    const repository = spawnSync("git", ["rev-parse", "--show-toplevel"], {cwd: root, encoding: "utf8", windowsHide: true, timeout: 10000});
+    assert.ifError(repository.error); assert.equal(repository.status, 0, "Baseline checks require an accessible Git checkout");
     const revision = spawnSync("git", ["rev-parse", "--verify", "--end-of-options", baselineRef + "^{commit}"], {cwd: root, encoding: "utf8", windowsHide: true, timeout: 10000});
     assert.ifError(revision.error); assert.equal(revision.status, 0, revision.stderr);
     const archive = path.join(output, "baseline.tar");
-    for (const [command, args] of [["git", ["archive", "--format=tar", "--output", archive, revision.stdout.trim()]], ["tar", ["-xf", archive, "-C", baselineRoot]]]) {
+    for (const [command, args] of [["git", ["-C", repository.stdout.trim(), "-c", "core.autocrlf=false", "-c", "core.eol=lf", "archive", "--format=tar", "--output", archive, revision.stdout.trim()]], ["tar", ["-xf", archive, "-C", baselineRoot]]]) {
       const result = spawnSync(command, args, {cwd: root, encoding: "utf8", windowsHide: true, timeout: 10000});
       assert.ifError(result.error); assert.equal(result.status, 0, result.stderr);
     }
+    assert.ok(fs.existsSync(path.join(baselineRoot, "plugin.json")), "Baseline archive must contain the repository root");
   }
   copyRuntime(baselineRoot || root);
   fs.mkdirSync(path.join(marketplace, ".agents/plugins"), {recursive: true});

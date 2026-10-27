@@ -151,6 +151,8 @@ node scripts/smoke-plugin.js /absolute/path/to/codex v0.3.0
 
 On Windows, pass the actual path to `codex.exe` as the first argument. The optional second argument selects a local Git baseline. This checks installation, exact file sets and contents, refresh, and removal; it does not execute models or hooks.
 
+Baseline files are archived from the accessible Git checkout's root, including when the candidate ZIP is extracted into a checkout subdirectory. Build release ZIPs with `git -c core.autocrlf=false -c core.eol=lf archive --format=zip --output=source.zip HEAD` and compare each extracted file with its Git blob to avoid platform-dependent line endings.
+
 With an available Claude Code executable, repeat the actual hook checks separately:
 
 ```bash

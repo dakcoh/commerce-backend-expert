@@ -151,6 +151,8 @@ node scripts/smoke-plugin.js /absolute/path/to/codex v0.3.0
 
 Windows에서는 첫 번째 인자에 `codex.exe`의 실제 경로를 전달합니다. 선택적인 두 번째 인자는 로컬 Git 기준 버전입니다. 설치·파일 목록과 내용 일치·갱신·제거를 확인하며 모델이나 훅을 실행하지 않습니다.
 
+기준 버전은 접근 가능한 Git 체크아웃의 루트에서 추출합니다. 소스 ZIP을 체크아웃 하위 폴더에 풀어 실행하는 경우에도 기준 버전의 전체 파일을 사용합니다. 공개용 ZIP을 직접 만들 때는 `git -c core.autocrlf=false -c core.eol=lf archive --format=zip --output=source.zip HEAD`로 개행을 고정하고 Git 원본과 파일별 바이트를 비교합니다.
+
 Claude Code 실행 파일이 있으면 실제 훅 검사를 별도로 반복할 수 있습니다.
 
 ```bash
