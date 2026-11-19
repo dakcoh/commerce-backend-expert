@@ -1,6 +1,6 @@
 # 행동 평가 / Behavior evaluation
 
-이 평가는 **현재 SKILL.md 전체를 명시적으로 제공했을 때의 적용**을 확인한다. 반복 비교 모드에서는 같은 모델의 미사용 대조군도 실행한다. 자동 스킬 선택·훅·클라이언트 설치 전체의 성능과 실제 DB·PG·Redis 업무는 평가하지 않는다.
+기본 모드는 현재 SKILL.md를 명시적으로 제공하고 답변을 평가한다. `--compare`는 같은 모델의 미사용 대조군을 추가한다. `--route`는 세 스킬의 이름·설명·경로만 보여 주고, 업무 요청을 받은 모델이 처음 연 파일을 기록한다. 실제 DB 동시성은 [통합 테스트](../validation/runtime/README.md)에서 검사한다.
 
 [미사용 대비 48회 비교 수치와 해석](comparison-2026-10-26.md) · [정책 구분 수정 후 회귀](results/2026-10-26-policy-followup.json). 실제 호출·실패·미실행과 실행 당시의 소스·기준을 구분한다.
 
@@ -22,13 +22,20 @@ Windows에서는 첫 번째 인자에 `codex.exe` 경로를 전달한다. 끝에
 npm run benchmark -- /absolute/path/to/codex model refund-overlap webhook-sync
 ```
 
-입력은 [cases.json](cases.json), 판정 기준은 [시나리오](scenarios.md), 합성 코드는 [fixtures/](fixtures/)에 있다. 판정 기준은 모델에 전달하지 않는다. 각 사례에는 선택한 스킬 폴더 하나와 필요한 합성 입력만 복사한다.
+입력은 [cases.json](cases.json), 판정 기준은 [시나리오](scenarios.md), 합성 코드는 [fixtures/](fixtures/)에 있다. 판정 기준은 모델에 전달하지 않는다. 기본 모드는 사례별 스킬 폴더 하나와 필요한 합성 입력을 복사한다.
+
+스킬 이름이 없는 요청에서 쿠폰 개발·재고 검증·환불 리뷰에 맞는 진입 문서를 처음 읽는지, CSS 수정에서는 스킬 파일을 열지 않는지 다음 명령으로 검사한다. 이 모드는 평가기가 제공한 카탈로그 안에서의 선택을 측정한다. 클라이언트 설치 경로의 자동 발견은 별도 확인이 필요하다.
+
+```bash
+npm run benchmark -- /absolute/path/to/codex model --route coupon-redelivery last-unit-evidence refund-overlap frontend-scope
+npm run benchmark -- /absolute/path/to/codex model --compare --repeat=1 last-unit-evidence
+```
 
 평가기는 기존 인증을 CLI를 통해 사용하며 인증 파일을 복사하거나 설정을 저장하지 않는다. 임시 스레드·읽기 전용 sandbox를 사용하고, shell·web search와 기존 플러그인에 대해 프로세스 내 비활성 설정을 전달한다. 기본·사용자 지침의 영향을 줄이기 위해 평가용 base/developer instructions를 명시한다. 추가 파일 읽기는 선택한 스킬·입력 디렉터리의 실제 경로와 64KiB 제한으로 검사하며, 쉘·파일 변경·MCP·웹 검색·하위 에이전트 이벤트가 나타나면 실행을 합격 근거로 수용하지 않는다.
 
 두 조건에 동일한 실제 작업 파일 목록을 주며 빈 목록이면 업무 사실은 프롬프트에만 있음을 알린다. 없는 프로젝트 파일을 추정해 탐색하는 비용을 검증 결과와 섞지 않는다. 조회 실패가 8회 누적되면 실행을 실패로 중단하며, 최초 실패 샘플과 시점별 사용량을 보존한다. 이 한도는 평가 전용이며 사용자 프로젝트의 파일 읽기를 제한하는 플러그인 기능이 아니다.
 
-`output/behavior-eval-*`에 실제 모델·설정, 제공한 스킬의 SHA-256, 추가로 읽은 문서의 경로·SHA-256, 거부된 읽기 횟수, 답변과 클라이언트 오류가 남는다. 스킬 본문은 developer instructions로 직접 전달하므로 SKILL.md의 별도 읽기 이벤트가 없어도 되며, 자동 발견 성공으로 집계하지 않는다. 실패·중단은 성공으로 처리하지 않는다. 완료 상태 이후에도 답변을 판정 기준으로 별도 검토해야 한다.
+`output/behavior-eval-*`에 실제 모델·설정, 읽은 파일의 경로·SHA-256, 거부된 읽기 횟수, 답변과 클라이언트 오류가 남는다. 기본 모드는 본문을 직접 전달하고, 카탈로그 모드는 첫 스킬 읽기를 검사한다. 답변의 정확성은 완료 후 판정 기준에 따라 별도 검토한다.
 
 ## 미사용 대비 반복 비교
 

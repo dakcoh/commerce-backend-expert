@@ -23,6 +23,7 @@ test("startup emits bounded skill routing without loading the rule catalog or wr
   assert.equal(result.hookSpecificOutput.hookEventName, "SessionStart");
   assert.match(context(result), /COMMERCE MODE ON/);
   assert.match(context(result), /commerce-review/);
+  assert.ok(context(result).includes("검증이 주된 요청이면 " + JSON.stringify(path.resolve(root, "../commerce-validation/SKILL.md"))));
   assert.ok(Buffer.byteLength(context(result)) < 2048);
   assert.doesNotMatch(context(result), /## 구현 가이드|id: partial-refund/);
   assert.deepEqual(fs.readdirSync(f.dataRoot), []);

@@ -49,6 +49,7 @@ The Markdown in `skills/commerce-backend-expert/` is the knowledge source. Maint
 |---|---|
 | Shared decision and development workflow | [SKILL.md](skills/commerce-backend-expert/SKILL.md) |
 | Payment/refund review workflow | [commerce-review](skills/commerce-review/SKILL.md) |
+| Web service validation workflow | [commerce-validation](skills/commerce-validation/SKILL.md) |
 | Individual rules and domain navigation | `skills/commerce-backend-expert/references/<domain>/<id>.md` and `INDEX.md` in the same folder |
 | Document checks and behavior tests | [Validator](scripts/validate-skills.js), [tests/](tests/README.md) |
 | AI behavior inputs and evaluation criteria | [benchmarks/scenarios.md](benchmarks/scenarios.md) |
@@ -117,7 +118,7 @@ Configure edit hooks only if you want automatic checks while editing skill knowl
 2. Replace `${CLAUDE_PLUGIN_ROOT}` or `${CURSOR_PLUGIN_ROOT}` in the command with this repository's absolute path. Use Node.js 24.22.1 LTS.
 3. Merge the event into the client's project/user hook settings. Preserve existing settings.
 
-The checker handles Markdown edits inside `skills/`, validating both skills and shared rules together. It skips external project files and makes no file/settings changes, network calls, or automatic prompt injections. Input is limited to 64 KiB; successful runs are silent. Do not wire these client hooks into OpenClaw.
+The checker handles Markdown edits inside `skills/`, validating the skill packages and shared rules together. It skips external project files and makes no file/settings changes, network calls, or automatic prompt injections. Input is limited to 64 KiB; successful runs are silent. Do not wire these client hooks into OpenClaw.
 
 ## Client checks
 

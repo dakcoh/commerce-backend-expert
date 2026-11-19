@@ -5,6 +5,7 @@ const path = require("node:path");
 const {spawnSync} = require("node:child_process");
 const {validateFrontmatter, validateLinks, validateSkill, validateRepository} = require("../scripts/validate-skills");
 const {skillRoot: root, repositoryRoot, temporaryDirectory, copySkill, repositoryFixture} = require("./helpers");
+const skillNames = ["commerce-backend-expert", "commerce-review", "commerce-validation"];
 
 test("packaged Markdown validates in isolation with no Java or npm on PATH", t => {
   const dir = temporaryDirectory(t), isolated = path.join(dir, "skill");
@@ -37,7 +38,7 @@ test("document anchors resolve Unicode, duplicate headings and fenced examples",
 });
 
 test("each skill is usable when an installer copies only its selected directory", t => {
-  for (const name of ["commerce-backend-expert", "commerce-review"]) {
+  for (const name of skillNames) {
     const destination = path.join(temporaryDirectory(t), name);
     fs.cpSync(path.resolve(root, "..", name), destination, {recursive: true});
     validateFrontmatter(fs.readFileSync(path.join(destination, "SKILL.md"), "utf8"), name);
@@ -52,10 +53,10 @@ test("license validation accepts mixed line endings and rejects changed content"
   const source = fs.readFileSync(license, "utf8").replaceAll("\r\n", "\n");
   for (const [rootEnding, skillEnding] of [["\r\n", "\n"], ["\n", "\r\n"]]) {
     fs.writeFileSync(license, source.replaceAll("\n", rootEnding));
-    for (const name of ["commerce-backend-expert", "commerce-review"]) {
+    for (const name of skillNames) {
       fs.writeFileSync(path.join(isolated, "skills", name, "LICENSE"), source.replaceAll("\n", skillEnding));
     }
-    assert.equal(validateRepository(isolated).skills, 2);
+    assert.equal(validateRepository(isolated).skills, skillNames.length);
   }
   fs.writeFileSync(path.join(isolated, "skills/commerce-review/LICENSE"), source + "altered\n");
   assert.throws(() => validateRepository(isolated), /commerce-review: bundle the repository license/);

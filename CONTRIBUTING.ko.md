@@ -49,6 +49,7 @@ node scripts/validate-skills.js /path/to/baseline.json
 |---|---|
 | 공통 판단·개발 절차 | [SKILL.md](skills/commerce-backend-expert/SKILL.md) |
 | 결제·환불 리뷰 절차 | [commerce-review](skills/commerce-review/SKILL.md) |
+| 웹 서비스 검증 절차 | [commerce-validation](skills/commerce-validation/SKILL.md) |
 | 개별 규칙과 파트별 탐색 | `skills/commerce-backend-expert/references/<파트>/<ID>.md`와 같은 폴더의 `INDEX.md` |
 | 문서 검사와 동작별 회귀 테스트 | [검사기](scripts/validate-skills.js), [tests/](tests/README.md) |
 | AI 행동 평가의 입력·판정 기준 | [benchmarks/scenarios.md](benchmarks/scenarios.md) |
@@ -117,7 +118,7 @@ Codex CLI 0.153.2에서는 루트 manifest에 Agent Plugins `$schema`가 있으�
 2. 명령의 `${CLAUDE_PLUGIN_ROOT}` 또는 `${CURSOR_PLUGIN_ROOT}`를 이 저장소의 절대경로로 바꿉니다. Node.js 24.22.1 LTS를 사용합니다.
 3. 해당 클라이언트의 프로젝트·사용자 훅 설정에 이벤트를 병합합니다. 기존 설정 전체를 덮어쓰지 않습니다.
 
-검사 범위는 `skills/` 안의 Markdown 편집입니다. 두 스킬과 공유 규칙을 함께 검사합니다. 외부 프로젝트 파일은 건너뛰며 파일·설정 변경, 네트워크 호출, 자동 프롬프트 주입을 하지 않습니다. 입력은 64KiB로 제한하고 정상 실행은 아무것도 출력하지 않습니다. OpenClaw에는 이 두 클라이언트의 훅을 연결하지 않습니다.
+검사 범위는 `skills/` 안의 Markdown 편집입니다. 배포 스킬과 공유 규칙을 함께 검사합니다. 외부 프로젝트 파일은 건너뛰며 파일·설정 변경, 네트워크 호출, 자동 프롬프트 주입을 하지 않습니다. 입력은 64KiB로 제한하고 정상 실행은 아무것도 출력하지 않습니다. OpenClaw에는 이 두 클라이언트의 훅을 연결하지 않습니다.
 
 ## 클라이언트 확인
 

@@ -10,7 +10,7 @@ const cli = path.resolve(process.argv[2]);
 assert.ok(fs.existsSync(cli), "OpenClaw entry point does not exist");
 fs.mkdirSync(path.join(root, "output"), {recursive: true});
 const output = fs.mkdtempSync(path.join(root, "output/openclaw-discovery-"));
-const names = ["commerce-backend-expert", "commerce-review"], checks = [];
+const names = ["commerce-backend-expert", "commerce-review", "commerce-validation"], checks = [];
 let command = 0;
 const env = {...process.env};
 for (const key of Object.keys(env)) if (key.startsWith("OPENCLAW_")) delete env[key];
@@ -56,7 +56,7 @@ try {
 configure([]);
 const version = run(["--version"], false);
 inventory([]);
-for (const selected of [[names[0]], [names[1]], names]) {
+for (const selected of [...names.map(name => [name]), names]) {
   const directory = path.join(output, "skills-" + selected.join("+"));
   fs.mkdirSync(directory);
   for (const name of selected) fs.cpSync(path.join(root, "skills", name), path.join(directory, name), {recursive: true});
@@ -82,7 +82,9 @@ inventory(names);
 run(["plugins", "uninstall", names[0], "--force"], false);
 assert.ok(!run(["plugins", "list", "--json"]).plugins.some(item => item.id === names[0]));
 inventory([]);
-assert.ok(fs.existsSync(path.join(bundle, "skills/commerce-review/SKILL.md")), "Unlink must retain fixture source");
+for (const name of names) {
+  assert.ok(fs.existsSync(path.join(bundle, "skills", name, "SKILL.md")), "Unlink must retain fixture source");
+}
 checks.push({installation: "bundle-link", skills: names, removed: true, hostHooks: "not executed"});
 fs.writeFileSync(path.join(output, "summary.json"), JSON.stringify({version, node: process.version, platform: process.platform, checks}, null, 2));
 console.log(JSON.stringify({version, output, checks}, null, 2));

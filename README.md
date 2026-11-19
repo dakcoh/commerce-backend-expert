@@ -10,6 +10,28 @@ The skill guides an AI through actual code and business conditions, then selects
 
 Document-only skill usage requires no Java or Node.js installation, MCP server, or separate API key. For the plugin's session hooks, use Node.js 24.22.1 LTS; compatibility is also tested on Node.js 22.23.4. AI-client access and project build/test requirements remain those of their respective environments.
 
+## From requirements to final review
+
+```mermaid
+flowchart TD
+    req["commerce-backend-expert<br/>Turn requirements into acceptance criteria"] --> impl["Design and implement the change"]
+    impl --> test["commerce-validation<br/>Test success, failure, and concurrent requests"]
+    impl -->|Payment or refund change| review["commerce-review<br/>Trace the code, provider contract, and transaction history"]
+    test -->|Expected and observed results| final["Final review<br/>Which criteria pass and what blocks release?"]
+    review -->|Findings and open questions| final
+    req -->|Agreed criteria| final
+```
+
+**Example · Orders A and B compete for the last unit.** Each requests one unit, stock is deducted immediately, and both orders are otherwise valid.
+
+| Observed after commit | Final review |
+|---|---|
+| One order succeeds and one sells out. Stock is zero. One deduction belongs to the successful order. | Stock criteria pass. |
+| Both orders sell out. One unit remains and there are no deductions. | Block release. An available unit went unsold. Deduction ownership on a successful order is unverified. |
+| A succeeds and B sells out. Stock is zero, but the deduction belongs to B. | Block release. The deduction was recorded against the rejected order. |
+
+The [PostgreSQL integration test](validation/runtime/src/test/java/validation/LastUnitTest.java) reproduces the first row using two connections. The [review evaluation](benchmarks/scenarios.md#last-unit-evidence--동시-주문-출시-판정) supplies the other two outcomes to check the release decision.
+
 ## What does it help catch?
 
 Suppose an order was paid 20,009 KRW and a 6,669 KRW refund for the first unit of X is still unresolved. A new request refunds both units of X for 13,339 KRW. The combined 20,008 KRW stays below the order total but refunds the same unit again.
@@ -20,13 +42,19 @@ The skill guides checks of line/unit reservations, unresolved transactions, requ
 
 ### Install skills only
 
-The [general skill](skills/commerce-backend-expert/SKILL.md) includes 70 detailed rules. The [payment/refund review skill](skills/commerce-review/SKILL.md) provides a self-contained review workflow and can be installed alone. When both are available, the review can also select relevant detailed rules.
+Choose the skill for the task. Each skill can be installed on its own.
+
+| Skill | Use it for |
+|---|---|
+| [commerce-backend-expert](skills/commerce-backend-expert/SKILL.md) | Deriving acceptance criteria from requirements, plus backend design, implementation, final review, and incident investigation with 70 domain rules |
+| [commerce-review](skills/commerce-review/SKILL.md) | Payment and refund code review, with optional detailed rules from the general skill |
+| [commerce-validation](skills/commerce-validation/SKILL.md) | Functional, regression, and pre-release testing of storefront and operations flows, including persisted state and external effects |
 
 ```bash
 npx skills add dakcoh/commerce-backend-expert --skill commerce-backend-expert
 ```
 
-Choose `--skill commerce-review` for the review workflow alone. The installer asks which AI client to target. The tested `skills@1.7.4` installer requires Node.js 22.20 or later. This method does not install session hooks or the `commerce on/off/status` controls.
+Use `--skill commerce-review` or `--skill commerce-validation` to select the corresponding workflow. The installer asks which AI client to target. The tested `skills@1.7.4` installer requires Node.js 22.20 or later. This method does not install session hooks or the `commerce on/off/status` controls.
 
 For manual use, copy the entire selected `skills/<skill-name>/` folder, including its license and references. Reading the Markdown directly requires no Java, Node.js, or separate API key.
 
@@ -58,10 +86,13 @@ Provide the relevant project, business conditions, and requested task. When supp
 
 | Task | Example request |
 |---|---|
+| Requirements | “We want to allow partial refunds. Turn confirmed policies into acceptance criteria and identify the coupon decisions we still need to make.” |
 | Design | “Design recovery for direct database stock deduction and a lost payment approval response.” |
 | Implementation | “Use a date/sequence business key to prevent duplicates; check midnight retries and request-content conflicts.” |
 | Refactoring | “Simplify stock deduction while preserving returns, exceptions, transactions, and side-effect order.” |
+| Validation | “Use commerce-validation to verify checkout after the payment change. In our isolated integration environment, include a lost approval response and webhook redelivery, and compare what the customer sees with the payment ledger.” |
 | Incident analysis | “An approval response was lost. Explain what to inspect using the original transaction and state history.” |
+| Final review | “Compare the agreed partial-refund criteria with the changed code and test results. Which criteria still block completion?” |
 
 Check the rules read, code locations, changes, tests actually run, and unresolved conditions in the result.
 

@@ -5,7 +5,7 @@ const assert = require("node:assert/strict");
 const {createHash} = require("node:crypto");
 const {spawn, spawnSync} = require("node:child_process");
 
-// Both modes measure explicit instructions; neither measures automatic discovery.
+const {validateFrontmatter} = require("./validate-skills");
 function readFixture(value, cwd, roots) {
   const file = fs.realpathSync(path.resolve(cwd, value));
   const root = roots.find(item => file.startsWith(item.path + path.sep));
@@ -29,10 +29,18 @@ function selectCases(cases, selected) {
   return cases.filter(item => selected.length ? selected.includes(item.id) : item.default !== false);
 }
 
-function snapshotSources(repository, fixtureRoot, chosen, against = null) {
+function verifyRouting(reads, expectedSkill) {
+  const first = reads.find(read => read.path.startsWith("skills/"))?.path ?? null;
+  const expected = expectedSkill ? "skills/" + expectedSkill + "/SKILL.md" : null;
+  assert.equal(first, expected, "Unexpected first skill read");
+  return first;
+}
+
+function snapshotSources(repository, fixtureRoot, chosen, against = null, route = false) {
   const roots = {skill: path.join(fixtureRoot, "source"), baseline: against ? path.join(fixtureRoot, "baseline") : null};
   for (const [arm, source] of [["skill", repository], ...(against ? [["baseline", fs.realpathSync(against)]] : [])]) {
-    for (const name of new Set(chosen.map(item => item.skill))) fs.cpSync(path.join(source, "skills", name), path.join(roots[arm], "skills", name), {recursive: true});
+    const names = route ? fs.readdirSync(path.join(source, "skills")) : new Set(chosen.map(item => item.skill));
+    for (const name of names) fs.cpSync(path.join(source, "skills", name), path.join(roots[arm], "skills", name), {recursive: true});
   }
   fs.cpSync(path.join(repository, "benchmarks/fixtures"), path.join(roots.skill, "fixtures"), {recursive: true});
   for (const name of ["cases.json", "rubric.json"]) fs.copyFileSync(path.join(repository, "benchmarks", name), path.join(roots.skill, name));
@@ -88,8 +96,9 @@ function summarizeMeasurements(records) {
   }));
 }
 
-async function evaluate(codex, model, selected = [], comparison = false, repeats = 3, against = null, orderOffset = 0) {
+async function evaluate(codex, model, selected = [], comparison = false, repeats = 3, against = null, orderOffset = 0, route = false) {
   assert.ok(!against || comparison, "--against requires --compare");
+  assert.ok(!route || !comparison, "Run --route separately from --compare");
   const repository = path.resolve(__dirname, "..");
   const cases = JSON.parse(fs.readFileSync(path.join(repository, "benchmarks/cases.json"), "utf8"));
   const chosen = selectCases(cases, selected);
@@ -98,7 +107,7 @@ async function evaluate(codex, model, selected = [], comparison = false, repeats
   const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), "commerce-behavior-"));
   const jobs = comparison ? comparisonSchedule(chosen, repeats, orderOffset) : chosen.map(item => ({...item, arm: "skill", repeat: 1}));
   const records = [];
-  const sources = snapshotSources(repository, fixtureRoot, chosen, against), snapshot = sources.skill;
+  const sources = snapshotSources(repository, fixtureRoot, chosen, against, route), snapshot = sources.skill;
   const version = spawnSync(codex, ["--version"], {encoding: "utf8", windowsHide: true, timeout: 10000});
   assert.ifError(version.error); assert.equal(version.status, 0, "Codex version check failed");
   const overrides = ["-c", "features.plugins=false", "-c", "features.remote_plugin=false"];
@@ -116,7 +125,7 @@ async function evaluate(codex, model, selected = [], comparison = false, repeats
     pluginIsolation: "features.plugins=false and features.remote_plugin=false; process overrides checked by features list",
     taskFileInventory: "Same complete filename inventory supplied to both arms; absent project files are not discovery targets",
     unavailableCallLimit: 8,
-    delivery: against ? "original vs candidate SKILL.md; fresh ephemeral read-only thread per run; alternating order" : "explicit SKILL.md vs no skill; fresh ephemeral read-only thread per run; alternating order", fixtureRoot}, null, 2));
+    delivery: route ? "catalog metadata only; selected skill bodies read on demand" : against ? "original vs candidate SKILL.md; fresh ephemeral read-only thread per run; alternating order" : "explicit SKILL.md vs no skill; fresh ephemeral read-only thread per run; alternating order", fixtureRoot}, null, 2));
   for (const [index, item] of jobs.entries()) {
     const runId = String(index + 1).padStart(3, "0");
     const directory = path.join(output, runId), fixture = path.join(fixtureRoot, runId), cwd = path.join(fixture, "work");
@@ -124,13 +133,23 @@ async function evaluate(codex, model, selected = [], comparison = false, repeats
     fs.mkdirSync(directory, {recursive: true});
     fs.mkdirSync(cwd, {recursive: true});
     const source = sources[item.arm];
-    if (source) fs.cpSync(path.join(source, "skills", item.skill), skill, {recursive: true});
+    const skillDirectory = path.dirname(skill);
+    if (route) fs.cpSync(path.join(source, "skills"), skillDirectory, {recursive: true});
+    else if (source) fs.cpSync(path.join(source, "skills", item.skill), skill, {recursive: true});
     for (const file of item.files) fs.copyFileSync(path.join(snapshot, "fixtures", file), path.join(cwd, file));
     const roots = [{path: fs.realpathSync(cwd), label: "workspace"}];
-    if (source) roots.push({path: fs.realpathSync(skill), label: "skills/" + item.skill});
-    const entry = source ? readFixture(path.join(skill, "SKILL.md"), cwd, roots) : null;
+    const catalog = [];
+    if (route) {
+      roots.push({path: fs.realpathSync(skillDirectory), label: "skills"});
+      for (const name of fs.readdirSync(skillDirectory)) {
+        const file = path.join(skillDirectory, name, "SKILL.md");
+        const {description} = validateFrontmatter(fs.readFileSync(file, "utf8"), name);
+        catalog.push({name, description, path: file});
+      }
+    } else if (source) roots.push({path: fs.realpathSync(skill), label: "skills/" + item.skill});
+    const entry = source && !route ? readFixture(path.join(skill, "SKILL.md"), cwd, roots) : null;
     const record = {runId, id: item.id, arm: item.arm, repeat: item.repeat, prompt: item.prompt, skill: entry ? item.skill : null, skillSha256: entry?.sha256 || null,
-      cli: version.stdout.trim(), effort: "medium", explicitSkill: Boolean(entry), skillDelivery: entry ? "exact SKILL.md in developerInstructions" : "none", skillEntryBytes: entry ? Buffer.byteLength(entry.text) : 0, pluginIsolation: "process feature overrides; plugins and remote_plugin verified false", blockedReads: 0, failedCallSamples: [], reads: [], messages: [], unexpectedTools: [], tokenUsageUpdates: [], startedAt: new Date().toISOString()};
+      cli: version.stdout.trim(), effort: "medium", explicitSkill: Boolean(entry), skillDelivery: route ? "catalog metadata" : entry ? "exact SKILL.md in developerInstructions" : "none", skillEntryBytes: entry ? Buffer.byteLength(entry.text) : 0, pluginIsolation: "process feature overrides; plugins and remote_plugin verified false", blockedReads: 0, failedCallSamples: [], reads: [], messages: [], unexpectedTools: [], tokenUsageUpdates: [], startedAt: new Date().toISOString()};
     const startedAt = Date.now();
     const child = spawn(codex, ["app-server", "--stdio", "-c", "features.shell_tool=false", "-c", 'web_search="disabled"', ...overrides], {cwd, windowsHide: true, stdio: ["pipe", "pipe", "pipe"]});
     let buffer = "", sequence = 0, complete;
@@ -189,7 +208,8 @@ async function evaluate(codex, model, selected = [], comparison = false, repeats
       const thread = await request("thread/start", {cwd, ephemeral: true, sandbox: "read-only", approvalPolicy: "never", ...(model ? {model} : {}),
         baseInstructions: "You are a coding assistant. Use only read_file for the provided task resources. Do not use shell, network, other tools, other skills, file writes or subagents. Answer in Korean.",
         config: {developer_instructions: ""},
-        developerInstructions: taskInstructions(cwd, item.files, entry, skill),
+        developerInstructions: taskInstructions(cwd, item.files, entry, skill) + (route
+          ? "\nAvailable skill metadata: " + JSON.stringify(catalog) + ". Read the relevant skill when applicable." : ""),
         dynamicTools: [{type: "function", name: "read_file", description: "Read a UTF-8 file in the permitted task resources.", inputSchema: {type: "object", properties: {path: {type: "string"}}, required: ["path"], additionalProperties: false}}]});
       record.model = thread.model; record.provider = thread.modelProvider;
       record.otherInstructionSourceCount = thread.instructionSources?.length || 0;
@@ -202,10 +222,13 @@ async function evaluate(codex, model, selected = [], comparison = false, repeats
       await done;
       assert.equal(record.status, "completed", "Incomplete model turn");
       assert.deepEqual(record.unexpectedTools, [], "Unexpected tool use; inspect before accepting this run");
+      if (route) {
+        record.firstSkillRead = verifyRouting(record.reads, item.id === "frontend-scope" ? null : item.skill);
+      }
       assert.ok(record.messages.length, "Missing model answer");
       for (const text of record.messages) assert.ok(text.trim());
     } catch (error) {
-      record.status ||= "failed";
+      if (route || !record.status) record.status = "failed";
       record.clientError = error.message;
       if (!comparison) throw error;
     } finally {
@@ -226,8 +249,9 @@ async function evaluate(codex, model, selected = [], comparison = false, repeats
 
 if (require.main === module) {
   const args = process.argv.slice(4), comparison = args.includes("--compare"), repeat = args.find(value => value.startsWith("--repeat=")), against = args.find(value => value.startsWith("--against=")), offset = args.find(value => value.startsWith("--order-offset="));
-  if (!process.argv[2] || (comparison && (!process.argv[3] || process.argv[3] === "-")) || args.some(value => value.startsWith("--") && value !== "--compare" && !/^--repeat=[1-5]$/.test(value) && !/^--against=.+/.test(value) && !/^--order-offset=[01]$/.test(value)) || ((repeat || against || offset) && !comparison)) {
-    console.error("Usage: node scripts/evaluate-behavior.js <codex executable> [model|-] [--compare --repeat=3] [--against=/original/source] [--order-offset=0|1] [case IDs...]"); process.exitCode = 1;
-  } else evaluate(process.argv[2], process.argv[3] === "-" ? undefined : process.argv[3], args.filter(value => !value.startsWith("--")), comparison, repeat ? Number(repeat.slice(9)) : 3, against ? path.resolve(against.slice(10)) : null, offset ? Number(offset.slice(15)) : 0).catch(error => { console.error(error.message); process.exitCode = 1; });
+  const route = args.includes("--route");
+  if (!process.argv[2] || (comparison && (route || !process.argv[3] || process.argv[3] === "-")) || args.some(value => value.startsWith("--") && value !== "--compare" && value !== "--route" && !/^--repeat=[1-5]$/.test(value) && !/^--against=.+/.test(value) && !/^--order-offset=[01]$/.test(value)) || ((repeat || against || offset) && !comparison)) {
+    console.error("Usage: node scripts/evaluate-behavior.js <codex executable> [model|-] [--route | --compare --repeat=3] [--against=/original/source] [--order-offset=0|1] [case IDs...]"); process.exitCode = 1;
+  } else evaluate(process.argv[2], process.argv[3] === "-" ? undefined : process.argv[3], args.filter(value => !value.startsWith("--")), comparison, repeat ? Number(repeat.slice(9)) : 3, against ? path.resolve(against.slice(10)) : null, offset ? Number(offset.slice(15)) : 0, route).catch(error => { console.error(error.message); process.exitCode = 1; });
 }
-module.exports = {readFixture, comparisonSchedule, summarizeMeasurements, selectCases, snapshotSources, taskInstructions, unavailableCall};
+module.exports = {readFixture, comparisonSchedule, summarizeMeasurements, selectCases, snapshotSources, taskInstructions, unavailableCall, verifyRouting};

@@ -4,7 +4,7 @@ const fs = require("node:fs");
 const path = require("node:path");
 const {spawnSync} = require("node:child_process");
 const {validateRepository} = require("../scripts/validate-skills");
-const {skillRoot: root, repositoryFixture} = require("./helpers");
+const {repositoryFixture} = require("./helpers");
 
 test("repository rejects retired paths and broken documentation, including new nested reports", t => {
   const isolated = repositoryFixture(t);
@@ -37,12 +37,16 @@ test("clients share canonical skills and cannot silently enable developer hooks 
   assert.throws(() => validateRepository(isolated), /only Markdown knowledge/);
 });
 
-test("review links stay inside their own skill and lifecycle manifests exclude edit validation", t => {
-  const isolated = repositoryFixture(t), review = path.join(isolated, "skills/commerce-review/SKILL.md");
-  assert.equal(validateRepository(isolated).skills, 2);
-  fs.appendFileSync(review, "\n[outside](../commerce-backend-expert/SKILL.md)\n");
-  assert.throws(() => validateRepository(isolated), /escapes skill/);
-  fs.writeFileSync(review, fs.readFileSync(path.resolve(root, "../commerce-review/SKILL.md")));
+test("workflow links stay inside their own skill and lifecycle manifests exclude edit validation", t => {
+  const isolated = repositoryFixture(t);
+  assert.equal(validateRepository(isolated).skills, 3);
+  for (const name of ["commerce-review", "commerce-validation"]) {
+    const entry = path.join(isolated, "skills", name, "SKILL.md");
+    const source = fs.readFileSync(entry, "utf8");
+    fs.writeFileSync(entry, source + "\n[outside](../commerce-backend-expert/SKILL.md)\n");
+    assert.throws(() => validateRepository(isolated), /escapes skill/);
+    fs.writeFileSync(entry, source);
+  }
   const file = path.join(isolated, ".codex-plugin/plugin.json"), manifest = JSON.parse(fs.readFileSync(file, "utf8"));
   manifest.hooks = "./hooks/claude.json"; fs.writeFileSync(file, JSON.stringify(manifest));
   assert.throws(() => validateRepository(isolated), /session hooks only/);

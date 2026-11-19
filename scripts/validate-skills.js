@@ -240,11 +240,15 @@ function validateRepository(root = repositoryRoot) {
     assert.ok(!fs.existsSync(path.join(root, legacy)), `Removed runtime path returned: ${legacy}`);
   }
   const result = validateSkill(path.join(root, "skills/commerce-backend-expert"));
-  const review = path.join(root, "skills/commerce-review/SKILL.md");
-  validateFrontmatter(fs.readFileSync(review, "utf8"), "commerce-review");
-  const reviewLinks = validateLinks(review, path.dirname(review));
+  const workflowSkills = ["commerce-review", "commerce-validation"];
+  const [reviewLinks, validationLinks] = workflowSkills.map(name => {
+    const directory = path.join(root, "skills", name);
+    const entry = path.join(directory, "SKILL.md");
+    validateFrontmatter(fs.readFileSync(entry, "utf8"), name);
+    return validateLinks(entry, directory);
+  });
   const license = fs.readFileSync(path.join(root, "LICENSE"), "utf8").replaceAll("\r\n", "\n");
-  for (const name of ["commerce-backend-expert", "commerce-review"]) {
+  for (const name of ["commerce-backend-expert", ...workflowSkills]) {
     assert.equal(fs.readFileSync(path.join(root, "skills", name, "LICENSE"), "utf8").replaceAll("\r\n", "\n"), license, `${name}: bundle the repository license`);
   }
   const documents = ["README.md", "README.ko.md", "CONTRIBUTING.md", "CONTRIBUTING.ko.md", ".cursor/rules/commerce-backend.mdc"];
@@ -296,7 +300,7 @@ function validateRepository(root = repositoryRoot) {
     const command = client === "claude" ? handlers[0].hooks[0].command : handlers[0].command;
     assert.ok(command.includes("/hooks/validate-knowledge.js"));
   }
-  return {...result, documentationLinks, reviewLinks, skills: 2, clientManifests: 3};
+  return {...result, documentationLinks, reviewLinks, validationLinks, skills: 1 + workflowSkills.length, clientManifests: 3};
 }
 
 if (require.main === module) {
@@ -306,7 +310,7 @@ if (require.main === module) {
       const baseline = JSON.parse(fs.readFileSync(process.argv[2], "utf8"));
       compareBaseline(result.rules, baseline);
     }
-    console.log(JSON.stringify({rules: result.rules.length, indexes: result.indexes, files: result.files, localLinks: result.links, reviewLinks: result.reviewLinks, skills: result.skills, documentationLinks: result.documentationLinks, clientManifests: result.clientManifests, baselineParity: Boolean(process.argv[2])}));
+    console.log(JSON.stringify({rules: result.rules.length, indexes: result.indexes, files: result.files, localLinks: result.links, reviewLinks: result.reviewLinks, validationLinks: result.validationLinks, skills: result.skills, documentationLinks: result.documentationLinks, clientManifests: result.clientManifests, baselineParity: Boolean(process.argv[2])}));
   } catch (error) { console.error(error.message); process.exitCode = 1; }
 }
 module.exports = {parseRule, validateRules, validateLinks, validateFrontmatter, validateSkill, validateRepository, compareBaseline};

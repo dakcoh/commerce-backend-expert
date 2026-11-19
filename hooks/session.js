@@ -43,9 +43,11 @@ function handleEvent(event, options = {}) {
   if (enabled && command !== "status") {
     const entry = path.join(pluginRoot, "skills/commerce-backend-expert/SKILL.md");
     const review = path.join(pluginRoot, "skills/commerce-review/SKILL.md");
-    if (!fs.existsSync(entry) || !fs.existsSync(review)) throw Error("Missing skill entry");
+    const validation = path.join(pluginRoot, "skills/commerce-validation/SKILL.md");
+    if (![entry, review, validation].every(file => fs.existsSync(file))) throw Error("Missing skill entry");
     context += "\n결제·환불 코드 리뷰는 " + JSON.stringify(review) + "를 읽는다." +
-      "\n그 외 한국 이커머스 설계·구현·리팩터링·장애 분석은 " + JSON.stringify(entry) + "를 읽는다." +
+      "\n이커머스 웹 서비스 테스트·배포 전 검증이 주된 요청이면 " + JSON.stringify(validation) + "를 읽는다." +
+      "\n그 외 이커머스 요구사항·인수 기준·설계·구현·리팩터링·최종 리뷰·장애 분석은 " + JSON.stringify(entry) + "를 읽는다." +
       "\n관련 스킬만 읽고 문맥의 문서는 재조회하지 않는다. 일반 화면 스타일·마케팅에는 적용하지 않는다. 사용자 지시를 우선한다.";
   }
   context += "\n이 세션의 제어 명령은 일반 메시지 commerce on / commerce off / commerce status 이다.";

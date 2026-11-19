@@ -36,3 +36,38 @@ jobs:
         run: npm run check
       - name: Check boundaries and regressions
         run: npm test
+
+  last-unit:
+    name: Last unit / PostgreSQL
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@cf277c60eb25467037889841efdb72551f06f6c3 # v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: gradle/actions/setup-gradle@ed408507eac070d1f99cc633dbcf757c94c7933a # v4
+        with:
+          gradle-version: '8.14.5'
+      - name: Verify competing orders against a disposable database
+        shell: bash
+        env:
+          COMMERCE_TEST_PASSWORD: local-fixture-only
+        run: |
+          set -eu
+          docker run --detach --rm --name commerce-stock -p 127.0.0.1::5432 \
+            -e POSTGRES_USER=commerce -e POSTGRES_DB=commerce_validation \
+            -e POSTGRES_PASSWORD="$COMMERCE_TEST_PASSWORD" postgres:16.15 \
+            -c cluster_name=commerce_rule_validation
+          trap 'docker stop commerce-stock' EXIT
+          for attempt in {1..30}; do
+            if docker exec commerce-stock pg_isready -h 127.0.0.1 -U commerce -d commerce_validation; then break; fi
+            sleep 1
+          done
+          docker exec commerce-stock pg_isready -h 127.0.0.1 -U commerce -d commerce_validation
+          export COMMERCE_TEST_DB="jdbc:postgresql://$(docker port commerce-stock 5432/tcp)/commerce_validation"
+          export COMMERCE_TEST_OUTPUT="$RUNNER_TEMP/commerce-stock-results"
+          gradle --no-daemon -p validation/runtime test --tests validation.LastUnitTest

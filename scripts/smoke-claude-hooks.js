@@ -90,10 +90,15 @@ async function main() {
   const startup = await run("startup", "ordinary fixture prompt", ["--session-id", session]);
   const init = startup.events.find(event => event.subtype === "init");
   assert.deepEqual(init.tools, []); assert.deepEqual(init.plugins.map(item => item.name), ["commerce-backend-expert"]);
-  assert.deepEqual(init.skills.filter(name => name.startsWith("commerce-backend-expert:")).sort(), ["commerce-backend-expert:commerce-backend-expert", "commerce-backend-expert:commerce-review"]);
+  assert.deepEqual(init.skills.filter(name => name.startsWith("commerce-backend-expert:")).sort(), [
+    "commerce-backend-expert:commerce-backend-expert",
+    "commerce-backend-expert:commerce-review",
+    "commerce-backend-expert:commerce-validation",
+  ]);
   expectContext(startup, "SessionStart:startup", "ON"); expectContext(startup, "UserPromptSubmit", null);
   assert.equal(startup.requestModes.at(-1), "COMMERCE MODE ON");
   assert.match(startup.contexts[0].context, /commerce-review/); assert.match(startup.contexts[0].context, /commerce-backend-expert/);
+  assert.match(startup.contexts[0].context, /commerce-validation/);
   for (const [label, prompt, mode] of [["off", "commerce off", "OFF"], ["status", "commerce status", "OFF"], ["quoted", "예시: commerce on", null], ["negated", "commerce on 하지 마", null]]) {
     const result = await run(label, prompt, resume); expectContext(result, "UserPromptSubmit", mode);
     if (label !== "off") expectContext(result, "SessionStart:resume", "OFF");

@@ -3,7 +3,18 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 const {temporaryDirectory} = require("./helpers");
-const {readFixture, comparisonSchedule, summarizeMeasurements, selectCases, snapshotSources, taskInstructions, unavailableCall} = require("../scripts/evaluate-behavior");
+const {readFixture, comparisonSchedule, summarizeMeasurements, selectCases, snapshotSources, taskInstructions, unavailableCall, verifyRouting} = require("../scripts/evaluate-behavior");
+
+test("routing checks the first skill opened and permits workspace reads for unrelated tasks", () => {
+  const input = {path: "workspace/order.js"};
+  const review = {path: "skills/commerce-review/SKILL.md"};
+  const validation = {path: "skills/commerce-validation/SKILL.md"};
+  assert.equal(verifyRouting([input, review], "commerce-review"), review.path);
+  assert.equal(verifyRouting([input], null), null);
+  assert.throws(() => verifyRouting([validation, review], "commerce-review"), /Unexpected first/);
+  assert.throws(() => verifyRouting([input], "commerce-review"), /Unexpected first/);
+  assert.throws(() => verifyRouting([{path: "skills/commerce-review/references/rules.md"}], null), /Unexpected first/);
+});
 
 test("evaluation reader bounds real paths and file sizes before returning contents", t => {
   const directory = temporaryDirectory(t);
@@ -59,7 +70,7 @@ test("public case defaults keep the eight-case request budget and match complete
   for (const item of cases) {
     assert.equal(rubric.cases[item.id].length, 4);
     assert.ok(item.prompt.trim());
-    assert.ok(["commerce-backend-expert", "commerce-review"].includes(item.skill));
+    assert.ok(["commerce-backend-expert", "commerce-review", "commerce-validation"].includes(item.skill));
     const fixtures = fs.realpathSync(path.join(root, "benchmarks/fixtures"));
     for (const file of item.files) assert.ok(Buffer.byteLength(readFixture(file, fixtures, [{path: fixtures, label: "fixtures"}]).text) > 0);
   }

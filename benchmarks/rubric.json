@@ -75,6 +75,12 @@
       "Protect the shared campaign cap across concurrent users and let only one new distinct grant claim the 100th slot; redelivery consumes none.",
       "Commit durable grant/quota effects before acknowledgment and avoid inventing broker/DB guarantees or claiming execution."
     ],
+    "last-unit-evidence": [
+      "Build A satisfies the cap S1 but fails S2. Both valid orders were rejected with one unit still available.",
+      "Build B satisfies S1 and S2 but fails S3. The deduction refers to rejected B instead of confirmed A despite correct totals.",
+      "Keep build A's absence of an orphan deduction distinct from proof of S3 on a successful order. Block release for both builds and identify the failing criterion for each.",
+      "Attribute observations to the supplied records. Do not claim to have run the database or to have identified an unobserved implementation cause."
+    ],
     "frontend-scope": [
       "Return one HTML code block equal to the fixture except button padding 0 -> 12px and .buttons gap 0 -> 8px.",
       "Read the provided HTML file successfully rather than inventing its contents.",

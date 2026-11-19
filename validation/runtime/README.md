@@ -28,7 +28,11 @@ for package in *.deb; do dpkg-deb -x "$package" root; done
 
 첫 실행에서 Maven Central의 고정 버전 개발 의존성을 `output/runtime-gradle`에 받는다. 기본 `npm ci`, `npm test`, 배포 스킬에는 추가하지 않는다. 코드·SQL은 재현용 최소 거래이며 복사해서 운영 구현으로 쓰는 예제가 아니다.
 
-## 확인한 사례 15개
+## 마지막 재고 동시 주문
+
+직접 차감 정책에서 독립된 두 DB 연결이 같은 SKU의 재고 1개를 읽은 뒤 동시에 주문한다. 커밋 후 새 연결에서 성공 응답 1건, 성공한 주문 ID와 일치하는 확정 주문 1건, 잔량 0개, 해당 주문에 귀속된 1개 차감 이력 1건을 확인한다. 2026-11-19 로컬 PostgreSQL 16.15에서 이 사례를 포함한 통합 테스트 16개가 통과했다. GitHub Actions의 `Last unit / PostgreSQL` 작업은 push와 PR에서 이 사례를 단독 실행하도록 구성했다. [LastUnitTest.java](src/test/java/validation/LastUnitTest.java)
+
+## 기존 실행에서 확인한 사례 15개
 
 | 테스트 | 실행·판정 |
 |---|---|
