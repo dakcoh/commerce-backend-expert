@@ -147,7 +147,7 @@ Codex CLI 0.153.2에서는 루트 manifest에 Agent Plugins `$schema`가 있으�
 ```bash
 node scripts/smoke-plugin.js /absolute/path/to/codex
 # 정확한 로컬 릴리스 태그에서의 갱신도 확인 (Git·tar 필요):
-node scripts/smoke-plugin.js /absolute/path/to/codex v0.3.0
+node scripts/smoke-plugin.js /absolute/path/to/codex v0.3.1
 ```
 
 Windows에서는 첫 번째 인자에 `codex.exe`의 실제 경로를 전달합니다. 선택적인 두 번째 인자는 로컬 Git 기준 버전입니다. 설치·파일 목록과 내용 일치·갱신·제거를 확인하며 모델이나 훅을 실행하지 않습니다.

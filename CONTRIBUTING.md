@@ -147,7 +147,7 @@ Repeat the local installation check without credentials or model calls. Evidence
 ```bash
 node scripts/smoke-plugin.js /absolute/path/to/codex
 # Also verify upgrade from the exact local release tag (requires Git and tar):
-node scripts/smoke-plugin.js /absolute/path/to/codex v0.3.0
+node scripts/smoke-plugin.js /absolute/path/to/codex v0.3.1
 ```
 
 On Windows, pass the actual path to `codex.exe` as the first argument. The optional second argument selects a local Git baseline. This checks installation, exact file sets and contents, refresh, and removal; it does not execute models or hooks.

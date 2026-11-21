@@ -12,6 +12,8 @@ Document-only skill usage requires no Java or Node.js installation, MCP server, 
 
 ## From requirements to final review
 
+When you ask the main skill to implement a feature or fix a bug, the same agent tests the change, then reviews the final diff and its callers. It fixes defects within scope, reruns the affected checks, and reports remaining findings or gaps. This workflow also works with the main skill installed on its own.
+
 ```mermaid
 flowchart TD
     req["commerce-backend-expert<br/>Turn requirements into acceptance criteria"] --> impl["Design and implement the change"]
@@ -114,7 +116,7 @@ Guides are bilingual; the knowledge documents are in Korean. This skill does not
 
 ## Client layouts
 
-The shared [plugin.json](plugin.json) and client entrypoints below use the same `skills/` source without copying knowledge. The current version is `0.3.1`. **Format/path checks and actual client installation/activation are separate.**
+The shared [plugin.json](plugin.json) and client entrypoints below use the same `skills/` source without copying knowledge. The current version is `0.4.0`. **Format/path checks and actual client installation/activation are separate.**
 
 | Client | Configuration |
 |---|---|

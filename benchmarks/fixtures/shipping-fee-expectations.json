@@ -1,0 +1,11 @@
+[
+  {"case": "empty order", "lines": [], "expected": 0},
+  {"case": "all canceled", "lines": [{"canceled": true, "netWon": 1000}], "expected": 0},
+  {"case": "zero is a supplied total", "lines": [{"unitWon": 30000, "quantity": 1, "netWon": 0}], "expected": 3000},
+  {"case": "discounted line total includes quantity", "lines": [{"netWon": 16000, "quantity": 2}], "expected": 3000},
+  {"case": "legacy under threshold", "lines": [{"unitWon": 9999, "quantity": 3}], "expected": 3000},
+  {"case": "legacy at threshold", "lines": [{"unitWon": 15000, "quantity": 2}], "expected": 0},
+  {"case": "mixed totals just below threshold", "lines": [{"unitWon": 10000, "quantity": 2}, {"netWon": 9999}], "expected": 3000},
+  {"case": "mixed totals exactly at threshold", "lines": [{"unitWon": 10000, "quantity": 2}, {"netWon": 10000}], "expected": 0},
+  {"case": "canceled line excluded from threshold", "lines": [{"canceled": true, "netWon": 40000}, {"netWon": 1000}], "expected": 3000}
+]
