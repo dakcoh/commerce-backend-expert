@@ -1,14 +1,66 @@
+<div align="center">
+
 # Commerce Backend Expert
 
-[English](README.md) · 한국어
+**주문·결제·정산의 요구사항을 구현하고, 코드와 원장으로 검증하는 이커머스 개발 스킬**
+
+[English](README.md) · **한국어**　|　[바로 사용하기](#바로-사용하기) · [스킬 선택](#어떤-스킬을-쓰면-될까요) · [언어별 활용](#내-프로젝트의-언어로-쓰기) · [도메인별 규칙](#필요한-파트만-읽습니다)
+
+</div>
+
+## 정산은 3건 다 됐는데, 왜 15,000원이 더 잡혔지?
+
+<div align="center">
+
+![정산 배치 재시작 예시. 기대한 세 거래의 합계는 11,000원이다. 12,000원 거래가 중복되고 마이너스 3,000원 거래가 빠져 실제 합계는 26,000원이다.](benchmarks/results/settlement-restart.svg)
+
+</div>
+
+합성 정산 배치를 재시작한 사례입니다. 스킬을 적용한 에이전트는 거래 ID별로 원장을 대조해 **e2 중복과 e3 누락**을 찾았고, 15,000원 과다 반영을 근거로 출시 차단을 권했습니다. [입력 CSV](benchmarks/fixtures/settlement-window.csv) · [평가 결과와 조건](benchmarks/operations-2026-11-19.md)
+
+## 바로 사용하기
+
+Codex나 Claude Code를 쓰는 프로젝트에서 대표 개발 스킬을 설치하세요.
+
+```bash
+npx skills add dakcoh/commerce-backend-expert --skill commerce-backend-expert
+```
+
+그다음 주문 코드를 열고 이렇게 요청해 보세요.
+
+> 신규 주문의 무료배송 기준을 3만 원에서 4만 원으로 올려줘. 기존 주문 영수증에는 주문 당시 배송비가 그대로 나와야 해.
+
+대표 스킬은 구현과 테스트를 마친 뒤 주문 생성과 영수증 조회 경로를 다시 리뷰합니다. 한 가지 업무만 맡기려면 아래에서 검증 또는 결제·환불 리뷰 스킬을 선택할 수 있습니다.
+
+Markdown 지침은 별도 API 키 없이 읽을 수 있습니다. 설치 도구와 세션 훅의 Node.js 요구사항은 아래에 정리했습니다.
 
 [![CI](https://github.com/dakcoh/commerce-backend-expert/actions/workflows/ci.yml/badge.svg)](https://github.com/dakcoh/commerce-backend-expert/actions/workflows/ci.yml) · [MIT](LICENSE)
 
-**한국 이커머스 백엔드의 설계·구현·리팩터링·코드 리뷰·장애 분석을 돕는 Markdown 스킬·훅 플러그인입니다.**
+## 어떤 스킬을 쓰면 될까요?
 
-AI가 실제 코드와 업무 조건을 먼저 확인하고, 필요한 파트의 지침만 읽어 요청한 개발 작업에 적용하도록 안내합니다. 주문·재고·결제·쿠폰·정산·Java/Spring의 규칙 70개를 제공합니다.
+| 지금 하려는 일 | 선택할 스킬 | 함께 주면 좋은 자료 |
+|---|---|---|
+| **구현·수정** — 무료배송 기준을 바꾸고 과거 영수증은 보존하기 | [commerce-backend-expert](skills/commerce-backend-expert/SKILL.md) | 정책을 적용할 시점, 주문 생성·영수증 조회 코드, 기존 주문 예시 |
+| **결제·환불 코드 리뷰** — 응답이 유실된 부분 환불을 다시 요청해도 되는지 검토하기 | [commerce-review](skills/commerce-review/SKILL.md) | 변경 diff, 결제사 응답 계약, 원거래와 환불 시도 이력 |
+| **출시 전 검증** — 마지막 재고 한 개에 두 주문이 경합한 결과 판정하기 | [commerce-validation](skills/commerce-validation/SKILL.md) | 인수 기준, 두 요청의 응답, 커밋 후 재고와 차감 원장 |
 
-문서 스킬만 사용하면 Java·Node.js 설치, MCP 서버 실행이나 별도 API 키가 필요하지 않습니다. 플러그인의 세션 훅에는 Node.js 24.22.1 LTS를 사용하세요. Node.js 22.23.4에서도 호환성을 검사합니다. AI 클라이언트의 이용 조건과 사용자 프로젝트의 빌드·테스트 요구사항은 각각 해당 환경을 따릅니다.
+## 내 프로젝트의 언어로 쓰기
+
+**Java/Spring 프로젝트에 가장 구체적인 지침이 있습니다.** 다른 언어에서도 주문·결제·재고의 업무 기준은 활용할 수 있습니다. 트랜잭션 경계나 재시도 동작은 해당 프로젝트의 라이브러리와 테스트로 확인하세요.
+
+| 언어·스택 | 활용 예 | 저장소의 근거 |
+|---|---|---|
+| **Java · Spring/JPA** | 환불 저장 중 flush가 실패하면 어느 트랜잭션에서 다시 시도해야 할지 추적 | [Spring 규칙 20개](skills/commerce-backend-expert/references/spring-commerce/INDEX.md) · [실행한 통합 테스트](validation/runtime/src/test/java/validation/SpringBoundaryTest.java) |
+| **JavaScript · Node.js** | 배송비 함수의 0원·경계값·구형 주문 처리와 환불 재전송 분기 확인 | [배송비·환불 함수 실행 결과](benchmarks/operations-2026-11-19.md) |
+| **SQL · PostgreSQL** | 독립 연결 두 개로 재고를 경합시킨 뒤 성공 주문과 차감 이력을 대조 | [마지막 재고 통합 테스트](validation/runtime/src/test/java/validation/LastUnitTest.java) |
+| **그 밖의 스택** | 예를 들어 Python이나 TypeScript에서는 주문 정책을 인수 기준으로 옮긴 뒤 기존 ORM·테스트 러너에서 검증 | [언어와 무관하게 쓸 수 있는 업무 규칙](skills/commerce-backend-expert/references/commerce/INDEX.md) |
+
+**요청은 팀에서 쓰는 언어로 적으세요.** 상세 규칙은 한국어로 작성되어 있습니다. 코드의 함수명과 상태값을 그대로 쓰고, 원하는 결과를 구체적으로 주면 두 언어 모두 같은 업무를 지시할 수 있습니다.
+
+| 요청 언어 | [환불 재전송 예제](benchmarks/fixtures/refund-replay.js)에 사용할 요청 |
+|---|---|
+| 한국어 | `reserve`에서 같은 키로 8,000원을 다시 요청하면 어떻게 돼? 잔액이 0원일 때 반환값과 원장 건수를 확인해줘. |
+| English | In `reserve`, replay the same key for KRW 8,000 after the balance reaches zero. Check the return value and the number of ledger entries. |
 
 ## 요구사항에서 최종 리뷰까지
 
@@ -44,17 +96,7 @@ flowchart TD
 
 ### 스킬만 설치
 
-작업에 맞는 스킬을 선택하세요. 각 스킬은 단독으로 설치할 수 있습니다.
-
-| 스킬 | 사용 목적 |
-|---|---|
-| [commerce-backend-expert](skills/commerce-backend-expert/SKILL.md) | 요구사항에서 인수 기준 도출, 도메인 규칙 70개를 활용한 설계·구현·최종 리뷰·장애 분석 |
-| [commerce-review](skills/commerce-review/SKILL.md) | 결제·환불 코드 리뷰. 대표 스킬이 함께 제공되면 관련 상세 규칙도 선택 |
-| [commerce-validation](skills/commerce-validation/SKILL.md) | 고객·운영자 흐름의 기능·회귀·배포 전 검증. 화면/API 결과와 저장 상태·외부 효과를 대조 |
-
-```bash
-npx skills add dakcoh/commerce-backend-expert --skill commerce-backend-expert
-```
+각 스킬은 단독 설치할 수 있습니다. [스킬 선택표](#어떤-스킬을-쓰면-될까요)에서 작업에 맞는 이름을 고르세요.
 
 리뷰 또는 검증을 사용하려면 각각 `--skill commerce-review` 또는 `--skill commerce-validation`을 지정합니다. 설치 도구가 적용할 AI 클라이언트를 묻습니다. 검증한 `skills@1.7.4` 설치 도구에는 Node.js 22.20 이상이 필요하며, 이 방식에는 세션 훅과 `commerce on/off/status` 제어가 포함되지 않습니다.
 
@@ -100,6 +142,13 @@ claude plugin install commerce-backend-expert@commerce-context-mcp
 
 
 ## 필요한 파트만 읽습니다
+
+<details>
+<summary>도메인별 규칙 수 분포 보기 (70개)</summary>
+
+![도메인별 규칙 70개. 상품·주문·회원·배송 20개, Java/Spring 20개, 정산 9개, 재고 8개, 결제 7개, 쿠폰 6개.](benchmarks/results/rules-by-domain.ko.svg)
+
+</details>
 
 대표 스킬 → 관련 파트 색인 → 필요한 규칙 순서로 읽습니다. 정확한 규칙 경로를 이미 알면 색인을 생략하고, 현재 맥락에 있는 문서는 중복 조회하지 않습니다. 전체 규칙을 매 요청에 넣지 않습니다.
 
@@ -147,7 +196,7 @@ Codex CLI 0.153.2(`/hooks` 검토·신뢰 후)와 Claude Code 2.1.114의 격리 
 
 규칙의 적용 조건·예외·근거 범위와 검토 상태를 함께 확인하세요. `active`는 사용 중이라는 뜻이며 정확성 인증이 아닙니다. `needs-review` 19개는 AI 문서 검토를 기록했지만 실제 연동·사업 정책 검증이 남아 있습니다. [규칙별 후속 검토·인증 없는 클라이언트 확인](validation/followup-review.md)을 참고하세요. `verifiedBy`·`lastReviewedAt`이 `not-recorded`이면 검토 기록이 없습니다.
 
-선택적 [격리 런타임 검증 15개](validation/runtime/README.md)에서는 PostgreSQL·Redis·Spring/JPA의 실패 경계를 실행하고 Lua 오류 복구 지침을 보완했습니다. 합성 사례이며 실제 PG·사업 정책·모델 적용 검증과 별도입니다.
+선택적 [격리 런타임 검증 16개](validation/runtime/README.md)에서는 PostgreSQL·Redis·Spring/JPA의 실패 경계를 실행하고 Lua 오류 복구 지침을 보완했습니다. 합성 사례이며 실제 PG·사업 정책·모델 적용 검증과 별도입니다.
 
 [공개 행동 평가](benchmarks/README.md)는 고정 합성 입력과 실제 스킬 내용을 사용합니다. 실제 DB·PG 운영 동작, 설치 후 자동 선택, 모든 업무의 정확성을 입증하는 절차는 아닙니다. 성능 수치는 각 실험의 비교 대상과 확인 범위에 맞춰 해석합니다. [검증 방법과 범위](CONTRIBUTING.ko.md#검증)
 

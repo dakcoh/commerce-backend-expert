@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="286" viewBox="0 0 900 286" role="img" aria-labelledby="title desc">
+  <title id="title">Settlement reconciliation after a batch restart</title>
+  <desc id="desc">Both sets contain three rows. Expected events e2, e3 and e4 total 11,000 won. The restarted batch contains e2 twice and omits e3, posting 26,000 won, or 15,000 won too much.</desc>
+  <rect x="1" y="1" width="898" height="284" rx="18" fill="#122c30" stroke="#456165" stroke-width="2"/>
+  <g font-family="Arial, Helvetica, sans-serif">
+    <g fill="#b9d7d4">
+      <text x="36" y="54" font-size="18" font-weight="bold" letter-spacing="2">SETTLEMENT REVIEW</text>
+      <text x="36" y="113" font-size="22">Excess posted</text>
+    </g>
+    <text x="32" y="172" fill="#f5f7e9" font-size="59" font-weight="bold" letter-spacing="-2">+15,000</text>
+    <text x="37" y="201" fill="#b9d7d4" font-size="19">KRW</text>
+    <path d="M36 224h228" stroke="#557478"/>
+    <circle cx="43" cy="249" r="6" fill="#ffc47e"/>
+    <text x="58" y="255" fill="#ffd5a1" font-size="18" font-weight="bold">Release blocked</text>
+    <rect x="296" y="21" width="583" height="244" rx="12" fill="#f5f3e9"/>
+    <path d="M587 40v203" stroke="#c6cdc2"/>
+    <g fill="#183335" font-size="20" font-weight="bold">
+      <text x="318" y="61">Expected</text>
+      <text x="609" y="61">After restart</text>
+    </g>
+    <path d="M318 76h247M609 76h247M318 201h247M609 201h247" stroke="#b4c2b8"/>
+    <rect x="308" y="119" width="268" height="34" rx="4" fill="#d9e9dc"/>
+    <rect x="599" y="119" width="268" height="34" rx="4" fill="#ffe0ae"/>
+    <g fill="#254344" font-family="Consolas, 'Liberation Mono', monospace" font-size="21">
+      <text x="319" y="107">e2</text><text x="564" y="107" text-anchor="end">12,000</text>
+      <text x="319" y="143">e3</text><text x="564" y="143" text-anchor="end">−3,000</text>
+      <text x="319" y="181">e4</text><text x="564" y="181" text-anchor="end">2,000</text>
+      <text x="610" y="107">e2</text><text x="855" y="107" text-anchor="end">12,000</text>
+      <text x="610" y="143">e2</text><text x="855" y="143" text-anchor="end">12,000</text>
+      <text x="610" y="181">e4</text><text x="855" y="181" text-anchor="end">2,000</text>
+    </g>
+    <g fill="#183335" font-weight="bold">
+      <text x="319" y="236" font-size="17">3 rows</text><text x="564" y="238" text-anchor="end" font-size="27">11,000</text>
+      <text x="610" y="236" font-size="17">3 rows</text><text x="855" y="238" text-anchor="end" font-size="27">26,000</text>
+    </g>
+  </g>
+</svg>

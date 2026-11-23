@@ -1,14 +1,66 @@
+<div align="center">
+
 # Commerce Backend Expert
 
-English · [한국어](README.ko.md)
+**AI agent skills for building and reviewing Korean ecommerce backends**
+
+**English** · [한국어](README.ko.md)　|　[Quick start](#quick-start) · [Choose a skill](#which-skill-should-i-use) · [Languages and stacks](#use-it-with-your-stack) · [Rules by domain](#read-only-relevant-guidance)
+
+</div>
+
+## Three settlement rows. Why is the total 15,000 won too high?
+
+<div align="center">
+
+![Settlement restart example. Three expected entries total 11,000 won. Duplicating a 12,000-won entry and dropping a negative 3,000-won entry raises the posted total to 26,000 won.](benchmarks/results/settlement-restart.svg)
+
+</div>
+
+In this synthetic batch restart, the agent compared the event IDs, found **a duplicate e2 and a missing e3**, and recommended blocking release. [Input CSV](benchmarks/fixtures/settlement-window.csv) · [Evaluation and scope](benchmarks/operations-2026-11-19.md)
+
+## Quick start
+
+Install the main development skill in a project you use with Codex or Claude Code.
+
+```bash
+npx skills add dakcoh/commerce-backend-expert --skill commerce-backend-expert
+```
+
+Open your order code and try a request like this.
+
+> Raise the free-shipping threshold from 30,000 to 40,000 won for new orders. Existing receipts should still show what the customer paid for shipping.
+
+The main skill guides the agent through implementation and testing, then back through checkout and receipt lookup for code review. For a narrower task, choose the validation or payment and refund review skill below.
+
+You can read the Markdown instructions without a separate API key. Installer and session-hook runtime requirements are listed below.
 
 [![CI](https://github.com/dakcoh/commerce-backend-expert/actions/workflows/ci.yml/badge.svg)](https://github.com/dakcoh/commerce-backend-expert/actions/workflows/ci.yml) · [MIT](LICENSE)
 
-**A Markdown skill and hook plugin for designing, implementing, refactoring, reviewing, and investigating Korean ecommerce backends.**
+## Which skill should I use?
 
-The skill guides an AI through actual code and business conditions, then selects relevant guidance for the requested development task. It includes 70 rules covering orders, inventory, payments, coupons, settlement, and Java/Spring.
+| What you want to do | Skill | What to give the agent |
+|---|---|---|
+| **Implement a change** — raise the free-shipping threshold and preserve old receipts | [commerce-backend-expert](skills/commerce-backend-expert/SKILL.md) | The effective date, checkout and receipt code, and an example of an older order |
+| **Review payments or refunds** — assess a partial refund retry after a lost response | [commerce-review](skills/commerce-review/SKILL.md) | The diff, the provider’s response contract, the original payment, and refund attempts |
+| **Verify a release** — decide whether two orders competing for the last unit behaved correctly | [commerce-validation](skills/commerce-validation/SKILL.md) | Acceptance criteria, both responses, final stock, and committed deduction entries |
 
-Document-only skill usage requires no Java or Node.js installation, MCP server, or separate API key. For the plugin's session hooks, use Node.js 24.22.1 LTS; compatibility is also tested on Node.js 22.23.4. AI-client access and project build/test requirements remain those of their respective environments.
+## Use it with your stack
+
+**Java and Spring have the most implementation-specific guidance.** The order, payment, and stock rules also apply across languages. Check transaction boundaries and retry behavior against the libraries and tests in your project.
+
+| Language or stack | Example task | Evidence in this repository |
+|---|---|---|
+| **Java · Spring/JPA** | Trace which transaction can retry after a failed refund flush | [20 Spring rules](skills/commerce-backend-expert/references/spring-commerce/INDEX.md) · [Integration test](validation/runtime/src/test/java/validation/SpringBoundaryTest.java) |
+| **JavaScript · Node.js** | Check a shipping-fee function at zero and at the threshold, or trace a refund replay | [Shipping and refund execution results](benchmarks/operations-2026-11-19.md) |
+| **SQL · PostgreSQL** | Race two connections and match the stock deduction to the winning order | [Last-unit integration test](validation/runtime/src/test/java/validation/LastUnitTest.java) |
+| **Other stacks** | In Python or TypeScript, for example, turn the order policy into acceptance criteria and exercise them with your own ORM and test runner | [Domain rules to start from](skills/commerce-backend-expert/references/commerce/INDEX.md) |
+
+**Write prompts in your team’s language.** The detailed rules are written in Korean. Keep function names and status values as they appear in the code and describe the result you want checked.
+
+| Prompt language | Request for the [refund replay example](benchmarks/fixtures/refund-replay.js) |
+|---|---|
+| English | In `reserve`, replay the same key for KRW 8,000 after the balance reaches zero. Check the return value and the number of ledger entries. |
+| 한국어 | `reserve`에서 같은 키로 8,000원을 다시 요청하면 어떻게 돼? 잔액이 0원일 때 반환값과 원장 건수를 확인해줘. |
 
 ## From requirements to final review
 
@@ -44,17 +96,7 @@ The skill guides checks of line/unit reservations, unresolved transactions, requ
 
 ### Install skills only
 
-Choose the skill for the task. Each skill can be installed on its own.
-
-| Skill | Use it for |
-|---|---|
-| [commerce-backend-expert](skills/commerce-backend-expert/SKILL.md) | Deriving acceptance criteria from requirements, plus backend design, implementation, final review, and incident investigation with 70 domain rules |
-| [commerce-review](skills/commerce-review/SKILL.md) | Payment and refund code review, with optional detailed rules from the general skill |
-| [commerce-validation](skills/commerce-validation/SKILL.md) | Functional, regression, and pre-release testing of storefront and operations flows, including persisted state and external effects |
-
-```bash
-npx skills add dakcoh/commerce-backend-expert --skill commerce-backend-expert
-```
+Each skill installs independently. Use the [skill selection table](#which-skill-should-i-use) to pick the name for your task.
 
 Use `--skill commerce-review` or `--skill commerce-validation` to select the corresponding workflow. The installer asks which AI client to target. The tested `skills@1.7.4` installer requires Node.js 22.20 or later. This method does not install session hooks or the `commerce on/off/status` controls.
 
@@ -100,6 +142,13 @@ Check the rules read, code locations, changes, tests actually run, and unresolve
 
 
 ## Read only relevant guidance
+
+<details>
+<summary>View the distribution of all 70 rules</summary>
+
+![70 rules by domain. Catalog, orders, customers and shipping: 20. Java/Spring: 20. Settlement: 9. Stock: 8. Payments: 7. Coupons: 6.](benchmarks/results/rules-by-domain.svg)
+
+</details>
 
 The entry skill selects a domain index, then reads the required rules. It skips the index when the exact rule path is already known and avoids rereading documents already in context. It does not load the entire catalog for every request.
 
@@ -147,7 +196,7 @@ The [validation record index](validation/README.md) explains the installation, m
 
 Check each rule's conditions, exceptions, evidence scope, and review state. `active` means in use, not certified accurate. All 19 `needs-review` rules have recorded AI document reviews, with integration and business-policy checks remaining. See the [follow-up reviews and client checks without authentication](validation/followup-review.md). `not-recorded` under `verifiedBy` or `lastReviewedAt` means there is no recorded review.
 
-An optional [15-case isolated runtime fixture](validation/runtime/README.md) exercises PostgreSQL/Redis/Spring/JPA failure boundaries and informed the Lua-error recovery guidance. These synthetic checks are separate from actual PG, business-policy, and model-application verification.
+An optional [16-case isolated runtime fixture](validation/runtime/README.md) exercises PostgreSQL/Redis/Spring/JPA failure boundaries and informed the Lua-error recovery guidance. These synthetic checks are separate from actual PG, business-policy, and model-application verification.
 
 The [public behavior evaluation](benchmarks/README.md) uses fixed synthetic inputs and the actual skill text. It does not establish live DB/PG behavior, automatic skill selection after installation, or correctness across all tasks. Interpret performance figures within each study's comparison and scope. See [validation and its limits](CONTRIBUTING.md#validation).
 

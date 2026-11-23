@@ -1,0 +1,51 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="740" height="292" viewBox="0 0 740 292" role="img" aria-labelledby="title desc">
+  <title id="title">Rules by domain</title>
+  <desc id="desc">Catalog, orders &amp; shipping 20, Java / Spring 20, Settlement &amp; payouts 9, Stock &amp; concurrency 8, Payments &amp; refunds 7, Coupons &amp; promotions 6.</desc>
+  <rect x="1" y="1" width="738" height="290" rx="16" fill="#122c30" stroke="#456165" stroke-width="2"/>
+  <g font-family="system-ui, 'Malgun Gothic', sans-serif">
+    <text x="22" y="39" fill="#f5f7e9" font-size="22" font-weight="700">Rules by domain</text>
+    <text x="718" y="39" text-anchor="end" fill="#b9d7d4" font-size="17">70 rules total</text>
+    <g transform="translate(0 64)">
+      <path d="M2 7l10-5 10 5-10 5z M2 7v10l10 5 10-5V7 M12 12v10" transform="translate(22 0)" fill="none" stroke="#a9d9cb" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"/>
+      <text x="58" y="18" fill="#f5f7e9" font-size="18">Catalog, orders &amp; shipping</text>
+      <rect x="300" y="5" width="360" height="13" rx="6" fill="#28474b"/>
+      <rect x="300" y="5" width="360" height="13" rx="6" fill="#8bd3bc"/>
+      <text x="714" y="19" text-anchor="end" fill="#f5f7e9" font-size="20" font-weight="700">20</text>
+    </g>
+    <g transform="translate(0 102)">
+      <path d="M8 5l-6 7 6 7 M16 5l6 7-6 7 M14 3l-4 18" transform="translate(22 0)" fill="none" stroke="#a9d9cb" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"/>
+      <text x="58" y="18" fill="#f5f7e9" font-size="18">Java / Spring</text>
+      <rect x="300" y="5" width="360" height="13" rx="6" fill="#28474b"/>
+      <rect x="300" y="5" width="360" height="13" rx="6" fill="#8bd3bc"/>
+      <text x="714" y="19" text-anchor="end" fill="#f5f7e9" font-size="20" font-weight="700">20</text>
+    </g>
+    <g transform="translate(0 140)">
+      <path d="M2 8l10-6 10 6z M4 21h16 M6 10v8 M12 10v8 M18 10v8" transform="translate(22 0)" fill="none" stroke="#a9d9cb" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"/>
+      <text x="58" y="18" fill="#f5f7e9" font-size="18">Settlement &amp; payouts</text>
+      <rect x="300" y="5" width="360" height="13" rx="6" fill="#28474b"/>
+      <rect x="300" y="5" width="162" height="13" rx="6" fill="#8bd3bc"/>
+      <text x="714" y="19" text-anchor="end" fill="#f5f7e9" font-size="20" font-weight="700">9</text>
+    </g>
+    <g transform="translate(0 178)">
+      <path d="M2 7l10-5 10 5-10 5z M2 12l10 5 10-5 M2 17l10 5 10-5" transform="translate(22 0)" fill="none" stroke="#a9d9cb" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"/>
+      <text x="58" y="18" fill="#f5f7e9" font-size="18">Stock &amp; concurrency</text>
+      <rect x="300" y="5" width="360" height="13" rx="6" fill="#28474b"/>
+      <rect x="300" y="5" width="144" height="13" rx="6" fill="#8bd3bc"/>
+      <text x="714" y="19" text-anchor="end" fill="#f5f7e9" font-size="20" font-weight="700">8</text>
+    </g>
+    <g transform="translate(0 216)">
+      <path d="M2 5h20v14H2z M2 10h20 M5 15h5" transform="translate(22 0)" fill="none" stroke="#a9d9cb" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"/>
+      <text x="58" y="18" fill="#f5f7e9" font-size="18">Payments &amp; refunds</text>
+      <rect x="300" y="5" width="360" height="13" rx="6" fill="#28474b"/>
+      <rect x="300" y="5" width="126" height="13" rx="6" fill="#8bd3bc"/>
+      <text x="714" y="19" text-anchor="end" fill="#f5f7e9" font-size="20" font-weight="700">7</text>
+    </g>
+    <g transform="translate(0 254)">
+      <path d="M2 5h20v4a3 3 0 0 0 0 6v4H2v-4a3 3 0 0 0 0-6z M15 7v2 M15 11v2 M15 15v2" transform="translate(22 0)" fill="none" stroke="#a9d9cb" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"/>
+      <text x="58" y="18" fill="#f5f7e9" font-size="18">Coupons &amp; promotions</text>
+      <rect x="300" y="5" width="360" height="13" rx="6" fill="#28474b"/>
+      <rect x="300" y="5" width="108" height="13" rx="6" fill="#8bd3bc"/>
+      <text x="714" y="19" text-anchor="end" fill="#f5f7e9" font-size="20" font-weight="700">6</text>
+    </g>
+  </g>
+</svg>
